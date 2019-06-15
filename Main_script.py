@@ -8,11 +8,6 @@ from Myo_communication import collect_training_data
 window = Tk()
 window.geometry("300x150")
 window.title("EMG Recognition")
-collect_data_button = Button(master=window, text="Collect data",
-                             command=lambda: collect_training_data(hand_disinfection_light))
-train_classifier_button = Button(master=window, text="Train classifier", command=lambda: train_classifier())
-predict_live_button = Button(master=window, text="Predict live Gesture", command=predict)
-exit_button = Button(master=window, text="Close", command=window.quit())
 
 # ordentliche prediction Ergebnisse
 # PREDICT_TIME: float = 0.5
@@ -33,10 +28,11 @@ hand_desinfection_description = ['Step 1 - palm and wrist',
 
 
 def main():
-    collect_data_button.pack()
-    predict_live_button.pack()
-    train_classifier_button.pack()
-    exit_button.pack()
+    Button(master=window, text="Collect data",
+           command=lambda: collect_training_data(hand_disinfection_light)).pack()
+    Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack()
+    Button(master=window, text="Predict live Gesture", command=predict).pack()
+    Button(master=window, text="Close", command=window.destroy).pack()
     window.mainloop()
 
 

@@ -3,8 +3,39 @@ from tkinter import filedialog
 
 import numpy as np
 
+emg_headline = ["ch0", "ch1", "ch2", "ch", "ch4", "ch5", "ch6", "ch7", "label"]
+imu_headline = ["ori", "gyr", "acc", "label"]
 
-def save_csv(data, label, file_name):
+
+def save_raw_csv(data, label, file_emg, file_imu):
+    f = open(file_emg, 'w', newline='')
+    with f:
+        writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(emg_headline)
+        for n in range(len(data['EMG'])):
+            column = [data['EMG'][n][0], data['EMG'][n][1], label]
+            writer.writerow(column)
+    f.close()
+
+    g = open(file_imu, 'w', newline='')
+    with g:
+        writer = csv.writer(g, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(imu_headline)
+        for j in range(len(data['ORI'])):
+            column = [data['ORI'][j], data['GYR'][j], data['ACC'][j], label]
+            writer.writerow(column)
+    g.close()
+
+    # for n in range(len(emg)):
+    #     for
+    # i in emg[n]:
+    # value_set.append(i)
+    # value_set.append(labels[n])
+    # writer.writerow(value_set)
+    return f
+
+
+def save_csv(data, labels, file_name):
     f = open(file_name, 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
@@ -12,7 +43,7 @@ def save_csv(data, label, file_name):
             value_set = []
             for i in data[n]:
                 value_set.append(i)
-            value_set.append(label[n])
+            value_set.append(labels[n])
             writer.writerow(value_set)
     return f
 

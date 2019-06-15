@@ -1,6 +1,7 @@
 import collections
+import os
+import threading
 import time
-from multiprocessing.pool import ThreadPool
 
 import numpy as np
 
@@ -10,13 +11,14 @@ import myo as libmyo
 # const
 from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
-from Save_Load import save_csv
+from Save_Load import save_csv, save_raw_csv
 
-TRAINING_TIME: int = 6
+TRAINING_TIME: int = 2
 PREDICT_TIME: float = 2.5
 DATA_POINT_WINDOW_SIZE = 20
 EMG_INTERVAL = 0.01
 POSITION_INTERVAL = 0.04
+COLLECTION_DIR = "Collections"
 
 RIGHT = "right"
 LEFT = "left"
@@ -44,7 +46,7 @@ ACC = []  # accelerometer
 class GestureListener(libmyo.DeviceListener):
     def __init__(self, queue_size=1):
         super(GestureListener, self).__init__()
-        # self.lock = threading.Lock()
+        self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
 
@@ -278,8 +280,13 @@ def collect_raw_data(record_duration):
 #         # save_csv(transformed_data_collection, train_y, "hand_disinfection_collection" + timestamp + ".csv")
 #
 
-def collect_training_data(label_display):
+def collect_training_data(label_display, probant="default", session=10):
     global status
+    user_path = COLLECTION_DIR + "/" + probant
+    if not os.path.isdir(COLLECTION_DIR):
+        os.mkdir(COLLECTION_DIR)
+        if not os.path.isdir(user_path):
+            os.mkdir(user_path)
 
     time.sleep(1)
     status = 0
@@ -294,41 +301,35 @@ def collect_training_data(label_display):
                          'ACC': []}
 
     with hub.run_in_background(listener.on_event):
-        for emg in range(1, 3):
+        for j in range(session):
             for i in range(len(label_display)):
-                for j in range(1, 3):
-                    print("\nGesture -- ", label_display[i], " : Ready?")
-                    input("Countdown start after press...")
-                    countdown(2)
-                    cls()
-                    print("Start")
-                    time.sleep(.5)
-                    tmp_data_window, tmp_data_raw = collect_raw_data(TRAINING_TIME)
+                print("\nGesture -- ", label_display[i], " : Ready?")
+                input("Countdown start after press...")
+                countdown(2)
+                cls()
+                print("Start")
+                time.sleep(.5)
+                tmp_data_window, tmp_data_raw = collect_raw_data(TRAINING_TIME)
 
-                    # WINDOW data
-                    entries = len(tmp_data_window['EMG'])
-                    raw_data_window['EMG'].extend(tmp_data_window['EMG'])
-                    raw_data_window['ACC'].extend(tmp_data_window['ACC'])
-                    raw_data_window['GYR'].extend(tmp_data_window['GYR'])
-                    raw_data_window['ORI'].extend(tmp_data_window['ORI'])
-                    label_window.extend(np.full((1, entries), i)[0])
+                # WINDOW data
+                entries = len(tmp_data_window['EMG'])
+                raw_data_window['EMG'].extend(tmp_data_window['EMG'])
+                raw_data_window['ACC'].extend(tmp_data_window['ACC'])
+                raw_data_window['GYR'].extend(tmp_data_window['GYR'])
+                raw_data_window['ORI'].extend(tmp_data_window['ORI'])
+                label_window.extend(np.full((1, entries), i)[0])
 
-                    # RAW data
-                    entries = len(tmp_data_raw['EMG'])
-                    raw_data_original['EMG'].extend(tmp_data_raw['EMG'])
-                    raw_data_original['ACC'].extend(tmp_data_raw['ACC'])
-                    raw_data_original['GYR'].extend(tmp_data_raw['GYR'])
-                    raw_data_original['ORI'].extend(tmp_data_raw['ORI'])
-                    label_raw.extend(np.full((1, entries), i)[0])
+                # RAW data
+                entries = len(tmp_data_raw['EMG'])
+                raw_data_original['EMG'].extend(tmp_data_raw['EMG'])
+                raw_data_original['ACC'].extend(tmp_data_raw['ACC'])
+                raw_data_original['GYR'].extend(tmp_data_raw['GYR'])
+                raw_data_original['ORI'].extend(tmp_data_raw['ORI'])
+                label_raw.extend(np.full((1, entries), i)[0])
 
-                    # for k in range(len(tmp_data_window)):
-                    #     raw_data_window.append(tmp_data_window[k])
-                    #     train_y_windowed.append(i)
-                    # for k in range(len(tmp_data_raw)):
-                    #     raw_data.append(tmp_data_raw[k])
-                    #     train_y_raw.append(i)
-
-                    print("Stop")
+                print("Stop")
+                file_emg = user_path + "/" + "emg" + probant + str(j) + label_display[i] + ".csv"
+                file_imu = user_path + "/" + "imu" + probant + str(j) + label_display[i] + ".csv"
 
                 print("Collected window data: ", len(raw_data_window))
                 print("Collected raw data: ", len(raw_data_original))
