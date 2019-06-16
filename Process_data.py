@@ -1,8 +1,78 @@
+import csv
+import os
+from tkinter import filedialog
+
 import math
 import numpy as np
 
+from Save_Load import load_session_raw_csv
+
 MAX = 127
 threshold = 0.30 * MAX
+WINDOW_EMG = 20
+DEGREE_OF_OVERLAP = 0.5
+OFFSET_EMG = WINDOW_EMG * DEGREE_OF_OVERLAP
+SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems with Bluetooth connection 3.815821888279855
+WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
+OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+
+
+def placeholder():
+    path = filedialog.askdirectory()
+    for file in os.listdir(path):
+        first = True
+        with open(path + "/" + file) as csv_file:
+            csv_reader = csv.reader(csv_file, delimiter=',')
+            if file.__contains__('emg'):
+                headline = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
+                load_data = []
+            elif file.__contains__('imu'):
+                headline = "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
+                load_data = []
+            for row in csv_reader:
+                if first:
+                    first = False
+                    continue
+                for i in range(len(row)):
+                    load_data[headline[i]].append(row[i])
+        window_data()
+
+
+def window_data(raw_emg=[], raw_imu=[]):
+    if not raw_emg or not raw_imu:
+        raw_emg, raw_imu = load_session_raw_csv()
+    raw_emg_window = []
+    raw_imu_window = []
+
+    emg_length = len(raw_emg['label'])
+    imu_length = len(raw_imu['label'])
+    WINDOW_IMU = WINDOW_EMG / (emg_length / imu_length)
+    OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+
+    # define blocks for EMG
+    identifier = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
+    blocks = int(emg_length / abs(WINDOW_EMG - OFFSET_EMG))
+    first = 0
+    for i in range(blocks):
+        last = first + WINDOW_EMG
+        tmp = []
+        for i in identifier:
+            tmp.append([int(j) for j in raw_emg[i][first:last]])
+        raw_emg_window.append(tmp)
+        first += int(WINDOW_EMG - OFFSET_EMG)
+
+    # define blocks for IMU
+    identifier = "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
+    blocks = int(emg_length / abs(WINDOW_IMU - OFFSET_IMU))
+    first = 0
+    for i in range(blocks):
+        last = int(first + WINDOW_IMU)
+        tmp = []
+        for i in identifier:
+            tmp.append([float(j) for j in raw_imu[i][first:last]])
+        raw_imu_window.append(tmp)
+        first += int(WINDOW_IMU - OFFSET_IMU)
+    return raw_emg_window, raw_imu_window
 
 
 def feat_trans_def(saving_list, features, options=0):
