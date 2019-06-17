@@ -3,36 +3,47 @@ from tkinter import filedialog
 
 import numpy as np
 
-emg_headline = ["ch0", "ch1", "ch2", "ch", "ch4", "ch5", "ch6", "ch7", "label"]
-imu_headline = ["ori", "gyr", "acc", "label"]
+emg_headline = ["timestamp", "ch0", "ch1", "ch2", "ch", "ch4", "ch5", "ch6", "ch7", "label"]
+imu_headline = ["timestamp",
+                "x_ori", "y_ori", "z_ori",
+                "x_gyr", "y_gyr", "z_gyr",
+                "x_acc", "y_acc", "z_acc",
+                "label"]
+imu_identifier = ["x", "y", "z"]
 
 
 def save_raw_csv(data, label, file_emg, file_imu):
+    emg_data = data['EMG']
     f = open(file_emg, 'w', newline='')
     with f:
-        writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(emg_headline)
-        for n in range(len(data['EMG'])):
-            column = [data['EMG'][n][0], data['EMG'][n][1], label]
-            writer.writerow(column)
+        for emg in emg_data:
+            tmp = [emg[0]]
+            for i in emg[1]:
+                tmp.append(i)
+            tmp.append(label)
+            writer.writerow(tmp)
     f.close()
 
     g = open(file_imu, 'w', newline='')
     with g:
-        writer = csv.writer(g, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer = csv.writer(g, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         writer.writerow(imu_headline)
-        for j in range(len(data['ORI'])):
-            column = [data['ORI'][j], data['GYR'][j], data['ACC'][j], label]
-            writer.writerow(column)
-    g.close()
+        length = len(data['ORI'])
+        ori = data['ORI']
+        acc = data['ACC']
+        gyr = data['GYR']
 
-    # for n in range(len(emg)):
-    #     for
-    # i in emg[n]:
-    # value_set.append(i)
-    # value_set.append(labels[n])
-    # writer.writerow(value_set)
-    return f
+        for i in range(length):
+            tmp = [ori[i][0],
+                   ori[i][1].x, ori[i][1].y, ori[i][1].z,
+                   gyr[i][1].x, gyr[i][1].y, gyr[i][1].z,
+                   acc[i][1].x, acc[i][1].y, acc[i][1].z,
+                   label]
+            writer.writerow(tmp)
+    g.close()
+    return
 
 
 def save_csv(data, labels, file_name):

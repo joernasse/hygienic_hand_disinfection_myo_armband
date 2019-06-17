@@ -5,8 +5,6 @@ from tkinter import filedialog
 import math
 import numpy as np
 
-from Save_Load import load_session_raw_csv
-
 MAX = 127
 threshold = 0.30 * MAX
 WINDOW_EMG = 20
