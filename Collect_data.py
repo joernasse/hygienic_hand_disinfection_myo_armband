@@ -4,7 +4,7 @@ import collections
 
 from Feature_extraction import feature_transformation, transform_data_collection
 from HelperFunctions import countdown, cls
-from Save_Load import save_csv
+from Save_Load import save_feature_csv
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
@@ -221,13 +221,13 @@ def collect_training_data():
             print("Saving collected data...")
 
             transformed_data_collection = transform_data_collection(raw_data_window)
-            res = save_csv(transformed_data_collection, label_window,
+            res = save_feature_csv(transformed_data_collection, label_window,
                            "hand_disinfection_collection_windowed" + timestamp + ".csv")
-            res = save_csv(raw_data, label_window, "hand_disinfection_collection_raw" + timestamp + ".csv")
+            res = save_feature_csv(raw_data, label_window, "hand_disinfection_collection_raw" + timestamp + ".csv")
             if res is not None:
                 print("Saving succeed")
 
-    save_csv(transformed_data_collection, label_window, "hand_disinfection_collection" + timestamp + ".csv")
+    save_feature_csv(transformed_data_collection, label_window, "hand_disinfection_collection" + timestamp + ".csv")
 
 
 def collect_raw_data(record_duration):

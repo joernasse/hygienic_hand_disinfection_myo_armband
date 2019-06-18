@@ -11,7 +11,7 @@ import myo as libmyo
 # const
 from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
-from Save_Load import save_csv, save_raw_csv
+from Save_Load import save_feature_csv, save_raw_csv
 
 TRAINING_TIME: int = 2
 PREDICT_TIME: float = 2.5
@@ -100,29 +100,28 @@ def collect_raw_data(record_duration):
         dif = end - start
     status = 0
 
-    WINDOW_IMU = WINDOW_EMG / (len(EMG) / len(ORI))
-    OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+    # WINDOW_IMU = WINDOW_EMG / (len(EMG) / len(ORI))
+    # OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+    #
+    #
+    # blocks = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
+    # first = 0
+    # for i in range(blocks):
+    #     last = first + WINDOW_EMG
+    #     raw_data_window['EMG'].append(np.asarray(EMG[first:last]))
+    #     first += int(WINDOW_EMG - OFFSET_EMG)
+    #
+    # # define blocks for IMU
+    # blocks = int(len(ORI) / abs(WINDOW_IMU - OFFSET_IMU))
+    # first = 0
+    # for i in range(blocks):
+    #     last = int(first + WINDOW_IMU)
+    #     raw_data_window['ORI'].append(np.asarray(ORI[first:last]))
+    #     raw_data_window['GYR'].append(GYR[first:last])
+    #     raw_data_window['ACC'].append(ACC[first:last])
+    #     first += int(WINDOW_IMU - OFFSET_IMU)
 
-    # define blocks for EMG
-    t_tmg = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
-    blocks = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
-    first = 0
-    for i in range(blocks):
-        last = first + WINDOW_EMG
-        raw_data_window['EMG'].append(np.asarray(EMG[first:last]))
-        first += int(WINDOW_EMG - OFFSET_EMG)
-
-    # define blocks for IMU
-    blocks = int(len(ORI) / abs(WINDOW_IMU - OFFSET_IMU))
-    first = 0
-    for i in range(blocks):
-        last = int(first + WINDOW_IMU)
-        raw_data_window['ORI'].append(np.asarray(ORI[first:last]))
-        raw_data_window['GYR'].append(GYR[first:last])
-        raw_data_window['ACC'].append(ACC[first:last])
-        first += int(WINDOW_IMU - OFFSET_IMU)
-
-    return raw_data_window, raw_data
+    return raw_data
 
 
 def collect_training_data(label_display, probant="defaultUser", session=10):
@@ -156,14 +155,6 @@ def collect_training_data(label_display, probant="defaultUser", session=10):
                 time.sleep(.5)
                 tmp_data_window, tmp_data_raw = collect_raw_data(TRAINING_TIME)
 
-                # WINDOW data
-                entries = len(tmp_data_window['EMG'])
-                raw_data_window['EMG'].extend(tmp_data_window['EMG'])
-                raw_data_window['ACC'].extend(tmp_data_window['ACC'])
-                raw_data_window['GYR'].extend(tmp_data_window['GYR'])
-                raw_data_window['ORI'].extend(tmp_data_window['ORI'])
-                label_window.extend(np.full((1, entries), i)[0])
-
                 # RAW data
                 entries = len(tmp_data_raw['EMG'])
                 raw_data_original['EMG'].extend(tmp_data_raw['EMG'])
@@ -187,10 +178,10 @@ def collect_training_data(label_display, probant="defaultUser", session=10):
             transformed_data_collection = transform_data_collection(raw_data_window)
 
             # Save processed window Data
-            window_save = save_csv(transformed_data_collection, label_window,
+            window_save = save_feature_csv(transformed_data_collection, label_window,
                                    "hand_disinfection_collection_windowed" + TIMESTAMP + ".csv")
             # Save processed RAW data
-            raw_save = save_csv(raw_data_original, label_window,
+            raw_save = save_feature_csv(raw_data_original, label_window,
                                 "hand_disinfection_collection_raw" + TIMESTAMP + ".csv")
             if window_save is not None & raw_save is not None:
                 print("Saving succeed")

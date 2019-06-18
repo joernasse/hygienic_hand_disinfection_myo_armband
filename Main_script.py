@@ -35,6 +35,7 @@ def main():
     Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack(pady=8)
     Button(master=window, text="Predict live Gesture", command=predict).pack(pady=8)
     Button(master=window, text="Process data", command=placeholder).pack(pady=8)
+    Button(master=window, text="Load feature file", command=load_csv).pack(pady=8)
     Button(master=window, text="Close", command=window.destroy).pack(pady=8)
 
     window.mainloop()

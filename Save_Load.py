@@ -57,16 +57,15 @@ def save_raw_csv(data, label, file_emg, file_imu):
     return
 
 
-def save_csv(data, labels, file_name):
+def save_feature_csv(data, file_name):
     f = open(file_name, 'w', newline='')
     with f:
-        writer = csv.writer(f, delimiter=',', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        for n in range(len(data)):
-            value_set = []
-            for i in data[n]:
-                value_set.append(i)
-            value_set.append(labels[n])
-            writer.writerow(value_set)
+        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for entry in data:
+            for t in entry:
+                tmp = t['fs']
+                tmp.extend([t['label']])
+                writer.writerow(tmp)
     return f
 
 
@@ -104,7 +103,7 @@ def load_csv():
     with open(file.name) as csv_file:
         train_x = []
         train_y = []
-        csv_reader = csv.reader(csv_file, delimiter=',')
+        csv_reader = csv.reader(csv_file, delimiter=';')
         for row in csv_reader:
             tmp = []
             for i in range(len(row) - 1):
