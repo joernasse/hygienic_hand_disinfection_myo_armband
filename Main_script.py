@@ -4,9 +4,11 @@ from tkinter import Tk, Button
 
 from Classification import train_classifier, predict
 from Myo_communication import collect_training_data
+from Process_data import placeholder
+from Save_Load import load_raw_csv, load_csv
 
 window = Tk()
-window.geometry("300x150")
+window.geometry("300x250")
 window.title("EMG Recognition")
 
 # ordentliche prediction Ergebnisse
@@ -29,10 +31,12 @@ hand_desinfection_description = ['Step 1 - palm and wrist',
 
 def main():
     Button(master=window, text="Collect data",
-           command=lambda: collect_training_data(hand_disinfection_light)).pack()
-    Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack()
-    Button(master=window, text="Predict live Gesture", command=predict).pack()
-    Button(master=window, text="Close", command=window.destroy).pack()
+           command=lambda: collect_training_data(hand_disinfection_light)).pack(pady=8)
+    Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack(pady=8)
+    Button(master=window, text="Predict live Gesture", command=predict).pack(pady=8)
+    Button(master=window, text="Process data", command=placeholder).pack(pady=8)
+    Button(master=window, text="Close", command=window.destroy).pack(pady=8)
+
     window.mainloop()
 
 

@@ -104,6 +104,7 @@ def collect_raw_data(record_duration):
     OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
 
     # define blocks for EMG
+    t_tmg = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
     blocks = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
     first = 0
     for i in range(blocks):
@@ -172,11 +173,12 @@ def collect_training_data(label_display, probant="defaultUser", session=10):
                 label_raw.extend(np.full((1, entries), i)[0])
 
                 print("Stop")
-                file_emg = user_path + "/" + "emg" + probant + str(j) + label_display[i] + ".csv"
-                file_imu = user_path + "/" + "imu" + probant + str(j) + label_display[i] + ".csv"
+                if not os.path.isdir(user_path + "/" + label_display[i]):
+                    os.mkdir(user_path + "/" + label_display[i])
 
                 # Save raw data
-                save_raw_csv(tmp_data_raw, i, file_emg, file_imu)
+                save_raw_csv(tmp_data_raw, i, user_path + "/" + label_display[i] + "/emg.csv",
+                             user_path + "/" + label_display[i] + "/imu.csv")
 
                 print("Collected window data: ", len(raw_data_window))
                 print("Collected raw data: ", len(raw_data_original))

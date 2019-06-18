@@ -75,8 +75,8 @@ def load_classifier():
 
 
 def load_raw_csv(emg_path, imu_path):
-    imu_file = open(imu_path)
-    emg_file = open(emg_path)
+    imu_file, emg_file = open(imu_path), open(emg_path)
+    load_data, identifier = [], []
 
     for file in [emg_file, imu_file]:
         if file.name.__contains__('emg'):
@@ -92,7 +92,7 @@ def load_raw_csv(emg_path, imu_path):
                 continue
             length = len(identifier)
             for i in range(length):
-                load_data[identifier[i]].append(column[i])
+                load_data[identifier[i]].append(float(column[i]))
     return emg_load_data, imu_load_data
 
 

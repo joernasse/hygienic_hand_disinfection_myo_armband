@@ -5,6 +5,8 @@ from tkinter import filedialog
 import math
 import numpy as np
 
+from Save_Load import load_raw_csv
+
 MAX = 127
 threshold = 0.30 * MAX
 WINDOW_EMG = 20
@@ -14,63 +16,65 @@ SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems w
 WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
 OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
 
+identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
+identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
+
 
 def placeholder():
+    # ("Select user directory")
     path = filedialog.askdirectory()
-    for file in os.listdir(path):
-        first = True
-        with open(path + "/" + file) as csv_file:
-            csv_reader = csv.reader(csv_file, delimiter=',')
-            if file.__contains__('emg'):
-                headline = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
-                load_data = []
-            elif file.__contains__('imu'):
-                headline = "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-                load_data = []
-            for row in csv_reader:
-                if first:
-                    first = False
-                    continue
-                for i in range(len(row)):
-                    load_data[headline[i]].append(row[i])
-        window_data()
+    directories = os.listdir(path)
+    for dir_name in directories:
+        full_path = path + "/" + dir_name
+        files = os.listdir(full_path)
+        emg_data, imu_data = load_raw_csv(full_path + "/" + files[0], full_path + "/" + files[1])
+        window_data(emg_data, imu_data)
+
+        # first = True
+        # with open(path + "/" + file) as csv_file:
+        #     csv_reader = csv.reader(csv_file, delimiter=',')
+        #     if file.__contains__('emg'):
+        #         headline = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
+        #         load_data = []
+        #     elif file.__contains__('imu'):
+        #         headline = "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
+        #         load_data = []
+        #     for row in csv_reader:
+        #         if first:
+        #             first = False
+        #             continue
+        #         for i in range(len(row)):
+        #             load_data[headline[i]].append(row[i])
+        # window_data()
 
 
-def window_data(raw_emg=[], raw_imu=[]):
-    if not raw_emg or not raw_imu:
-        raw_emg, raw_imu = load_session_raw_csv()
-    raw_emg_window = []
-    raw_imu_window = []
-
-    emg_length = len(raw_emg['label'])
-    imu_length = len(raw_imu['label'])
+def window_data(emg_data, imu_data, window=20):
+    emg_window, imu_window = [], []
+    emg_length, imu_length = len(emg_data['label']), len(imu_data['label'])
     WINDOW_IMU = WINDOW_EMG / (emg_length / imu_length)
     OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
 
-    # define blocks for EMG
-    identifier = "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
+    # define block size for emg and imu
     blocks = int(emg_length / abs(WINDOW_EMG - OFFSET_EMG))
-    first = 0
-    for i in range(blocks):
-        last = first + WINDOW_EMG
-        tmp = []
-        for i in identifier:
-            tmp.append([int(j) for j in raw_emg[i][first:last]])
-        raw_emg_window.append(tmp)
-        first += int(WINDOW_EMG - OFFSET_EMG)
+    label = emg_data['label'][0]
 
-    # define blocks for IMU
-    identifier = "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-    blocks = int(emg_length / abs(WINDOW_IMU - OFFSET_IMU))
-    first = 0
+    first_emg, first_imu = 0, 0
     for i in range(blocks):
-        last = int(first + WINDOW_IMU)
-        tmp = []
-        for i in identifier:
-            tmp.append([float(j) for j in raw_imu[i][first:last]])
-        raw_imu_window.append(tmp)
-        first += int(WINDOW_IMU - OFFSET_IMU)
-    return raw_emg_window, raw_imu_window
+        last_emg = first_emg + WINDOW_EMG
+        last_imu = int(first_imu + WINDOW_IMU)
+        emg, imu = [], []
+        for n in identifier_emg:
+            emg.append([j for j in emg_data[n][first_emg:last_emg]])
+        emg.append(label)
+        emg_window.append(emg)
+        first_emg += int(WINDOW_EMG - OFFSET_EMG)
+
+        for k in identifier_imu:
+            imu.append([j for j in imu_data[k][first_imu:last_imu]])
+        imu.append(label)
+        imu_window.append(imu)
+        first_imu += int(WINDOW_IMU - OFFSET_IMU)
+    return emg_window, imu_window
 
 
 def feat_trans_def(saving_list, features, options=0):
