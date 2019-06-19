@@ -3,9 +3,9 @@ from __future__ import print_function
 from tkinter import Tk, Button
 
 from Classification import train_classifier, predict
-from Myo_communication import collect_training_data
+from Myo_communication import collect_training_data, check_sample_rate
 from Process_data import placeholder
-from Save_Load import load_raw_csv, load_csv
+from Save_Load import load_csv
 
 window = Tk()
 window.geometry("300x250")
@@ -33,6 +33,7 @@ def main():
     Button(master=window, text="Collect data",
            command=lambda: collect_training_data(hand_disinfection_light, delete_old=True)).pack(pady=8)
     Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack(pady=8)
+    Button(master=window, text="Check sample rate", command=check_sample_rate).pack(pady=8)
     Button(master=window, text="Predict live Gesture", command=predict).pack(pady=8)
     Button(master=window, text="Process data", command=placeholder).pack(pady=8)
     Button(master=window, text="Load feature file", command=load_csv).pack(pady=8)

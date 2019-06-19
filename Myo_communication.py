@@ -54,16 +54,16 @@ class GestureListener(libmyo.DeviceListener):
         event.device.stream_emg(StreamEmg.enabled)
 
     def on_emg(self, event):
-        with self.lock:
-            if status:
-                EMG.append([event.timestamp, event.emg])
+        # with self.lock:
+        if status:
+            EMG.append([event.timestamp, event.emg])
 
     def on_orientation(self, event):
-        with self.lock:
-            if status:
-                ORI.append([event.timestamp, event.orientation])
-                ACC.append([event.timestamp, event.acceleration])
-                GYR.append([event.timestamp, event.gyroscope])
+        # with self.lock:
+        if status:
+            ORI.append([event.timestamp, event.orientation])
+            ACC.append([event.timestamp, event.acceleration])
+            GYR.append([event.timestamp, event.gyroscope])
 
     def get_ori_data(self):
         with self.lock:
@@ -75,7 +75,22 @@ hub = Hub()
 listener = GestureListener()
 
 
-def collect_raw_data(record_duration):
+def check_sample_rate(runtime_s=100):
+    global EMG, ORI
+    emg_samples, imu_samples = 0, 0
+    with hub.run_in_background(listener.on_event):
+        for i in range(runtime_s):
+            collect_raw_data()
+            emg_samples += len(EMG)
+            imu_samples += len(ORI)
+            print(i + 1)
+    print("Total EMG samples ", emg_samples, " | ", emg_samples, "/", runtime_s * 200)
+    print("Total IMU samples ", imu_samples, " | ", imu_samples, "/", runtime_s * 50)
+    print("Mean EMG", emg_samples / runtime_s)
+    print("Mean IMU", imu_samples / runtime_s)
+
+
+def collect_raw_data(record_duration=1):
     global EMG
     global ORI
     global ACC
@@ -84,10 +99,6 @@ def collect_raw_data(record_duration):
     global WINDOW_IMU
     global OFFSET_IMU
     EMG, ORI, ACC, GYR = [], [], [], []
-    raw_data = {'EMG': EMG,
-                'ORI': ORI,
-                'GYR': GYR,
-                'ACC': ACC}
     dif = 0
     start = time.time()
     while dif <= record_duration:
@@ -95,24 +106,24 @@ def collect_raw_data(record_duration):
         end = time.time()
         dif = end - start
     status = 0
-    return raw_data
+    return
 
 
 def collect_training_data(label_display, probant="defaultUser", session=10, delete_old=False):
     global status
-
     user_path = COLLECTION_DIR + "/" + probant
     raw_path = user_path + "/raw"
 
+    if not os.path.isdir(COLLECTION_DIR):
+        os.mkdir(COLLECTION_DIR)
+    if not os.path.isdir(user_path):
+        os.mkdir(user_path)
     if os.path.isdir(raw_path):
         if delete_old:
             shutil.rmtree(raw_path)
+            os.mkdir(raw_path)
+    else:
         os.mkdir(raw_path)
-    if not os.path.isdir(user_path):
-        os.mkdir(user_path)
-    if not os.path.isdir(raw_path):
-        os.mkdir(raw_path)
-
     time.sleep(1)
 
     with hub.run_in_background(listener.on_event):
