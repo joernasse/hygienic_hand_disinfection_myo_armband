@@ -1,5 +1,6 @@
 import collections
 import os
+import shutil
 import threading
 import time
 
@@ -9,7 +10,6 @@ from myo import init, Hub, StreamEmg
 import myo as libmyo
 
 # const
-from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
 from Save_Load import save_feature_csv, save_raw_csv
 
@@ -88,10 +88,6 @@ def collect_raw_data(record_duration):
                 'ORI': ORI,
                 'GYR': GYR,
                 'ACC': ACC}
-    raw_data_window = {'EMG': [],
-                       'ORI': [],
-                       'GYR': [],
-                       'ACC': []}
     dif = 0
     start = time.time()
     while dif <= record_duration:
@@ -99,89 +95,47 @@ def collect_raw_data(record_duration):
         end = time.time()
         dif = end - start
     status = 0
-
-    # WINDOW_IMU = WINDOW_EMG / (len(EMG) / len(ORI))
-    # OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
-    #
-    #
-    # blocks = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
-    # first = 0
-    # for i in range(blocks):
-    #     last = first + WINDOW_EMG
-    #     raw_data_window['EMG'].append(np.asarray(EMG[first:last]))
-    #     first += int(WINDOW_EMG - OFFSET_EMG)
-    #
-    # # define blocks for IMU
-    # blocks = int(len(ORI) / abs(WINDOW_IMU - OFFSET_IMU))
-    # first = 0
-    # for i in range(blocks):
-    #     last = int(first + WINDOW_IMU)
-    #     raw_data_window['ORI'].append(np.asarray(ORI[first:last]))
-    #     raw_data_window['GYR'].append(GYR[first:last])
-    #     raw_data_window['ACC'].append(ACC[first:last])
-    #     first += int(WINDOW_IMU - OFFSET_IMU)
-
     return raw_data
 
 
-def collect_training_data(label_display, probant="defaultUser", session=10):
+def collect_training_data(label_display, probant="defaultUser", session=10, delete_old=False):
     global status
+
     user_path = COLLECTION_DIR + "/" + probant
-    if not os.path.isdir(COLLECTION_DIR):
-        os.mkdir(COLLECTION_DIR)
+    raw_path = user_path + "/raw"
+
+    if os.path.isdir(raw_path):
+        if delete_old:
+            shutil.rmtree(raw_path)
+        os.mkdir(raw_path)
     if not os.path.isdir(user_path):
         os.mkdir(user_path)
+    if not os.path.isdir(raw_path):
+        os.mkdir(raw_path)
 
     time.sleep(1)
-    status = 0
-    label_window, label_raw = [], []
-    raw_data_window = {'EMG': [],
-                       'ORI': [],
-                       'GYR': [],
-                       'ACC': []}
-    raw_data_original = {'EMG': [],
-                         'ORI': [],
-                         'GYR': [],
-                         'ACC': []}
 
     with hub.run_in_background(listener.on_event):
         for j in range(session):
             for i in range(len(label_display)):
                 print("\nGesture -- ", label_display[i], " : Ready?")
-                input("Countdown start after press...")
+                input("Countdown starts after pressing enter...")
                 countdown(2)
                 cls()
                 print("Start")
                 time.sleep(.5)
-                tmp_data_window, tmp_data_raw = collect_raw_data(TRAINING_TIME)
 
-                # RAW data
-                entries = len(tmp_data_raw['EMG'])
-                raw_data_original['EMG'].extend(tmp_data_raw['EMG'])
-                raw_data_original['ACC'].extend(tmp_data_raw['ACC'])
-                raw_data_original['GYR'].extend(tmp_data_raw['GYR'])
-                raw_data_original['ORI'].extend(tmp_data_raw['ORI'])
-                label_raw.extend(np.full((1, entries), i)[0])
+                collect_raw_data(TRAINING_TIME)
 
                 print("Stop")
-                if not os.path.isdir(user_path + "/" + label_display[i]):
-                    os.mkdir(user_path + "/" + label_display[i])
+                if not os.path.isdir(raw_path + "/" + label_display[i]):
+                    os.mkdir(raw_path + "/" + label_display[i])
 
-                # Save raw data
-                save_raw_csv(tmp_data_raw, i, user_path + "/" + label_display[i] + "/emg.csv",
-                             user_path + "/" + label_display[i] + "/imu.csv")
+                save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                             raw_path + "/" + label_display[i] + "/emg.csv",
+                             raw_path + "/" + label_display[i] + "/imu.csv")
 
-                print("Collected window data: ", len(raw_data_window))
-                print("Collected raw data: ", len(raw_data_original))
-
-            print("Saving collected data...")
-            transformed_data_collection = transform_data_collection(raw_data_window)
-
-            # Save processed window Data
-            window_save = save_feature_csv(transformed_data_collection, label_window,
-                                   "hand_disinfection_collection_windowed" + TIMESTAMP + ".csv")
-            # Save processed RAW data
-            raw_save = save_feature_csv(raw_data_original, label_window,
-                                "hand_disinfection_collection_raw" + TIMESTAMP + ".csv")
-            if window_save is not None & raw_save is not None:
-                print("Saving succeed")
+                print("Collected emg data: ", len(EMG))
+                print("Collected imu data: ", len(ORI))
+            print("Session ", j + 1, "completed")
+        print("Data collection completed")

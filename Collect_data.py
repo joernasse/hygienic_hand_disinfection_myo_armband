@@ -230,7 +230,7 @@ def collect_training_data():
     save_feature_csv(transformed_data_collection, label_window, "hand_disinfection_collection" + timestamp + ".csv")
 
 
-def collect_raw_data(record_duration):
+def collect_raw_data_old(record_duration):
     # global EMG
     # global ORI
     # global ACC

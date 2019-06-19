@@ -31,7 +31,7 @@ hand_desinfection_description = ['Step 1 - palm and wrist',
 
 def main():
     Button(master=window, text="Collect data",
-           command=lambda: collect_training_data(hand_disinfection_light)).pack(pady=8)
+           command=lambda: collect_training_data(hand_disinfection_light, delete_old=True)).pack(pady=8)
     Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack(pady=8)
     Button(master=window, text="Predict live Gesture", command=predict).pack(pady=8)
     Button(master=window, text="Process data", command=placeholder).pack(pady=8)

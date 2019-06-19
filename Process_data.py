@@ -13,13 +13,14 @@ identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 
 
+# Select user directory --  load all emg and imu data, window it, feature extraction
 def placeholder(feature_extration_mode="default"):
-    # Select user directory --  load all emg and imu data, window it, feature extraction
-    path = filedialog.askdirectory()
-    directories = os.listdir(path)
+    load_path = filedialog.askdirectory(title="Select raw from user directory")
+    save_path = filedialog.askdirectory(title="Select user directory")
+    directories = os.listdir(load_path)
     emg_feature, imu_feature = [], []
     for dir_name in directories:
-        full_path = path + "/" + dir_name
+        full_path = load_path + "/" + dir_name
         files = os.listdir(full_path)
         emg_data, imu_data = load_raw_csv(full_path + "/" + files[0], full_path + "/" + files[1])
         current_label = int(emg_data['label'][0])
@@ -28,11 +29,13 @@ def placeholder(feature_extration_mode="default"):
         emg_feature.append(feature_extraction_default(emg_window, 1, 1, current_label))
         imu_feature.append(feature_extraction_default(imu_window, 1, 1, current_label))
 
-    path = path + "/feature_" + feature_extration_mode
-    if not os.path.isdir(path):
-        os.mkdir(path)
-    save_feature_csv(emg_feature, path + "/emg.csv")
-
+    save_path = save_path + "/feature_" + feature_extration_mode
+    if not os.path.isdir(save_path):
+        os.mkdir(save_path)
+    save_feature_csv(emg_feature, save_path + "/emg.csv")
+    save_feature_csv(imu_feature, save_path + "/imu.csv")
+    print("Feature extraction successfully completed")
+    return
 
 def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5):
     emg_window, imu_window = [], []

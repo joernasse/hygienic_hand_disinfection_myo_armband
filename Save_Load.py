@@ -14,21 +14,16 @@ imu_headline = ["timestamp",
                 "label"]
 imu_identifier = ["x", "y", "z"]
 
-imu_load_data = {"timestamp": [],
-                 "x_ori": [], "y_ori": [], "z_ori": [],
-                 "x_gyr": [], "y_gyr": [], "z_gyr": [],
-                 "x_acc": [], "y_acc": [], "z_acc": [],
-                 "label": []}
-emg_load_data = {"timestamp": [],
-                 "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
-                 "label": []}
+
 
 
 def save_raw_csv(data, label, file_emg, file_imu):
-    f = open(file_emg, 'w', newline='')
+    file_exist = os.path.isfile(file_emg)
+    f = open(file_emg, 'a', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(emg_headline)
+        if not file_exist:
+            writer.writerow(emg_headline)
         for emg in data['EMG']:
             tmp = [emg[0]]
             for i in emg[1]:
@@ -37,10 +32,12 @@ def save_raw_csv(data, label, file_emg, file_imu):
             writer.writerow(tmp)
     f.close()
 
-    g = open(file_imu, 'w', newline='')
+    file_exist = os.path.isfile(file_imu)
+    g = open(file_imu, 'a', newline='')
     with g:
         writer = csv.writer(g, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(imu_headline)
+        if not file_exist:
+            writer.writerow(imu_headline)
         length = len(data['ORI'])
         ori = data['ORI']
         acc = data['ACC']
@@ -76,6 +73,14 @@ def load_classifier():
 def load_raw_csv(emg_path, imu_path):
     imu_file, emg_file = open(imu_path), open(emg_path)
     load_data, identifier = [], []
+    imu_load_data = {"timestamp": [],
+                     "x_ori": [], "y_ori": [], "z_ori": [],
+                     "x_gyr": [], "y_gyr": [], "z_gyr": [],
+                     "x_acc": [], "y_acc": [], "z_acc": [],
+                     "label": []}
+    emg_load_data = {"timestamp": [],
+                     "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
+                     "label": []}
 
     for file in [emg_file, imu_file]:
         if file.name.__contains__('emg'):
@@ -92,6 +97,10 @@ def load_raw_csv(emg_path, imu_path):
             length = len(identifier)
             for i in range(length):
                 load_data[identifier[i]].append(float(column[i]))
+        print("x")
+    imu_file.close()
+    emg_file.close()
+
     return emg_load_data, imu_load_data
 
 
