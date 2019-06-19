@@ -5,6 +5,8 @@ import threading
 import time
 
 import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
 from myo import init, Hub, StreamEmg
 import myo as libmyo
@@ -76,6 +78,7 @@ listener = GestureListener()
 
 
 def check_sample_rate(runtime_s=100):
+    emg_diagram, imu_diagram = [], []
     global EMG, ORI
     emg_samples, imu_samples = 0, 0
     with hub.run_in_background(listener.on_event):
@@ -83,11 +86,23 @@ def check_sample_rate(runtime_s=100):
             collect_raw_data()
             emg_samples += len(EMG)
             imu_samples += len(ORI)
+            emg_diagram.append(len(EMG))
+            imu_diagram.append(len(ORI))
             print(i + 1)
     print("Total EMG samples ", emg_samples, " | ", emg_samples, "/", runtime_s * 200)
     print("Total IMU samples ", imu_samples, " | ", imu_samples, "/", runtime_s * 50)
-    print("Mean EMG", emg_samples / runtime_s)
-    print("Mean IMU", imu_samples / runtime_s)
+    print("Mean EMG", emg_samples / runtime_s, "|", emg_samples / runtime_s, "/200")
+    print("Mean IMU", imu_samples / runtime_s, "|", imu_samples / runtime_s, "/50")
+
+    df_emg = pd.DataFrame({'x': emg_diagram,
+                           'y': runtime_s})
+    df_imu = df = pd.DataFrame({'x': imu_diagram,
+                                'y': runtime_s})
+
+    y_axis = [i for i in range(runtime_s)]
+    plt.plot(y_axis, emg_diagram, 'ro')
+    plt.show()
+    input("x")
 
 
 def collect_raw_data(record_duration=1):
