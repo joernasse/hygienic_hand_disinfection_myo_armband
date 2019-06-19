@@ -3,7 +3,7 @@ from __future__ import print_function
 from tkinter import Tk, Button
 
 from Classification import train_classifier, predict
-from Myo_communication import collect_training_data, check_sample_rate
+from Myo_communication import collect_training_data, check_sample_rate, status
 from Process_data import placeholder
 from Save_Load import load_csv
 
@@ -30,10 +30,11 @@ hand_desinfection_description = ['Step 1 - palm and wrist',
 
 
 def main():
+    # status = 1
     Button(master=window, text="Collect data",
            command=lambda: collect_training_data(hand_disinfection_light, delete_old=True)).pack(pady=8)
     Button(master=window, text="Train classifier", command=lambda: train_classifier()).pack(pady=8)
-    Button(master=window, text="Check sample rate", command=lambda: check_sample_rate(200)).pack(pady=8)
+    Button(master=window, text="Check sample rate", command=lambda: check_sample_rate(20)).pack(pady=8)
     Button(master=window, text="Predict live Gesture", command=predict).pack(pady=8)
     Button(master=window, text="Process data", command=placeholder).pack(pady=8)
     Button(master=window, text="Load feature file", command=load_csv).pack(pady=8)

@@ -1,6 +1,7 @@
 import collections
 import os
 import shutil
+import statistics
 import threading
 import time
 
@@ -9,6 +10,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 from myo import init, Hub, StreamEmg
+from collections import deque
+from threading import Lock, Thread
 import myo as libmyo
 
 # const
@@ -80,19 +83,25 @@ listener = GestureListener()
 def check_sample_rate(runtime_s=100):
     emg_diagram, imu_diagram = [], []
     global EMG, ORI
-    emg_samples, imu_samples = 0, 0
+    emg_samples, imu_samples, over_emg = 0, 0
     with hub.run_in_background(listener.on_event):
         for i in range(runtime_s):
             collect_raw_data()
             emg_samples += len(EMG)
+            if len(EMG) > 200:
+                over_emg += 1
             imu_samples += len(ORI)
             emg_diagram.append(len(EMG))
             imu_diagram.append(len(ORI))
             print(i + 1)
+    print("Runtime", runtime_s)
     print("Total EMG samples ", emg_samples, " | ", emg_samples, "/", runtime_s * 200)
     print("Total IMU samples ", imu_samples, " | ", imu_samples, "/", runtime_s * 50)
     print("Mean EMG", emg_samples / runtime_s, "|", emg_samples / runtime_s, "/200")
     print("Mean IMU", imu_samples / runtime_s, "|", imu_samples / runtime_s, "/50")
+    print("Std deviation EMG", statistics.stdev(emg_diagram))
+    print("Std deviation IMU", statistics.stdev(imu_diagram))
+    print("Over max EMG:", over_emg)
 
     df_emg = pd.DataFrame({'x': emg_diagram,
                            'y': runtime_s})
@@ -102,7 +111,6 @@ def check_sample_rate(runtime_s=100):
     y_axis = [i for i in range(runtime_s)]
     plt.plot(y_axis, emg_diagram, 'ro')
     plt.show()
-    input("x")
 
 
 def collect_raw_data(record_duration=1):
@@ -114,7 +122,7 @@ def collect_raw_data(record_duration=1):
     global WINDOW_IMU
     global OFFSET_IMU
     EMG, ORI, ACC, GYR = [], [], [], []
-    dif = 0
+    dif, status = 0, 0
     start = time.time()
     while dif <= record_duration:
         status = 1
