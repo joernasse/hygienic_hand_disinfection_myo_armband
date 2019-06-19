@@ -97,7 +97,6 @@ def load_raw_csv(emg_path, imu_path):
             length = len(identifier)
             for i in range(length):
                 load_data[identifier[i]].append(float(column[i]))
-        print("x")
     imu_file.close()
     emg_file.close()
 
