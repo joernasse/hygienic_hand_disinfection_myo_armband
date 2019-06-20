@@ -1,8 +1,9 @@
 import os
 from tkinter import filedialog
+from sampen import sampen2
 
-import math
 import numpy as np
+import math
 
 from Save_Load import load_raw_csv, save_feature_csv
 
@@ -14,11 +15,12 @@ identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gy
 
 
 # Select user directory --  load all emg and imu data, window it, feature extraction
-def placeholder(feature_extration_mode="default"):
+def process_raw_data(feature_extraction_mode="default"):
+    emg_feature, imu_feature = [], []
     load_path = filedialog.askdirectory(title="Select raw from user directory")
     save_path = filedialog.askdirectory(title="Select user directory")
     directories = os.listdir(load_path)
-    emg_feature, imu_feature = [], []
+
     for dir_name in directories:
         full_path = load_path + "/" + dir_name
         files = os.listdir(full_path)
@@ -29,13 +31,14 @@ def placeholder(feature_extration_mode="default"):
         emg_feature.append(feature_extraction_default(emg_window, 1, 1, current_label))
         imu_feature.append(feature_extraction_default(imu_window, 1, 1, current_label))
 
-    save_path = save_path + "/feature_" + feature_extration_mode
+    save_path = save_path + "/feature_" + feature_extraction_mode
     if not os.path.isdir(save_path):
         os.mkdir(save_path)
     save_feature_csv(emg_feature, save_path + "/emg.csv")
     save_feature_csv(imu_feature, save_path + "/imu.csv")
     print("Feature extraction successfully completed")
     return
+
 
 def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5):
     emg_window, imu_window = [], []
@@ -84,6 +87,25 @@ def feature_extraction_default(window_list, skip_first=0, skip_last=0, label=-1)
                          "label": label})
 
     return features
+
+
+# Paper [5] Feature choice
+def feature_extraction_phinyomark(window_list, skip_first=0, skip_last=0, label=-1):
+    features = []
+    for window in window_list:
+        data_area = len(window) - 1 - skip_last
+        feature = []
+        for i in range(skip_first, data_area):
+            feature.extend([sampen2(window[i])[i],
+                            cc(window[i]),
+                            rms(window[i]),
+                            wl(window[i])])
+        features.append({"fs": feature,
+                         "label": label})
+
+        # result = sampen2(window[1])  # SampEn test # ch0, result index 0 Epoch
+        # # 1 is SampEn
+        # # 2 is Std deviation
 
 
 def feat_trans_def(saving_list, features, options=0):
@@ -192,11 +214,16 @@ def tm3(array):
     return np.power((1 / float(n)) * sum, 1 / float(3))
 
 
-def wl(array):  # wavlet
+def wl(array):  # Waveform length
     sum = 0
     for a in range(0, len(array) - 1):
-        sum += array[a + 1] - array[a]
+        sum += abs(array[a + 1] - array[a])
     return sum
+
+
+def cc(array):  # cepstral coeffcients
+    print("cc")
+    # do some stuff
 
 
 def aac(array):
