@@ -1,8 +1,10 @@
 import csv
 import os
+import shutil
 from tkinter import filedialog
 
 import numpy as np
+import logging as log
 
 emg_headline = ["timestamp",
                 "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7",
@@ -13,8 +15,7 @@ imu_headline = ["timestamp",
                 "x_acc", "y_acc", "z_acc",
                 "label"]
 imu_identifier = ["x", "y", "z"]
-
-
+COLLECTION_DIR = "Collections"
 
 
 def save_raw_csv(data, label, file_emg, file_imu):
@@ -120,3 +121,26 @@ def load_csv():
             train_y.append(int(row[len(row) - 1]))
         print("Done -- loading data")
         return np.asarray(train_x), np.asarray(train_y), data_name[-1]
+
+
+def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
+    user_path = COLLECTION_DIR + "/" + proband
+    if not os.path.isdir(COLLECTION_DIR):  # Collection dir
+        os.mkdir(COLLECTION_DIR)
+        log.info("Create directory" + COLLECTION_DIR)
+    if not os.path.isdir(user_path):  # User dir
+        os.mkdir(user_path)
+        log.info("Create directory" + user_path)
+    if os.path.isdir(raw_sep) and os.path.isdir(raw_con):  # Raw dir
+        if delete_old:
+            shutil.rmtree(raw_sep)
+            shutil.rmtree(raw_con)
+            log.info("Remove directory" + raw_path)
+            os.mkdir(raw_sep)
+            os.mkdir(raw_path + "_continues")
+            log.info("Create directory" + raw_path)
+    else:
+        # os.mkdir(raw_path)
+        os.mkdir(raw_sep)
+        os.mkdir(raw_con)
+        log.info("Create directory" + raw_path)

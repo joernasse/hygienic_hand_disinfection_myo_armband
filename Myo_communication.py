@@ -1,9 +1,10 @@
 import collections
 import os
-import shutil
 import statistics
 import threading
 import time
+from tkinter import PhotoImage, Label
+
 import pandas as pd
 import matplotlib.pyplot as plt
 import logging as log
@@ -11,11 +12,11 @@ import logging as log
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
+# from GUI import data_collect_window
 from Helper_functions import countdown, cls
-from Save_Load import save_raw_csv
+from Save_Load import save_raw_csv, create_directories
 
 # const
-TRAINING_TIME: int = 2
 PREDICT_TIME: float = 2.5
 DATA_POINT_WINDOW_SIZE = 20
 EMG_INTERVAL = 0.01
@@ -25,18 +26,18 @@ COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
 
-WINDOW_EMG = 20
-DEGREE_OF_OVERLAP = 0.5
-OFFSET_EMG = WINDOW_EMG * DEGREE_OF_OVERLAP
-SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems with Bluetooth connection 3.815821888279855
-WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
-OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+# WINDOW_EMG = 20
+# DEGREE_OF_OVERLAP = 0.5
+# OFFSET_EMG = WINDOW_EMG * DEGREE_OF_OVERLAP
+# SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems with Bluetooth connection 3.815821888279855
+# WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
+# OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
 
 TIME_NOW = time.localtime()
 TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
     TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
 
-status = 0
+# status = 0
 
 DEVICE = []
 EMG = []  # emg
@@ -47,7 +48,7 @@ ACC = []  # accelerometer
 
 class GestureListener(libmyo.DeviceListener):
     def __init__(self, queue_size=1):
-        super(GestureListener, self).__init__()
+        # super(GestureListener, self).__init__()
         self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
@@ -71,6 +72,10 @@ class GestureListener(libmyo.DeviceListener):
         with self.lock:
             return list(self.ori_data_queue)
 
+    # def devices(self):
+    #     with self._cond:
+    #         return list(self._devices.values())
+
 
 init()
 hub = Hub()
@@ -82,9 +87,6 @@ def check_sample_rate(runtime_s=100):
     global EMG, ORI
     emg_samples, imu_samples, over_emg = 0, 0, 0
     with hub.run_in_background(listener.on_event):
-        # warm start
-        collect_raw_data(5)
-
         for i in range(runtime_s):
             collect_raw_data()
             emg_samples += len(EMG)
@@ -118,11 +120,6 @@ def check_sample_rate(runtime_s=100):
     print("Std deviation IMU", statistics.stdev(imu_diagram))
     print("Over max EMG:", over_emg)
 
-    df_emg = pd.DataFrame({'x': emg_diagram,
-                           'y': runtime_s})
-    df_imu = df = pd.DataFrame({'x': imu_diagram,
-                                'y': runtime_s})
-
     y_axis = [i for i in range(runtime_s)]
 
     # plt.subplot(121)
@@ -142,8 +139,8 @@ def collect_raw_data(record_duration=1):
     global ACC
     global GYR
     global status
-    global WINDOW_IMU
-    global OFFSET_IMU
+    # global WINDOW_IMU
+    # global OFFSET_IMU
     EMG, ORI, ACC, GYR = [], [], [], []
     dif, status = 0, 0
     start = time.time()
@@ -155,92 +152,93 @@ def collect_raw_data(record_duration=1):
     return
 
 
-def collect_separate_training_data(label_display, probant="defaultUser", session=10, delete_old=False,
-                                   fixed_pause=False):
+def collect_separate_training_data(display_label, save_label, raw_path, session=10, training_time=5):
+    warm_start()
+    cls()
     global status
-    user_path = COLLECTION_DIR + "/" + probant
-    raw_path = user_path + "/raw"
-
-    create_directories(probant, delete_old, raw_path)
-
-    # if not os.path.isdir(COLLECTION_DIR):
-    #     os.mkdir(COLLECTION_DIR)
-    # if not os.path.isdir(user_path):
-    #     os.mkdir(user_path)
-    # if os.path.isdir(raw_path):
-    #     if delete_old:
-    #         shutil.rmtree(raw_path)
-    #         os.mkdir(raw_path)
-    # else:
-    #     os.mkdir(raw_path)
 
     time.sleep(1)
 
-    n = len(label_display)
-    input("Start data collection, press enter...")
-    countdown(3)
+    print("Gesture set\n")
+    print(*display_label, sep="\n")
+    print("\nHold every gesture 5 seconds")
+    n = len(display_label)
+
     with hub.run_in_background(listener.on_event):
         for j in range(session):
+            session_display = "To start session " + str(j + 1) + ", press enter..."
+            input(session_display)
+            countdown(3)
             for i in range(n):
-                print("\nGesture -- ", label_display[i], " : be ready!")
-                cls()
+                print("Gesture -- ", save_label[i], " : be ready!")
+                time.sleep(1)
                 print("Do Gesture!")
+
+                collect_raw_data(training_time)
                 time.sleep(.5)
 
-                collect_raw_data(TRAINING_TIME)
-
-                print("Stop!")
-                if not os.path.isdir(raw_path + "/" + label_display[i]):
-                    os.mkdir(raw_path + "/" + label_display[i])
+                if not os.path.isdir(raw_path + "/" + save_label[i]):
+                    os.mkdir(raw_path + "/" + save_label[i])
 
                 save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                             raw_path + "/" + label_display[i] + "/emg.csv",
-                             raw_path + "/" + label_display[i] + "/imu.csv")
+                             raw_path + "/" + save_label[i] + "/emg.csv",
+                             raw_path + "/" + save_label[i] + "/imu.csv")
 
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
+                cls()
                 print("Pause")
+                time.sleep(.5)
                 countdown(5)
+                cls()
 
             log.info("Session " + str(j + 1) + "completed")
             print("Session ", j + 1, "completed")
 
         print("Data collection completed")
         log.info("Data collection completed")
+        return
 
 
-def collect_continuous_trainings_data(label_display, proband="defaultUser", session=5, delete_old=False):
+def collect_continuous_trainings_data(display_label, save_label, raw_path, session=5, training_time=5):
+    warm_start()
     global status
-    user_path = COLLECTION_DIR + "/" + proband
-    raw_path = user_path + "/raw"
 
-    create_directories(proband, delete_old, raw_path)
     time.sleep(1)
+
+    print("Gesture set\n")
+    print(*display_label, sep="\n")
+    print("Full motion sequence.\nSwitching to the next step is displayed visually")
 
     with hub.run_in_background(listener.on_event):
         for j in range(session):
-            for i in range(6):
-                print("Full motion sequence.\nSwitching to the next step is displayed visually")
-                input("Countdown starts after pressing")
-                countdown(2)
+            session_display = "To start session " + str(j + 1) + ", press enter..."
+            input(session_display)
+            countdown(3)
+            for i in range(len(save_label)):
                 print("Start")
-                collect_raw_data(5)
+                collect_raw_data(training_time)
+
+                if not os.path.isdir(raw_path + "/" + save_label[i]):
+                    os.mkdir(raw_path + "/" + save_label[i])
+
+                save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                             raw_path + "/" + save_label[i] + "/emg.csv",
+                             raw_path + "/" + save_label[i] + "/imu.csv")
+
+                log.info("Collected emg data: " + str(len(EMG)))
+                log.info("Collected imu data:" + str(len(ORI)))
+                cls()
+                print("NEXT!")
+
+            log.info("Session " + str(j + 1) + "completed")
+            print("Session ", j + 1, "completed")
+
+        print("Data collection completed")
+        log.info("Data collection completed")
+        return
 
 
-def create_directories(proband, delete_old, raw_path):
-    user_path = COLLECTION_DIR + "/" + proband
-    if not os.path.isdir(COLLECTION_DIR):
-        os.mkdir(COLLECTION_DIR)
-        log.info("Create directory" + COLLECTION_DIR)
-    if not os.path.isdir(user_path):
-        os.mkdir(user_path)
-        log.info("Create directory" + user_path)
-    if os.path.isdir(raw_path):
-        if delete_old:
-            shutil.rmtree(raw_path)
-            log.info("Remove directory" + raw_path)
-            os.mkdir(raw_path)
-            log.info("Create directory" + raw_path)
-    else:
-        os.mkdir(raw_path)
-        log.info("Create directory" + raw_path)
+def warm_start():
+    collect_raw_data(5)
+    return
