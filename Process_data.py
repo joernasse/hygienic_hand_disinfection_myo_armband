@@ -1,17 +1,11 @@
 import os
 from tkinter import filedialog
 from sampen import sampen2
-
 import numpy as np
 import math
 
+from Constant import identifier_emg, identifier_imu, MAX_EMG_VALUE, threshold
 from Save_Load import load_raw_csv, save_feature_csv
-
-MAX = 127
-threshold = 0.30 * MAX
-
-identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
-identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 
 
 # Select user directory --  load all emg and imu data, window it, feature extraction
@@ -126,7 +120,7 @@ def normalization(channel):
     channel_norm = []
     x_max = np.max(channel)
     for xi in channel:
-        channel_norm.append((MAX / x_max) * xi)
+        channel_norm.append((MAX_EMG_VALUE / x_max) * xi)
     return channel_norm
 
 

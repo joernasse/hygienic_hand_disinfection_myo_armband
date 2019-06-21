@@ -3,47 +3,25 @@ import os
 import statistics
 import threading
 import time
-from tkinter import PhotoImage, Label
 
-import pandas as pd
 import matplotlib.pyplot as plt
 import logging as log
 
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
-# from GUI import data_collect_window
 from Helper_functions import countdown, cls
 from Save_Load import save_raw_csv, create_directories
-
-# const
-PREDICT_TIME: float = 2.5
-DATA_POINT_WINDOW_SIZE = 20
-EMG_INTERVAL = 0.01
-POSITION_INTERVAL = 0.04
-COLLECTION_DIR = "Collections"
-
-RIGHT = "right"
-LEFT = "left"
-
-# WINDOW_EMG = 20
-# DEGREE_OF_OVERLAP = 0.5
-# OFFSET_EMG = WINDOW_EMG * DEGREE_OF_OVERLAP
-# SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems with Bluetooth connection 3.815821888279855
-# WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
-# OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
-
-TIME_NOW = time.localtime()
-TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
-    TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
-
-# status = 0
 
 DEVICE = []
 EMG = []  # emg
 ORI = []  # orientation
 GYR = []  # gyroscope
 ACC = []  # accelerometer
+
+TIME_NOW = time.localtime()
+TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
+    TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -139,8 +117,6 @@ def collect_raw_data(record_duration=1):
     global ACC
     global GYR
     global status
-    # global WINDOW_IMU
-    # global OFFSET_IMU
     EMG, ORI, ACC, GYR = [], [], [], []
     dif, status = 0, 0
     start = time.time()
@@ -201,14 +177,16 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
 
 
 def collect_continuous_trainings_data(display_label, save_label, raw_path, session=5, training_time=5):
-    warm_start()
     global status
+    print("Prepare Application...")
+    warm_start()
+    print("Collect continuous training data")
 
     time.sleep(1)
-
+    cls()
     print("Gesture set\n")
     print(*display_label, sep="\n")
-    print("Full motion sequence.\nSwitching to the next step is displayed visually")
+    print("\nFull motion sequence.\nSwitching to the next step is displayed visually")
 
     with hub.run_in_background(listener.on_event):
         for j in range(session):
@@ -216,7 +194,7 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
             input(session_display)
             countdown(3)
             for i in range(len(save_label)):
-                print("Start")
+                print("Do Gesture!")
                 collect_raw_data(training_time)
 
                 if not os.path.isdir(raw_path + "/" + save_label[i]):
@@ -230,6 +208,7 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
                 log.info("Collected imu data:" + str(len(ORI)))
                 cls()
                 print("NEXT!")
+                time.sleep(.5)
 
             log.info("Session " + str(j + 1) + "completed")
             print("Session ", j + 1, "completed")

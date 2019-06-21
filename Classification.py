@@ -6,20 +6,13 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 
+from Constant import times, process_number, max_forest, min_forest, rfc_list, TEST_SIZE
 from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
 from Myo_communication import collect_raw_data
 from Save_Load import load_csv, load_classifier
 
-counter = 0
-TEST_SIZE = 0.2
-rfc_list, results = [], []
 
-min_forest = 2
-times = 2
-max_forest = 4
-
-process_number = 1
 border = int(times / process_number)
 n = np.linspace(min_forest, max_forest, times, dtype=int)
 for i in n:
