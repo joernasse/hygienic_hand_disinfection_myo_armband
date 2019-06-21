@@ -1,6 +1,7 @@
 from __future__ import print_function
 
-from tkinter import Tk, Button, PhotoImage, Label, Image, Canvas, NW
+from tkinter import *
+
 from GUI import main_window
 from Myo_communication import check_sample_rate, collect_separate_training_data, \
     collect_continuous_trainings_data
@@ -13,12 +14,17 @@ from Constant import hand_disinfection, hand_disinfection_display
 
 
 def main():
+    Label(main_window, text="Probant Name").grid(row=1, pady=4)
+    e1 = Entry(main_window)
+    e1.grid(row=1, column=1)
     Button(master=main_window, text="Collect data",
-           command=lambda: collect_data_ui(delete_old=True, session=2, proband="defaultUser")).pack(pady=8)
-    Button(master=main_window, text="Check sample rate", command=lambda: check_sample_rate(100)).pack(pady=8)
-    Button(master=main_window, text="Process data", command=process_raw_data).pack(pady=8)
-    Button(master=main_window, text="Load feature file", command=load_csv).pack(pady=8)
-    Button(master=main_window, text="Close", command=main_window.destroy).pack(pady=8)
+           command=lambda: collect_data_ui(delete_old=True, session=2, proband=e1.get())).grid(row=0, pady=8)
+
+    Button(master=main_window, text="Check sample rate", command=lambda: check_sample_rate(100)).grid(row=3, column=0,
+                                                                                                      pady=8)
+    Button(master=main_window, text="Process data", command=process_raw_data).grid(row=3, column=1, pady=8)
+    Button(master=main_window, text="Load feature file", command=load_csv).grid(row=3, column=2, pady=8)
+    Button(master=main_window, text="Close", command=main_window.destroy).grid(row=5, column=1, pady=8)
 
     main_window.mainloop()
 
