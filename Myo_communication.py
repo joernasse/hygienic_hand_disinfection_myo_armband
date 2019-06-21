@@ -18,6 +18,7 @@ EMG = []  # emg
 ORI = []  # orientation
 GYR = []  # gyroscope
 ACC = []  # accelerometer
+status = 0
 
 TIME_NOW = time.localtime()
 TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
@@ -220,4 +221,56 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
 
 def warm_start():
     collect_raw_data(5)
+    return
+
+
+def trial_round_separate(save_label, display_label):
+    session = 1
+    print("Gesture set\n")
+    print(*display_label, sep="\n")
+    print("\nHold every gesture 5 seconds")
+    with hub.run_in_background(listener.on_event):
+        for j in range(session):
+            session_display = "To start session " + str(j + 1) + ", press enter..."
+            input(session_display)
+            countdown(3)
+            cls()
+            for i in range(len(display_label)):
+                print("Gesture -- ", save_label[i], " be ready!")
+                time.sleep(.5)
+                print("Do Gesture!")
+                cls()
+                collect_raw_data(5)
+                time.sleep(.5)
+                print("Pause")
+                time.sleep(.5)
+                countdown(5)
+                cls()
+        log.info("Session " + str(j + 1) + "completed")
+        print("Session ", j + 1, "completed")
+    print("Trial round separated completed")
+    log.info("Data collection completed")
+    return
+
+
+def trial_round_continuous(save_label, display_label):
+    print("Gesture set\n")
+    print(*display_label, sep="\n")
+    print("\nFull motion sequence.\nSwitching to the next step is displayed visually")
+
+    with hub.run_in_background(listener.on_event):
+        for j in range(1):
+            session_display = "To start session " + str(j + 1) + ", press enter..."
+            input(session_display)
+            countdown(3)
+            for i in range(len(save_label)):
+                print("Do Gesture!")
+                collect_raw_data(5)
+                cls()
+                print("NEXT!")
+                time.sleep(.5)
+
+            log.info("Session " + str(j + 1) + "completed")
+            print("Session ", j + 1, "completed")
+        print("Trial round continuous completed")
     return

@@ -1,12 +1,12 @@
 from __future__ import print_function
 
 from tkinter import *
+from tkinter.ttk import Separator
 
 from GUI import main_window
-from Myo_communication import check_sample_rate, collect_separate_training_data, \
-    collect_continuous_trainings_data
+from Myo_communication import *
 from Process_data import process_raw_data
-from Save_Load import load_csv, create_directories
+from Save_Load import *
 
 # ordentliche prediction Ergebnisse
 # PREDICT_TIME: float = 0.5
@@ -23,8 +23,16 @@ def main():
     Button(master=main_window, text="Check sample rate", command=lambda: check_sample_rate(100)).grid(row=3, column=0,
                                                                                                       pady=8)
     Button(master=main_window, text="Process data", command=process_raw_data).grid(row=3, column=1, pady=8)
-    Button(master=main_window, text="Load feature file", command=load_csv).grid(row=3, column=2, pady=8)
-    Button(master=main_window, text="Close", command=main_window.destroy).grid(row=5, column=1, pady=8)
+    Button(master=main_window, text="Load feature file", command=load_csv).grid(row=3, column=3, pady=8)
+    Button(master=main_window, text="Trial round separated",
+           command=lambda: trial_round_separate(save_label=hand_disinfection,
+                                                display_label=hand_disinfection_display)).grid(row=0, column=3, pady=8)
+    Button(master=main_window, text="Trial round", command=lambda: trial_round_continuous(save_label=hand_disinfection,
+                                                                                          display_label=hand_disinfection_display)).grid(
+        row=1, column=3, pady=8)
+    Separator(main_window, orient=HORIZONTAL).grid(row=2, column=0, sticky="ew", columnspan=4)
+
+    Button(master=main_window, text="Close", command=main_window.destroy).grid(row=7, column=1, pady=8)
 
     main_window.mainloop()
 
@@ -46,14 +54,13 @@ def collect_data_ui(delete_old=True, session=2, proband="defaultUser"):
                                                           display_label=hand_disinfection_display,
                                                           raw_path=user_path + "/raw_separate",
                                                           session=session,
-                                                          training_time=5)).pack(pady=8)
+                                                          training_time=5)).grid(row=0, column=0, pady=8)
     Button(master=data_collect_window, text="Collect continues data",
            command=lambda: collect_continuous_trainings_data(save_label=hand_disinfection, session=session,
                                                              display_label=hand_disinfection_display,
                                                              raw_path=user_path + "/raw_separate",
-                                                             training_time=5)).pack(pady=8)
-    Button(master=data_collect_window, text="Close", command=data_collect_window.destroy).pack(pady=8)
-
+                                                             training_time=5)).grid(row=0, column=1, pady=8)
+    Button(master=data_collect_window, text="Close", command=data_collect_window.destroy).grid(row=3, column=1, pady=8)
     data_collect_window.deiconify()
     data_collect_window.mainloop()
 
