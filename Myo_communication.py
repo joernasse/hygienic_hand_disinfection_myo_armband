@@ -202,20 +202,21 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
     print("\nFull motion sequence.\nSwitching to the next step is displayed visually")
 
     with hub.run_in_background(listener.on_event):
-        for j in range(session):
-            session_display = "To start session " + str(j + 1) + ", press enter..."
+        for s in range(session):
+            session_display = "To start session " + str(s + 1) + ", press enter..."
             input(session_display)
             countdown(3)
             for i in range(len(save_label)):
                 print("Do Gesture!")
                 collect_raw_data(training_time)
 
-                if not os.path.isdir(raw_path + "/" + save_label[i]):
-                    os.mkdir(raw_path + "/" + save_label[i])
+                dest_path = raw_path + "/" + "s" + str(s) + save_label[i]
+                if not os.path.isdir(dest_path):
+                    os.mkdir(dest_path)
 
                 save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                             raw_path + "/" + save_label[i] + "/emg.csv",
-                             raw_path + "/" + save_label[i] + "/imu.csv")
+                             dest_path + "/emg.csv",
+                             dest_path + "/imu.csv")
 
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
@@ -223,8 +224,8 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
                 print("NEXT!")
                 time.sleep(.5)
 
-            log.info("Session " + str(j + 1) + "completed")
-            print("Session ", j + 1, "completed")
+            log.info("Session " + str(s + 1) + "completed")
+            print("Session ", s + 1, "completed")
 
         print("Data collection completed")
         log.info("Data collection completed")

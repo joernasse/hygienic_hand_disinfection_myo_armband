@@ -51,10 +51,10 @@ def collect_data_ui(delete_old=True, session=2, proband="defaultUser"):
                                                                                                            pady=4,
                                                                                                            padx=4)
     Button(master=data_collect_window, text="Collect continues data",
-           command=lambda: collect_continuous_trainings_data(save_label=hand_disinfection, session=session,
+           command=lambda: collect_continuous_trainings_data(save_label=hand_disinfection, session=int(sessions.get()),
                                                              display_label=hand_disinfection_display,
                                                              raw_path=user_path + "/raw_separate",
-                                                             training_time=5)).grid(row=3, column=2, pady=8, padx=4)
+                                                             training_time=int(int(record_time.get())))).grid(row=3, column=2, pady=8, padx=4)
 
     data_collect_window.deiconify()
     data_collect_window.mainloop()
