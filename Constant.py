@@ -1,13 +1,15 @@
 # main_script
-label_display = ['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5', 'Step 6', 'Rest']
+label_display = ['Step 0', 'Step 1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 4', 'Step 5', 'Step 5.1', 'Step 6',
+                 'Step 6.1', 'Rest']
 
-hand_disinfection = ['Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1',
+hand_disinfection = ['Step0', 'Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1',
                      'Rest']
 
-hand_disinfection_display = ['Step 1    - palm and wrist',
-                             'Step 2    - right palm on left back',
-                             'Step 2.1  - left palm on right back',
-                             'Step 3    - spread and interlocked fingers palm',
+hand_disinfection_display = ['Step 0    - Take disinfectant'
+                             'Step 1    - Palm and wrist',
+                             'Step 2    - Right palm on left back',
+                             'Step 2.1  - Left palm on right back',
+                             'Step 3    - Spread and interlocked fingers palm',
                              'Step 4    - Interlock fingers',
                              'Step 5    - Circular rubbing of the right thumb in the closed left palm of the hand',
                              'Step 5.1  - Circular rubbing of the left thumb in the closed right palm of the hand ',
@@ -21,9 +23,10 @@ DATA_POINT_WINDOW_SIZE = 20
 EMG_INTERVAL = 0.01
 POSITION_INTERVAL = 0.04
 COLLECTION_DIR = "Collections"
-
 RIGHT = "right"
 LEFT = "left"
+emg_count_list = []
+imu_count_list = []
 
 # Process_data
 MAX_EMG_VALUE = 127

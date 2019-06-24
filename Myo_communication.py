@@ -3,6 +3,7 @@ import os
 import statistics
 import threading
 import time
+from tkinter import Text, INSERT, Label, StringVar
 
 import matplotlib.pyplot as plt
 import logging as log
@@ -10,6 +11,8 @@ import logging as log
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
+from Constant import emg_count_list, imu_count_list
+from GUI import main_window, data_collect_window
 from Helper_functions import countdown, cls
 from Save_Load import save_raw_csv, create_directories
 
@@ -61,11 +64,16 @@ hub = Hub()
 listener = GestureListener()
 
 
-def check_sample_rate(runtime_s=100):
+def check_sample_rate(runtime_s=100, warm_start=True):
+    global EMG, ORI, GYR, ACC
+    EMG, ORI, GYR, ACC = [], [], [], []
     emg_diagram, imu_diagram = [], []
-    global EMG, ORI
     emg_samples, imu_samples, over_emg = 0, 0, 0
     with hub.run_in_background(listener.on_event):
+        if warm_start:
+            print("Warming up...")
+            # collect_raw_data(5)
+            time.sleep(5)
         for i in range(runtime_s):
             collect_raw_data()
             emg_samples += len(EMG)
@@ -76,25 +84,29 @@ def check_sample_rate(runtime_s=100):
             imu_diagram.append(len(ORI))
             print(i + 1)
 
-    log.basicConfig(filename="log" + TIMESTAMP + str(runtime_s),
-                    filemode='a',
-                    format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
-                    datefmt='%H:%M:%S',
-                    level=log.DEBUG)
-    log.info("Runtime" + str(runtime_s))
-    log.info("Total EMG samples " + str(emg_samples) + " | " + str(emg_samples) + "/" + str(runtime_s * 200))
-    log.info("Total IMU samples " + str(imu_samples) + " | " + str(imu_samples), "/" + str(runtime_s * 50))
-    log.info("Mean EMG" + str(emg_samples / runtime_s), "|" + str(emg_samples / runtime_s) + "/200")
-    log.info("Mean IMU" + str(imu_samples / runtime_s), "|" + str(imu_samples / runtime_s) + "/50")
-    log.info("Std deviation EMG" + str(statistics.stdev(emg_diagram)))
-    log.info("Std deviation IMU" + str(statistics.stdev(imu_diagram)))
-    log.info("Over max EMG:" + str(over_emg))
+    # log.basicConfig(filename="log/log" + TIMESTAMP + str(runtime_s),
+    #                 filemode='a',
+    #                 format='%(asctime)s,%(msecs)d %(name)s %(levelname)s %(message)s',
+    #                 datefmt='%H:%M:%S',
+    #                 level=log.DEBUG)
+    # log.info("Runtime" + str(runtime_s))
+    # log.info("Total EMG samples " + str(emg_samples) + " | " + str(emg_samples) + "/" + str(runtime_s * 200))
+    # log.info("Total IMU samples " + str(imu_samples) + " | " + str(imu_samples), "/" + str(runtime_s * 50))
+    # log.info("Mean EMG" + str(emg_samples / runtime_s), "|" + str(emg_samples / runtime_s) + "/200")
+    # log.info("Mean IMU" + str(imu_samples / runtime_s), "|" + str(imu_samples / runtime_s) + "/50")
+    # log.info("Std deviation EMG" + str(statistics.stdev(emg_diagram)))
+    # log.info("Std deviation IMU" + str(statistics.stdev(imu_diagram)))
+    # log.info("Over max EMG:" + str(over_emg))
 
+    imu_mean = imu_samples / runtime_s
+    emg_mean = emg_samples / runtime_s
     print("Runtime", runtime_s)
     print("Total EMG samples ", emg_samples, " | ", emg_samples, "/", runtime_s * 200)
     print("Total IMU samples ", imu_samples, " | ", imu_samples, "/", runtime_s * 50)
-    print("Mean EMG", emg_samples / runtime_s, "|", emg_samples / runtime_s, "/200")
-    print("Mean IMU", imu_samples / runtime_s, "|", imu_samples / runtime_s, "/50")
+    print("Mean EMG", emg_mean, "|", emg_mean, "/200")
+    print("Mean IMU", imu_mean, "|", imu_mean / runtime_s, "/50")
+    print("EMG ", runtime_s * 200 / emg_samples * 100, "%")
+    print("EMG ", runtime_s * 50 / imu_samples * 100, "%")
     print("Std deviation EMG", statistics.stdev(emg_diagram))
     print("Std deviation IMU", statistics.stdev(imu_diagram))
     print("Over max EMG:", over_emg)
@@ -118,6 +130,7 @@ def collect_raw_data(record_duration=1):
     global ACC
     global GYR
     global status
+
     EMG, ORI, ACC, GYR = [], [], [], []
     dif, status = 0, 0
     start = time.time()
@@ -126,14 +139,13 @@ def collect_raw_data(record_duration=1):
         end = time.time()
         dif = end - start
     status = 0
+    emg_count_list.append(len(EMG))
+    imu_count_list.append(len(ORI))
     return
 
 
 def collect_separate_training_data(display_label, save_label, raw_path, session=10, training_time=5):
-    warm_start()
     cls()
-    global status
-
     time.sleep(1)
 
     print("Gesture set\n")
@@ -153,7 +165,6 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
 
                 collect_raw_data(training_time)
                 time.sleep(.5)
-
                 if not os.path.isdir(raw_path + "/" + save_label[i]):
                     os.mkdir(raw_path + "/" + save_label[i])
 
@@ -181,6 +192,8 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
     global status
     print("Prepare Application...")
     warm_start()
+    data_collect_window.update_idletasks()
+
     print("Collect continuous training data")
 
     time.sleep(1)
