@@ -6,16 +6,7 @@ from tkinter import filedialog
 import numpy as np
 import logging as log
 
-emg_headline = ["timestamp",
-                "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7",
-                "label"]
-imu_headline = ["timestamp",
-                "x_ori", "y_ori", "z_ori",
-                "x_gyr", "y_gyr", "z_gyr",
-                "x_acc", "y_acc", "z_acc",
-                "label"]
-imu_identifier = ["x", "y", "z"]
-COLLECTION_DIR = "Collections"
+from Constant import emg_headline, imu_headline, COLLECTION_DIR
 
 
 def save_raw_csv(data, label, file_emg, file_imu):

@@ -12,7 +12,7 @@ from myo import init, Hub, StreamEmg
 import myo as libmyo
 
 from Constant import emg_count_list, imu_count_list
-from GUI import main_window, data_collect_window
+from GUI import status_window, status_val
 from Helper_functions import countdown, cls
 from Save_Load import save_raw_csv, create_directories
 
@@ -147,15 +147,14 @@ def collect_raw_data(record_duration=1):
 def collect_separate_training_data(display_label, save_label, raw_path, session=10, training_time=5):
     cls()
     time.sleep(1)
-
     print("Gesture set\n")
     print(*display_label, sep="\n")
     print("\nHold every gesture 5 seconds")
     n = len(display_label)
 
     with hub.run_in_background(listener.on_event):
-        for j in range(session):
-            session_display = "To start session " + str(j + 1) + ", press enter..."
+        for s in range(session):
+            session_display = "To start session " + str(s + 1) + ", press enter..."
             input(session_display)
             countdown(3)
             for i in range(n):
@@ -165,12 +164,13 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
 
                 collect_raw_data(training_time)
                 time.sleep(.5)
-                if not os.path.isdir(raw_path + "/" + save_label[i]):
-                    os.mkdir(raw_path + "/" + save_label[i])
+                dest_path = raw_path + "/" + "s" + str(s) + save_label[i]
+                if not os.path.isdir(dest_path):
+                    os.mkdir(dest_path)
 
                 save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                             raw_path + "/" + save_label[i] + "/emg.csv",
-                             raw_path + "/" + save_label[i] + "/imu.csv")
+                             dest_path + "/emg.csv",
+                             dest_path + "/imu.csv")
 
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
@@ -180,8 +180,8 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
                 countdown(5)
                 cls()
 
-            log.info("Session " + str(j + 1) + "completed")
-            print("Session ", j + 1, "completed")
+            log.info("Session " + str(s + 1) + "completed")
+            print("Session ", s + 1, "completed")
 
         print("Data collection completed")
         log.info("Data collection completed")
@@ -192,7 +192,6 @@ def collect_continuous_trainings_data(display_label, save_label, raw_path, sessi
     global status
     print("Prepare Application...")
     warm_start()
-    data_collect_window.update_idletasks()
 
     print("Collect continuous training data")
 
