@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split, GridSearchCV
 from Constant import times, process_number, max_forest, min_forest, rfc_list, TEST_SIZE
 from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
-from Myo_communication import collect_raw_data
+from Collect_data import collect_raw_data
 from Save_Load import load_csv, load_classifier
 
 

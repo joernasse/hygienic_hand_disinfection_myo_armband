@@ -3,7 +3,6 @@ import os
 import statistics
 import threading
 import time
-from tkinter import Text, INSERT, Label, StringVar
 
 import matplotlib.pyplot as plt
 import logging as log
@@ -11,8 +10,8 @@ import logging as log
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
-from Constant import emg_count_list, imu_count_list
-from GUI import status_window, status_val
+from Constant import emg_count_list, imu_count_list, hand_disinfection_display, label_display, save_label
+# from GUI import status_window, status_val
 from Helper_functions import countdown, cls
 from Save_Load import save_raw_csv, create_directories
 
@@ -26,6 +25,13 @@ status = 0
 TIME_NOW = time.localtime()
 TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
     TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
+
+# data collection shared variables
+g_introduction_screen = []
+g_files = []
+g_training_time = 0
+g_raw_path = ""
+g_img_path = ""
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -144,20 +150,84 @@ def collect_raw_data(record_duration=1):
     return
 
 
-def collect_separate_training_data(display_label, save_label, raw_path, session=10, training_time=5):
-    cls()
+def init_data_collection(raw_path, introduction_screen, session=10, training_time=5):
+    global g_introduction_screen
+    global g_files
+    global g_training_time
+    global g_raw_path
+    global g_img_path
+
+    g_training_time = training_time
+    g_introduction_screen = introduction_screen
+    g_introduction_screen.change_img("intro_screen.jpg")
+    g_img_path = os.getcwd() + "/img/"
+    g_files = os.listdir(g_img_path)
+    # g_introduction_screen.set_descr_text("Gesture set")
+    g_introduction_screen.set_descr_text("Hold every gesture for 5 seconds")
+    g_raw_path = raw_path
+
+
+def collect_gui_sep_data(session):
+    global g_introduction_screen
+    global g_files
+    global g_training_time
+    global g_raw_path
+    global g_img_path
+
+    with hub.run_in_background(listener.on_event):
+        g_introduction_screen.init_sessionbar()
+        countdown(g_introduction_screen, 3)
+        for i in range(len(save_label)):
+            g_introduction_screen.set_descr_val("")
+            g_introduction_screen.change_img(g_img_path + g_files[i])
+            g_introduction_screen.set_descr_text("Gesture -- " + label_display[i] + " : be ready!")
+            time.sleep(1)
+            g_introduction_screen.set_descr_text("Do Gesture!")
+            collect_raw_data(g_training_time)
+            time.sleep(.3)
+            dest_path = g_raw_path + "/" + "s" + str(session) + save_label[i]
+
+            if not os.path.isdir(dest_path):
+                os.mkdir(dest_path)
+
+            save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                         dest_path + "/emg.csv",
+                         dest_path + "/imu.csv")
+            log.info("Collected emg data: " + str(len(EMG)))
+            log.info("Collected imu data:" + str(len(ORI)))
+            cls()
+            g_introduction_screen.set_descr_text("Pause")
+            time.sleep(.5)
+            countdown(g_introduction_screen, 5)
+            cls()
+            g_introduction_screen.update_session_bar(1)
+    return
+
+
+def collect_separate_training_data(raw_path, introduction_screen, session=10, training_time=5):
+    display_label = hand_disinfection_display
+    save_label = label_display
+    introduction_screen.change_img("intro_screen.jpg")
+    img_path = os.getcwd() + "/img/"
+    files = os.listdir(img_path)
+    files.sort()
+
+    # cls()
     time.sleep(1)
-    print("Gesture set\n")
+    # print("Gesture set\n")
+    introduction_screen.set_descr_text("Gesture set")
     print(*display_label, sep="\n")
     print("\nHold every gesture 5 seconds")
     n = len(display_label)
 
     with hub.run_in_background(listener.on_event):
         for s in range(session):
-            session_display = "To start session " + str(s + 1) + ", press enter..."
-            input(session_display)
+            introduction_screen.init_sessionbar()
+            # session_display = "To start session " + str(s + 1) + ", press enter..."
+            # input(session_display)
             countdown(3)
             for i in range(n):
+                introduction_screen.change_img(img_path + files[i])
                 print("Gesture -- ", save_label[i], " : be ready!")
                 time.sleep(1)
                 print("Do Gesture!")
@@ -171,7 +241,6 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
                 save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
                              dest_path + "/emg.csv",
                              dest_path + "/imu.csv")
-
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
                 cls()
@@ -179,6 +248,8 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
                 time.sleep(.5)
                 countdown(5)
                 cls()
+                introduction_screen.update_session_bar(1)
+            introduction_screen.update_total_bar(1)
 
             log.info("Session " + str(s + 1) + "completed")
             print("Session ", s + 1, "completed")
@@ -188,7 +259,9 @@ def collect_separate_training_data(display_label, save_label, raw_path, session=
         return
 
 
-def collect_continuous_trainings_data(display_label, save_label, raw_path, session=5, training_time=5):
+def collect_continuous_trainings_data(raw_path, introduction_screen, session=5, training_time=5):
+    display_label = hand_disinfection_display
+    save_label = label_display
     global status
     print("Prepare Application...")
     warm_start()

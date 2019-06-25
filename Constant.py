@@ -1,9 +1,10 @@
 # main_script
-label_display = ['Step 0', 'Step 1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 4', 'Step 5', 'Step 5.1', 'Step 6',
+# label_display = ['Step 0',
+label_display = ['Step 1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 4', 'Step 5', 'Step 5.1', 'Step 6',
                  'Step 6.1', 'Rest']
 
 # hand_disinfection = ['Step0',
-hand_disinfection = ['Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1',
+save_label = ['Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1',
                      'Rest']
 
 # hand_disinfection_display = ['Step 0    - Take disinfectant',
@@ -55,4 +56,7 @@ imu_headline = ["timestamp",
                 "x_acc", "y_acc", "z_acc",
                 "label"]
 imu_identifier = ["x", "y", "z"]
-# COLLECTION_DIR = "Collections"
+
+# GUI
+SEPARATE = "separate"
+CONTINUES = "continues"
