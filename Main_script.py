@@ -12,7 +12,7 @@ def main():
     root = Tk()
     app = MainWindow(root)
     root.wm_title("EMG Recognition")
-    root.geometry("500x500")
+    # root.geometry("500x500")
     root.mainloop()
 
 

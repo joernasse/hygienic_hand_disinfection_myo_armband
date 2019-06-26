@@ -24,7 +24,7 @@ status = 0
 g_device_right = 0
 g_device_left = 0
 
-EMG_INTERVAL = 0.01
+EMG_INTERVAL = 0.005
 POS_INTERVAL = 0.02
 
 pool = ThreadPool(processes=2)
@@ -42,8 +42,8 @@ g_img_path = ""
 
 init()
 hub = Hub()
+# device_listener=
 listener_2 = libmyo.ApiDeviceListener()
-
 
 def collect_independent_pos_data():
     global g_device_left
@@ -71,20 +71,20 @@ def collect_independent_emg_data():
     global g_device_right
     global g_device_left
     emg_left, emg_right = [], []
-    time.sleep(0.5)
-    dif = 0
-    start = time.time()
     g_device_left.stream_emg(True)
     g_device_right.stream_emg(True)
-    while dif < 1:
-        end = time.time()
-        dif = end - start
-        emg_left.append(np.asarray(g_device_left.emg))
-        emg_right.append(np.asarray(g_device_right.emg))
-        time.sleep(EMG_INTERVAL)
-
-    g_device_right.stream_emg(False)
-    g_device_left.stream_emg(False)
+    with hub.run_in_background(listener_2.on_event):
+        # time.sleep(0.5)
+        dif = 0
+        start = time.time()
+        while dif < 1:
+            end = time.time()
+            dif = end - start
+            emg_left.append(np.asarray(g_device_left.emg))
+            emg_right.append(np.asarray(g_device_right.emg))
+            time.sleep(EMG_INTERVAL)
+        g_device_right.stream_emg(False)
+        g_device_left.stream_emg(False)
 
     return {"EMG_L": emg_left, "EMG_R": emg_right}
 
@@ -92,19 +92,20 @@ def collect_independent_emg_data():
 def pair_devices():
     global g_device_right
     global g_device_left
-    with hub.run_in_background(listener_2.on_event):
-        time.sleep(1)
-        r, l = False, False
-        devices = listener_2.devices
-        for dev in devices:
-            if dev.arm == "right":
-                g_device_right = dev
-                r = True
-            elif dev.arm == "left":
-                g_device_left = dev
-                l = True
-            if r and l:
-                break
+    # with hub.run_in_background(listener_2.on_event):
+    time.sleep(1)
+    r, l = False, False
+    devices = listener_2.devices
+    for dev in devices:
+        if dev.arm == "right":
+            g_device_right = dev
+            r = True
+        elif dev.arm == "left":
+            g_device_left = dev
+            l = True
+        if r and l:
+            break
+    return
     # return [device_left, device_right]
 
 
@@ -116,7 +117,6 @@ def check_sample_rate(runtime_s=100, warm_start=True):
     with hub.run_in_background(listener_2.on_event):
         if warm_start:
             print("Warming up...")
-            # collect_raw_data(5)
             time.sleep(5)
         for i in range(runtime_s):
             collect_raw_data()
@@ -199,8 +199,8 @@ def collect_data(session):
     global g_raw_path
     global g_img_path
 
-    pair_devices()
     with hub.run_in_background(listener_2.on_event):
+        pair_devices()
         g_introduction_screen.init_sessionbar()
         time.sleep(3)
         countdown(g_introduction_screen, 3)
