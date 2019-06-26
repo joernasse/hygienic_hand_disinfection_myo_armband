@@ -17,8 +17,8 @@ def save_raw_csv(data, label, file_emg, file_imu):
         if not file_exist:
             writer.writerow(emg_headline)
         for emg in data['EMG']:
-            tmp = [emg[0]]
-            for i in emg[1]:
+            tmp = []
+            for i in emg:
                 tmp.append(i)
             tmp.append(label)
             writer.writerow(tmp)

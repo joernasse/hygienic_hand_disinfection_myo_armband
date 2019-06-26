@@ -5,7 +5,8 @@ from tkinter.ttk import Progressbar, Separator
 from PIL import Image, ImageTk
 
 from Collect_data import trial_round_separate, trial_round_continuous, check_sample_rate, \
-    collect_continuous_trainings_data, collect_separate_training_data, collect_gui_sep_data, init_data_collection
+    collect_continuous_trainings_data, collect_separate_training_data, collect_data, init_data_collection, \
+    pair_devices
 from Constant import save_label, hand_disinfection_display, label_display, CONTINUES, SEPARATE
 from Process_data import process_raw_data
 from Save_Load import load_csv, create_directories
@@ -64,6 +65,9 @@ class MainWindow(Frame):
         self.trial_continuous_btn.grid(row=2, column=4, pady=8, padx=4)
         self.label2.grid(row=2, column=0, pady=4)
         self.proband.grid(row=2, column=1)
+
+        self.pair_btn = Button(self, text="pair", command=pair_devices)
+        self.pair_btn.grid(row=6, column=1, pady=4, padx=4)
 
         self.label3.grid(row=3, pady=4)
         self.sep1.grid(row=3, column=0, sticky="ew", columnspan=5, padx=4)
@@ -125,6 +129,7 @@ class CollectDataWindow(Frame):
         self.collect_separate_btn.grid(row=3, column=0, pady=4, padx=4)
         self.collect_continues_btn.grid(row=3, column=2, pady=8, padx=4)
 
+
     def collect_data(self, sessions, training_time, raw_path, mode):
         introduction.deiconify()
         introduction_screen.init_totalbar(sessions)
@@ -132,14 +137,6 @@ class CollectDataWindow(Frame):
         init_data_collection(raw_path=raw_path, introduction_screen=introduction_screen, session=sessions,
                              training_time=training_time)
         introduction_screen.sessions = sessions
-
-        # if mode == SEPARATE:
-        #     collect_separate_training_data(raw_path=raw_path, session=sessions, training_time=training_time,
-        #                                    introduction_screen=introduction_screen)
-        # elif mode == CONTINUES:
-        #     collect_continuous_trainings_data(raw_path=raw_path, session=sessions, training_time=training_time,
-        #                                       introduction_screen=introduction_screen)
-
 
 class IntroductionScreen(Frame):
     def __init__(self, master=None):
@@ -188,7 +185,7 @@ class IntroductionScreen(Frame):
     def start_session(self):
         if self.current_session < self.sessions:
             self.init_sessionbar()
-            collect_gui_sep_data(self.current_session)
+            collect_data(self.current_session)
             self.current_session += 1
             self.update_total_bar(1)
             return
@@ -196,7 +193,6 @@ class IntroductionScreen(Frame):
             print("Data collection complete!")
 
     def change_img(self, path):
-        # full_path = "img/" + file
         load = Image.open(path)
         load = load.resize((450, 400), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
