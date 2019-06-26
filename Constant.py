@@ -19,7 +19,7 @@ hand_disinfection_display = ['Step 1    - Palm and wrist',
                              'Step 6.1  - Circular movement of closed fingertips of the left hand on the right palm of the hand',
                              'Rest      - Do nothing']
 
-# myo_communication
+# Collect_data
 PREDICT_TIME = 2.5
 DATA_POINT_WINDOW_SIZE = 20
 EMG_INTERVAL = 0.01
@@ -27,6 +27,7 @@ POSITION_INTERVAL = 0.04
 COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
+INDIVIDUAL="individual"
 emg_count_list = []
 imu_count_list = []
 

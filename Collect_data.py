@@ -10,12 +10,12 @@ import logging as log
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
-from Constant import emg_count_list, imu_count_list, hand_disinfection_display, label_display, save_label
-# from GUI import status_window, status_val
-from Helper_functions import countdown, cls
-from Save_Load import save_raw_csv, create_directories
+from Constant import emg_count_list, imu_count_list, hand_disinfection_display, label_display, save_label, LEFT, RIGHT, \
+    INDIVIDUAL
+from Helper_functions import countdown, cls, wait
+from Save_Load import save_raw_csv
 
-DEVICE = []
+DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
 ORI = []  # orientation
 GYR = []  # gyroscope
@@ -27,16 +27,15 @@ TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday)
     TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
 
 # data collection shared variables
-g_introduction_screen = []
+g_introduction_screen = None
 g_files = []
 g_training_time = 0
-g_raw_path = ""
-g_img_path = ""
+g_raw_path, g_img_path = "", ""
 
 
-class GestureListener(libmyo.DeviceListener):
+class GestureListener(libmyo.ApiDeviceListener):
     def __init__(self, queue_size=1):
-        # super(GestureListener, self).__init__()
+        super(GestureListener, self).__init__()
         self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
@@ -70,6 +69,24 @@ hub = Hub()
 listener = GestureListener()
 
 
+def pair_devices():
+    global DEVICE_L
+    global DEVICE_R
+    with hub.run_in_background(listener):
+        wait(2)
+        devices = listener.devices
+        for d in devices:
+            if d.arm == LEFT:
+                d.vibrate(libmyo.VibrationType.short)
+                DEVICE_L = d
+            elif d.arm == RIGHT:
+                d.vibrate(libmyo.VibrationType.short)
+                DEVICE_R = d
+        print("x")
+    hub.stop()
+    return [DEVICE_L, DEVICE_R]
+
+
 def check_sample_rate(runtime_s=100, warm_start=True):
     global EMG, ORI, GYR, ACC
     EMG, ORI, GYR, ACC = [], [], [], []
@@ -79,7 +96,7 @@ def check_sample_rate(runtime_s=100, warm_start=True):
         if warm_start:
             print("Warming up...")
             # collect_raw_data(5)
-            time.sleep(5)
+            wait(5)
         for i in range(runtime_s):
             collect_raw_data()
             emg_samples += len(EMG)
@@ -150,7 +167,7 @@ def collect_raw_data(record_duration=1):
     return
 
 
-def init_data_collection(raw_path, introduction_screen, session=10, training_time=5):
+def init_data_collection(raw_path, introduction_screen, session=10, training_time=5, mode="individually"):
     global g_introduction_screen
     global g_files
     global g_training_time
@@ -162,17 +179,17 @@ def init_data_collection(raw_path, introduction_screen, session=10, training_tim
     g_introduction_screen.change_img("intro_screen.jpg")
     g_img_path = os.getcwd() + "/img/"
     g_files = os.listdir(g_img_path)
-    # g_introduction_screen.set_descr_text("Gesture set")
     g_introduction_screen.set_descr_text("Hold every gesture for 5 seconds")
     g_raw_path = raw_path
 
 
-def collect_gui_sep_data(session):
+def collect_data(session, mode=INDIVIDUAL):
     global g_introduction_screen
     global g_files
     global g_training_time
     global g_raw_path
     global g_img_path
+    global DEVICE_R
 
     with hub.run_in_background(listener.on_event):
         g_introduction_screen.init_sessionbar()
@@ -181,10 +198,10 @@ def collect_gui_sep_data(session):
             g_introduction_screen.set_descr_val("")
             g_introduction_screen.change_img(g_img_path + g_files[i])
             g_introduction_screen.set_descr_text("Gesture -- " + label_display[i] + " : be ready!")
-            time.sleep(1)
+            wait(1)
             g_introduction_screen.set_descr_text("Do Gesture!")
             collect_raw_data(g_training_time)
-            time.sleep(.3)
+            wait(.3)
             dest_path = g_raw_path + "/" + "s" + str(session) + save_label[i]
 
             if not os.path.isdir(dest_path):
@@ -195,12 +212,15 @@ def collect_gui_sep_data(session):
                          dest_path + "/imu.csv")
             log.info("Collected emg data: " + str(len(EMG)))
             log.info("Collected imu data:" + str(len(ORI)))
-            cls()
             g_introduction_screen.set_descr_text("Pause")
-            time.sleep(.5)
-            countdown(g_introduction_screen, 5)
-            cls()
+            wait(.5)
+            if mode == INDIVIDUAL:
+                countdown(g_introduction_screen, 5)
+            else:
+                DEVICE_R.vibrate(type=libmyo.VibrationType.short)
+                # wait(.5)
             g_introduction_screen.update_session_bar(1)
+    hub.stop()
     return
 
 
@@ -213,7 +233,7 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
     files.sort()
 
     # cls()
-    time.sleep(1)
+    wait(1)
     # print("Gesture set\n")
     introduction_screen.set_descr_text("Gesture set")
     print(*display_label, sep="\n")
@@ -229,11 +249,11 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
             for i in range(n):
                 introduction_screen.change_img(img_path + files[i])
                 print("Gesture -- ", save_label[i], " : be ready!")
-                time.sleep(1)
+                wait(1)
                 print("Do Gesture!")
 
                 collect_raw_data(training_time)
-                time.sleep(.5)
+                wait(.5)
                 dest_path = raw_path + "/" + "s" + str(s) + save_label[i]
                 if not os.path.isdir(dest_path):
                     os.mkdir(dest_path)
@@ -245,7 +265,7 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
                 log.info("Collected imu data:" + str(len(ORI)))
                 cls()
                 print("Pause")
-                time.sleep(.5)
+                wait(.5)
                 countdown(5)
                 cls()
                 introduction_screen.update_session_bar(1)
@@ -268,7 +288,7 @@ def collect_continuous_trainings_data(raw_path, introduction_screen, session=5, 
 
     print("Collect continuous training data")
 
-    time.sleep(1)
+    wait(1)
     cls()
     print("Gesture set\n")
     print(*display_label, sep="\n")
@@ -295,7 +315,7 @@ def collect_continuous_trainings_data(raw_path, introduction_screen, session=5, 
                 log.info("Collected imu data:" + str(len(ORI)))
                 cls()
                 print("NEXT!")
-                time.sleep(.5)
+                wait(.5)
 
             log.info("Session " + str(s + 1) + "completed")
             print("Session ", s + 1, "completed")
@@ -323,13 +343,13 @@ def trial_round_separate(save_label, display_label):
             cls()
             for i in range(len(display_label)):
                 print("Gesture -- ", save_label[i], " be ready!")
-                time.sleep(.5)
+                wait(.5)
                 print("Do Gesture!")
                 cls()
                 collect_raw_data(5)
-                time.sleep(.5)
+                wait(.5)
                 print("Pause")
-                time.sleep(.5)
+                wait(.5)
                 countdown(5)
                 cls()
         log.info("Session " + str(j + 1) + "completed")
@@ -354,7 +374,7 @@ def trial_round_continuous(save_label, display_label):
                 collect_raw_data(5)
                 cls()
                 print("NEXT!")
-                time.sleep(.5)
+                wait(.5)
 
             log.info("Session " + str(j + 1) + "completed")
             print("Session ", j + 1, "completed")

@@ -4,12 +4,11 @@ from tkinter.ttk import Progressbar, Separator
 
 from PIL import Image, ImageTk
 
-from Collect_data import trial_round_separate, trial_round_continuous, check_sample_rate, \
-    collect_continuous_trainings_data, collect_separate_training_data, collect_gui_sep_data, init_data_collection
-from Constant import save_label, hand_disinfection_display, label_display, CONTINUES, SEPARATE
+from Collect_data import trial_round_separate, trial_round_continuous, check_sample_rate, collect_data, \
+    init_data_collection, pair_devices
+from Constant import *
 from Process_data import process_raw_data
 from Save_Load import load_csv, create_directories
-
 
 class MainWindow(Frame):
     def __init__(self, master=None):
@@ -20,15 +19,13 @@ class MainWindow(Frame):
         self.p_val = StringVar(self, value="defaultUser")
 
         # main_window.title("EMG Recognition")
-        self.label1 = Label(self, text="Data Collection")
-        self.label2 = Label(self, text="Proband Name:")
+        self.collect_label = Label(self, text="Data Collection")
+        self.proband_label = Label(self, text="Proband Name:")
 
         self.p_val = StringVar(self, value="defaultUser")
         self.proband = Entry(self, textvariable=self.p_val)
 
         self.sep1 = Separator(self, orient=HORIZONTAL)
-
-        self.sep2 = Separator(self, orient=VERTICAL)
 
         self.label3 = Label(self, text="Process data")
 
@@ -41,28 +38,17 @@ class MainWindow(Frame):
                                        command=lambda: self.collect_data_ui(delete_old=False, session=2,
                                                                             proband=self.proband.get()))
 
-        self.trial_separat_btn = Button(self, text="Trial round separated",
-                                        command=lambda: trial_round_separate(save_label=save_label,
-                                                                             display_label=hand_disinfection_display))
-
-        self.trial_continuous_btn = Button(self, text="Trial round",
-                                           command=lambda: trial_round_continuous(save_label=save_label,
-                                                                                  display_label=hand_disinfection_display))
-
         self.check_rate_btn = Button(self, text="Check sample rate",
                                      command=lambda: check_sample_rate(2, warm_start=False))
 
         self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
         self.load_feature_btn = Button(self, text="Load feature file", command=load_csv)
 
-        self.label1.grid(row=0, column=0, pady=4)
-        self.sep2.grid(row=0, column=3, sticky='ns', rowspan=3, padx=1, pady=4)
+        self.collect_label.grid(row=0, column=0, pady=4)
 
         self.collect_data_btn.grid(row=1, column=0, pady=8, padx=4)
-        self.trial_separat_btn.grid(row=1, column=4, pady=8, padx=4)
 
-        self.trial_continuous_btn.grid(row=2, column=4, pady=8, padx=4)
-        self.label2.grid(row=2, column=0, pady=4)
+        self.proband_label.grid(row=2, column=0, pady=4)
         self.proband.grid(row=2, column=1)
 
         self.label3.grid(row=3, pady=4)
@@ -74,19 +60,14 @@ class MainWindow(Frame):
         self.close_btn.grid(row=10, column=1, pady=8, padx=4)
 
     def collect_data_ui(self, delete_old=True, session=2, proband="defaultUser"):
-        # collect = Tk()
-        # data_collect = Collect_Data_Window(collect)
-        # collect.wm_title("Collect Data")
-        # collect.geometry("400x400")
-
-        collect.deiconify()
+        collect_window.deiconify()
         data_collect.user_path = "Collections/" + proband
         user_path = "Collections/" + proband
         raw_path = user_path + "/raw"
         create_directories(proband=proband, delete_old=delete_old, raw_path=raw_path,
                            raw_sep=user_path + "/raw_separate",
                            raw_con=user_path + "/raw_continues")
-        # data_collect.deiconify()
+        pair_devices()
 
 
 class CollectDataWindow(Frame):
@@ -96,49 +77,89 @@ class CollectDataWindow(Frame):
         self.pack(fill=BOTH, expand=1)
         self.user_path = ""
 
-        self.label1 = Label(self, text="Durchgänge")
-        self.label2 = Label(self, text="Zeit pro Geste")
+        # icons
+        load_false = Image.open("icons8-false-100.png")
+        # load_false = load_false.resize((50, 50), Image.ANTIALIAS)
+        # self.icon_false = ImageTk.PhotoImage(load_false)
+        #
+        # load_true = Image.open("icons8-true-100.png")
+        # load_true = load_true.resize((50, 50), Image.ANTIALIAS)
+        # self.icon_true = ImageTk.PhotoImage(load_true)
+        #
+        # self.device_l_img = Label(self, image=self.icon_false)
+        # self.device_l_img.image = self.icon_false
+        # self.device_r_img = Label(self, image=self.icon_false)
+        # self.device_r_img.image = self.icon_false
+
+        self.sessions_label = Label(self, text="Durchgänge")
+        self.record_time_label = Label(self, text="Zeit pro Geste")
         self.sep1 = Separator(self, orient=HORIZONTAL)
+        self.sep2 = Separator(self, orient=HORIZONTAL)
+
+        self.device_r_label = Label(self, text="Armband rechts")
+        self.device_l_label = Label(self, text="Armband links")
+
         self.close_btn = Button(self, text="Close", command=self.destroy)
         s_val = StringVar(self, value="10")
         r_val = StringVar(self, value="5")
-        self.sessions = Entry(self, textvariable=s_val, width=3)
-        self.record_time = Entry(self, textvariable=r_val, width=3)
+        self.sessions_input = Entry(self, textvariable=s_val, width=3)
+        self.record_time_input = Entry(self, textvariable=r_val, width=3)
 
+        self.trial_separat_btn = Button(self, text="Trial round separated",
+                                        command=lambda: trial_round_separate(save_label=save_label,
+                                                                             display_label=hand_disinfection_display))
+        self.trial_continuous_btn = Button(self, text="Trial round",
+                                           command=lambda: trial_round_continuous(save_label=save_label,
+                                                                                  display_label=hand_disinfection_display))
         self.collect_separate_btn = Button(master=self, text="Collect separate data",
-                                           command=lambda: self.collect_data(sessions=int(self.sessions.get()),
-                                                                             training_time=int(self.record_time.get()),
+                                           command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),
+                                                                             training_time=int(
+                                                                                 self.record_time_input.get()),
                                                                              raw_path=self.user_path + "/raw_separate",
-                                                                             mode=SEPARATE))
-        self.collect_continues_btn = Button(master=self, text="Collect separate data",
-                                            command=lambda: self.collect_data(sessions=int(self.sessions.get()),
-                                                                              training_time=int(self.record_time.get()),
+                                                                             mode=INDIVIDUAL))
+        self.collect_continues_btn = Button(master=self, text="Durchgehender Ablauf",
+                                            command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),
+                                                                              training_time=int(
+                                                                                  self.record_time_input.get()),
                                                                               raw_path=self.user_path + "/raw_separate",
                                                                               mode=CONTINUES))
 
-        self.label1.grid(row=1, pady=4, padx=2)
-        self.label2.grid(row=2, pady=4, padx=2)
-        self.sep1.grid(row=5, column=0, sticky="ew", columnspan=5)
-        self.close_btn.grid(row=6, column=1, pady=4, padx=4)
-        self.sessions.grid(row=1, column=1)
-        self.record_time.grid(row=2, column=1)
-        self.collect_separate_btn.grid(row=3, column=0, pady=4, padx=4)
-        self.collect_continues_btn.grid(row=3, column=2, pady=8, padx=4)
+        # self.device_l_label.grid(row=0,column=2,padx=4)
+        # self.device_r_label.grid(row=1, column=2, padx=4)
+        # self.device_l_img.grid(row=0,column=3,padx=4)
+        # self.device_r_img.grid(row=1, column=3, padx=4)
+
+        self.trial_separat_btn.grid(row=0, column=0, pady=4, padx=4)
+        self.trial_continuous_btn.grid(row=0, column=1, pady=4, padx=4)
+        self.sep1.grid(row=1, column=0, columnspan=2, sticky=E)
+        self.sessions_label.grid(row=2, column=0, pady=4, padx=2)
+        self.sessions_input.grid(row=2, column=1)
+        self.record_time_label.grid(row=3, column=0, pady=4, padx=2)
+        self.record_time_input.grid(row=3, column=1)
+        self.collect_separate_btn.grid(row=4, column=0, pady=4, padx=4)
+        self.collect_continues_btn.grid(row=4, column=1, pady=4, padx=4)
+        self.sep1.grid(row=5, column=0, sticky="ew", columnspan=2)
+        self.close_btn.grid(row=6, column=1, pady=8, padx=4, sticky=E)
 
     def collect_data(self, sessions, training_time, raw_path, mode):
-        introduction.deiconify()
+        introduction_window.deiconify()
         introduction_screen.init_totalbar(sessions)
         introduction_screen.init_sessionbar()
         init_data_collection(raw_path=raw_path, introduction_screen=introduction_screen, session=sessions,
                              training_time=training_time)
         introduction_screen.sessions = sessions
+        introduction_screen.mode = mode
 
-        # if mode == SEPARATE:
-        #     collect_separate_training_data(raw_path=raw_path, session=sessions, training_time=training_time,
-        #                                    introduction_screen=introduction_screen)
-        # elif mode == CONTINUES:
-        #     collect_continuous_trainings_data(raw_path=raw_path, session=sessions, training_time=training_time,
-        #                                       introduction_screen=introduction_screen)
+    # def change_img(self, device):
+    #     if device == RIGHT:
+    #         self.device_r_img = Label(self, image=self.icon_true)
+    #         self.device_r_img.image = self.icon_true
+    #         self.device_r_img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+    #     elif device == LEFT:
+    #         self.device_r_img = Label(self, image=self.icon_true)
+    #         self.device_r_img.image = self.icon_true
+    #         self.device_r_img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+    #     collect_window.update()
 
 
 class IntroductionScreen(Frame):
@@ -184,11 +205,12 @@ class IntroductionScreen(Frame):
 
         self.sessions = -1
         self.current_session = 0
+        self.mode = ""
 
     def start_session(self):
         if self.current_session < self.sessions:
             self.init_sessionbar()
-            collect_gui_sep_data(self.current_session)
+            collect_data(self.current_session,self.mode)
             self.current_session += 1
             self.update_total_bar(1)
             return
@@ -203,7 +225,7 @@ class IntroductionScreen(Frame):
         self.img = Label(self, image=render)
         self.img.image = render
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
-        introduction.update()
+        introduction_window.update()
 
     def init_sessionbar(self):
         self.progressbar_session_val = 0
@@ -217,30 +239,30 @@ class IntroductionScreen(Frame):
 
     def set_descr_text(self, text):
         self.description_text.set(text)
-        introduction.update()
+        introduction_window.update()
 
     def set_descr_val(self, text):
         self.description_value.set(text)
-        introduction.update()
+        introduction_window.update()
 
     def update_total_bar(self, value):
         self.progressbar_total_val += value
         self.progress_total["value"] = self.progressbar_total_val
-        introduction.update()
+        introduction_window.update()
 
     def update_session_bar(self, value):
         self.progressbar_session_val += value
         self.progress_session["value"] = self.progressbar_session_val
-        introduction.update()
+        introduction_window.update()
 
 
-introduction = Tk()
-introduction_screen = IntroductionScreen(introduction)
-introduction.wm_title("Introduction Screen")
-introduction.withdraw()
+introduction_window = Tk()
+introduction_screen = IntroductionScreen(introduction_window)
+introduction_window.wm_title("Introduction Screen")
+introduction_window.withdraw()
 
-collect = Tk()
-data_collect = CollectDataWindow(collect)
-collect.wm_title("Collect Data")
-collect.geometry("300x300")
-collect.withdraw()
+collect_window = Tk()
+data_collect = CollectDataWindow(collect_window)
+collect_window.wm_title("Collect Data")
+collect_window.withdraw()
+

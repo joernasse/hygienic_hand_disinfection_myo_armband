@@ -13,3 +13,11 @@ def countdown(introduction_screen, t=5, ):
         introduction_screen.set_descr_val(timeformat)
         time.sleep(1)
         t -= 1
+
+
+def wait(time_in_sec):
+    dif = 0
+    start = time.time()
+    while dif <= time_in_sec:
+        end = time.time()
+        dif = end - start
