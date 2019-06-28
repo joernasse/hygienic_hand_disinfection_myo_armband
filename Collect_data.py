@@ -28,9 +28,9 @@ TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday)
 # data collection shared variables
 g_introduction_screen = None
 g_files = []
-g_training_time = 0
+g_training_time, g_mode = 0, 0
 g_raw_path, g_img_path = "", ""
-
+g_trial = None
 
 class GestureListener(libmyo.ApiDeviceListener):
     def __init__(self, queue_size=1):
@@ -167,24 +167,7 @@ def collect_raw_data(record_duration=1):
     return
 
 
-def init_data_collection(raw_path, introduction_screen, session=10, training_time=5, mode="individually"):
-    global g_introduction_screen
-    global g_files
-    global g_training_time
-    global g_raw_path
-    global g_img_path
-
-    pair_devices()
-    g_training_time = training_time
-    g_introduction_screen = introduction_screen
-    g_introduction_screen.change_img("intro_screen.jpg")
-    g_img_path = os.getcwd() + "/img/"
-    g_files = os.listdir(g_img_path)
-    g_introduction_screen.set_description_text("Hold every gesture for 5 seconds")
-    g_raw_path = raw_path
-
-
-def collect_data(session, mode=INDIVIDUAL):
+def collect_data(session, mode=INDIVIDUAL, trial=False):
     global g_introduction_screen
     global g_files
     global g_training_time
@@ -200,7 +183,6 @@ def collect_data(session, mode=INDIVIDUAL):
             g_introduction_screen.set_gesture_label(hand_disinfection_description[i])
             g_introduction_screen.set_description_val("")
             g_introduction_screen.change_img(g_img_path + g_files[i])
-            # g_introduction_screen.set_description_text(hand_disinfection_description[i])
 
             wait(1)
 
@@ -211,24 +193,45 @@ def collect_data(session, mode=INDIVIDUAL):
             DEVICE_L.vibrate(type=libmyo.VibrationType.medium)
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
-            if not os.path.isdir(path):
-                os.mkdir(path)
-
-            save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                         path + "/emg.csv",
-                         path + "/imu.csv")
-            log.info("Collected emg data: " + str(len(EMG)))
-            log.info("Collected imu data:" + str(len(ORI)))
+            if not trial:
+                if not os.path.isdir(path):
+                    os.mkdir(path)
+                save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                             path + "/emg.csv",
+                             path + "/imu.csv")
+                log.info("Collected emg data: " + str(len(EMG)))
+                log.info("Collected imu data:" + str(len(ORI)))
 
             wait(.5)
+
             if mode == INDIVIDUAL:
                 countdown(g_introduction_screen, 5)
             else:
                 DEVICE_R.vibrate(type=libmyo.VibrationType.short)
-                # wait(.5)
             g_introduction_screen.update_session_bar(1)
     hub.stop()
     return
+
+
+def init_data_collection(raw_path, introduction_screen, trial, mode, session=10, training_time=5):
+    global g_introduction_screen
+    global g_files
+    global g_training_time
+    global g_raw_path
+    global g_img_path
+    global g_mode
+    global g_trial
+
+    pair_devices()
+    g_training_time = training_time
+    g_introduction_screen = introduction_screen
+    g_introduction_screen.change_img("intro_screen.jpg")
+    g_img_path = os.getcwd() + "/img/"
+    g_files = os.listdir(g_img_path)
+    g_introduction_screen.set_description_text("Hold every gesture for 5 seconds")
+    g_raw_path = raw_path
+    g_mode = mode
+    g_trial = trial
 
 
 def collect_separate_training_data(raw_path, introduction_screen, session=10, training_time=5):

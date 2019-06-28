@@ -1,6 +1,7 @@
-from tkinter import *
+# from tkinter import *
 # pip install pillow
-from tkinter.ttk import Progressbar, Separator
+from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton
+from tkinter.ttk import Progressbar, Separator, Frame
 
 from PIL import Image, ImageTk
 
@@ -105,62 +106,62 @@ class CollectDataWindow(Frame):
         self.sessions_input = Entry(self, textvariable=s_val, width=3)
         self.record_time_input = Entry(self, textvariable=r_val, width=3)
 
-        self.trial_separat_btn = Button(self, text="Trial round separated",
-                                        command=lambda: trial_round_separate(save_label=save_label,
-                                                                             display_label=hand_disinfection_description))
-        self.trial_continuous_btn = Button(self, text="Trial round",
-                                           command=lambda: trial_round_continuous(save_label=save_label,
-                                                                                  display_label=hand_disinfection_description))
-        self.collect_separate_btn = Button(master=self, text="Collect separate data",
-                                           command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),
-                                                                             training_time=int(
-                                                                                 self.record_time_input.get()),
-                                                                             raw_path=self.user_path + "/raw_separate",
-                                                                             mode=INDIVIDUAL))
-        self.collect_continues_btn = Button(master=self, text="Durchgehender Ablauf",
-                                            command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),
-                                                                              training_time=int(
-                                                                                  self.record_time_input.get()),
-                                                                              raw_path=self.user_path + "/raw_separate",
-                                                                              mode=CONTINUES))
+        # self.trial_separate_btn = Button(self, text="Trial round separated",command=lambda: trial_round_separate(save_label=save_label,display_label=hand_disinfection_description))
+        # self.trial_continuous_btn = Button(self, text="Trial round",command=lambda: trial_round_continuous(save_label=save_label,display_label=hand_disinfection_description))
+        # self.collect_continues_btn = Button(master=self, text="Durchgehender Ablauf",command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),training_time=int(self.record_time_input.get()),raw_path=self.user_path + "/raw_separate",mode=CONTINUES))
+        self.collect_data_btn = Button(master=self, text="Start data collection", command=self.collect_data)
 
+        self.trial_val = IntVar()
+        self.trial_cbox = Checkbutton(self, text="Testdurchgang", variable=self.trial_val)
+
+        self.mode_val = IntVar()
+        self.mode_cbox = Checkbutton(self, text="Separate Aufzeichnung", variable=self.mode_val)
+        self.mode_cbox.var = self.mode_val
         # self.device_l_label.grid(row=0,column=2,padx=4)
         # self.device_r_label.grid(row=1, column=2, padx=4)
         # self.device_l_img.grid(row=0,column=3,padx=4)
         # self.device_r_img.grid(row=1, column=3, padx=4)
 
-        self.trial_separat_btn.grid(row=0, column=0, pady=4, padx=4)
-        self.trial_continuous_btn.grid(row=0, column=1, pady=4, padx=4)
-        self.sep1.grid(row=1, column=0, columnspan=2, sticky=E)
-        self.sessions_label.grid(row=2, column=0, pady=4, padx=2)
-        self.sessions_input.grid(row=2, column=1)
-        self.record_time_label.grid(row=3, column=0, pady=4, padx=2)
-        self.record_time_input.grid(row=3, column=1)
-        self.collect_separate_btn.grid(row=4, column=0, pady=4, padx=4)
-        self.collect_continues_btn.grid(row=4, column=1, pady=4, padx=4)
-        self.sep1.grid(row=5, column=0, sticky="ew", columnspan=2)
+        # self.trial_separate_btn.grid(row=0, column=0, pady=4, padx=4)
+        # self.trial_continuous_btn.grid(row=0, column=1, pady=4, padx=4)
+        # self.sep1.grid(row=1, column=0, columnspan=2, sticky=E)
+        self.sessions_label.grid(row=0, column=0, pady=4, padx=2)
+        self.sessions_input.grid(row=0, column=1)
+
+        self.record_time_label.grid(row=1, column=0, pady=4, padx=2)
+        self.record_time_input.grid(row=1, column=1)
+
+        self.mode_cbox.grid(row=2, column=0, pady=4, padx=4, sticky=W)
+        self.trial_cbox.grid(row=2, column=1, pady=4, padx=4, sticky=W)
+        self.collect_data_btn.grid(row=4, column=0, pady=4, padx=4)
+
+        self.sep1.grid(row=5, column=0, sticky="ew", columnspan=2, padx=4)
+
         self.close_btn.grid(row=6, column=1, pady=8, padx=4, sticky=E)
 
-    def collect_data(self, sessions, training_time, raw_path, mode):
+    def collect_data(self):
+        # introduction_screen.update()
+        sessions = int(self.sessions_input.get())
+
+        if self.mode_val == 1:
+            raw_path = self.user_path + "/raw_separate"
+        else:
+            raw_path = self.user_path + "/raw_continues"
+
+        mode = self.mode_val.get()
+        trial = self.trial_val.get()
+
         introduction_window.deiconify()
         introduction_screen.init_totalbar(sessions)
         introduction_screen.init_sessionbar()
-        init_data_collection(raw_path=raw_path, introduction_screen=introduction_screen, session=sessions,
-                             training_time=training_time)
+        init_data_collection(raw_path=raw_path,
+                             trial=trial,
+                             mode=mode,
+                             introduction_screen=introduction_screen,
+                             session=sessions,
+                             training_time=int(self.record_time_input.get()))
         introduction_screen.sessions = sessions
-        introduction_screen.mode = mode
-
-    # def change_img(self, device):
-    #     if device == RIGHT:
-    #         self.device_r_img = Label(self, image=self.icon_true)
-    #         self.device_r_img.image = self.icon_true
-    #         self.device_r_img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
-    #     elif device == LEFT:
-    #         self.device_r_img = Label(self, image=self.icon_true)
-    #         self.device_r_img.image = self.icon_true
-    #         self.device_r_img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
-    #     collect_window.update()
-
+        introduction_screen.mode = self.mode_val
 
 class IntroductionScreen(Frame):
     def __init__(self, master=None):
