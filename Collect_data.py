@@ -6,11 +6,10 @@ import time
 
 import matplotlib.pyplot as plt
 import logging as log
-
 from myo import init, Hub, StreamEmg
 import myo as libmyo
-
-from Constant import emg_count_list, imu_count_list, hand_disinfection_display, label_display, save_label, LEFT, RIGHT, \
+from Constant import emg_count_list, imu_count_list, hand_disinfection_description, label_display, save_label, LEFT, \
+    RIGHT, \
     INDIVIDUAL
 from Helper_functions import countdown, cls, wait
 from Save_Load import save_raw_csv
@@ -161,6 +160,7 @@ def collect_raw_data(record_duration=1):
         status = 1
         end = time.time()
         dif = end - start
+        # g_introduction_screen.update_gesture_bar(1)
     status = 0
     emg_count_list.append(len(EMG))
     imu_count_list.append(len(ORI))
@@ -174,12 +174,13 @@ def init_data_collection(raw_path, introduction_screen, session=10, training_tim
     global g_raw_path
     global g_img_path
 
+    pair_devices()
     g_training_time = training_time
     g_introduction_screen = introduction_screen
     g_introduction_screen.change_img("intro_screen.jpg")
     g_img_path = os.getcwd() + "/img/"
     g_files = os.listdir(g_img_path)
-    g_introduction_screen.set_descr_text("Hold every gesture for 5 seconds")
+    g_introduction_screen.set_description_text("Hold every gesture for 5 seconds")
     g_raw_path = raw_path
 
 
@@ -195,24 +196,30 @@ def collect_data(session, mode=INDIVIDUAL):
         g_introduction_screen.init_sessionbar()
         countdown(g_introduction_screen, 3)
         for i in range(len(save_label)):
-            g_introduction_screen.set_descr_val("")
+            path = g_raw_path + "/" + "s" + str(session) + save_label[i]
+            g_introduction_screen.set_gesture_label(hand_disinfection_description[i])
+            g_introduction_screen.set_description_val("")
             g_introduction_screen.change_img(g_img_path + g_files[i])
-            g_introduction_screen.set_descr_text("Gesture -- " + label_display[i] + " : be ready!")
-            wait(1)
-            g_introduction_screen.set_descr_text("Do Gesture!")
-            collect_raw_data(g_training_time)
-            wait(.3)
-            dest_path = g_raw_path + "/" + "s" + str(session) + save_label[i]
+            # g_introduction_screen.set_description_text(hand_disinfection_description[i])
 
-            if not os.path.isdir(dest_path):
-                os.mkdir(dest_path)
+            wait(1)
+
+            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
+            g_introduction_screen.set_description_text("Start!")
+            collect_raw_data(g_training_time)
+            g_introduction_screen.set_description_text("Pause")
+            DEVICE_L.vibrate(type=libmyo.VibrationType.medium)
+            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
+
+            if not os.path.isdir(path):
+                os.mkdir(path)
 
             save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                         dest_path + "/emg.csv",
-                         dest_path + "/imu.csv")
+                         path + "/emg.csv",
+                         path + "/imu.csv")
             log.info("Collected emg data: " + str(len(EMG)))
             log.info("Collected imu data:" + str(len(ORI)))
-            g_introduction_screen.set_descr_text("Pause")
+
             wait(.5)
             if mode == INDIVIDUAL:
                 countdown(g_introduction_screen, 5)
@@ -225,28 +232,24 @@ def collect_data(session, mode=INDIVIDUAL):
 
 
 def collect_separate_training_data(raw_path, introduction_screen, session=10, training_time=5):
-    display_label = hand_disinfection_display
+    display_label = hand_disinfection_description
     save_label = label_display
     introduction_screen.change_img("intro_screen.jpg")
     img_path = os.getcwd() + "/img/"
     files = os.listdir(img_path)
     files.sort()
 
-    # cls()
     wait(1)
-    # print("Gesture set\n")
-    introduction_screen.set_descr_text("Gesture set")
+    introduction_screen.set_description_text("Gesture set")
     print(*display_label, sep="\n")
     print("\nHold every gesture 5 seconds")
-    n = len(display_label)
 
     with hub.run_in_background(listener.on_event):
         for s in range(session):
-            introduction_screen.init_sessionbar()
-            # session_display = "To start session " + str(s + 1) + ", press enter..."
-            # input(session_display)
+            g_introduction_screen.init_gesturebar(training_time)
             countdown(3)
-            for i in range(n):
+            for i in range(len(display_label)):
+                introduction_screen.init_gesture_bar()
                 introduction_screen.change_img(img_path + files[i])
                 print("Gesture -- ", save_label[i], " : be ready!")
                 wait(1)
@@ -263,11 +266,9 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
                              dest_path + "/imu.csv")
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
-                cls()
                 print("Pause")
                 wait(.5)
                 countdown(5)
-                cls()
                 introduction_screen.update_session_bar(1)
             introduction_screen.update_total_bar(1)
 
@@ -280,7 +281,7 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
 
 
 def collect_continuous_trainings_data(raw_path, introduction_screen, session=5, training_time=5):
-    display_label = hand_disinfection_display
+    display_label = hand_disinfection_description
     save_label = label_display
     global status
     print("Prepare Application...")
@@ -289,7 +290,6 @@ def collect_continuous_trainings_data(raw_path, introduction_screen, session=5, 
     print("Collect continuous training data")
 
     wait(1)
-    cls()
     print("Gesture set\n")
     print(*display_label, sep="\n")
     print("\nFull motion sequence.\nSwitching to the next step is displayed visually")
@@ -380,3 +380,11 @@ def trial_round_continuous(save_label, display_label):
             print("Session ", j + 1, "completed")
         print("Trial round continuous completed")
     return
+
+
+def main():
+    print("x")
+
+
+if __name__ == '__main__':
+    main()

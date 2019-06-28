@@ -8,16 +8,16 @@ save_label = ['Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1',
                      'Rest']
 
 # hand_disinfection_display = ['Step 0    - Take disinfectant',
-hand_disinfection_display = ['Step 1    - Palm and wrist',
+hand_disinfection_description = ['Step 1    - Palm and wrist',
                              'Step 2    - Right palm on left back',
                              'Step 2.1  - Left palm on right back',
                              'Step 3    - Spread and interlocked fingers palm',
                              'Step 4    - Interlock fingers',
                              'Step 5    - Circular rubbing of the right thumb in the closed left palm of the hand',
                              'Step 5.1  - Circular rubbing of the left thumb in the closed right palm of the hand ',
-                             'Step 6    - Circular movement of closed fingertips of the right hand on the left palm of the hand',
-                             'Step 6.1  - Circular movement of closed fingertips of the left hand on the right palm of the hand',
-                             'Rest      - Do nothing']
+                                 'Step 6    - Circular movement of closed fingertips of the right hand on the left palm of the hand',
+                                 'Step 6.1  - Circular movement of closed fingertips of the left hand on the right palm of the hand',
+                                 'Rest      - Do nothing']
 
 # Collect_data
 PREDICT_TIME = 2.5
