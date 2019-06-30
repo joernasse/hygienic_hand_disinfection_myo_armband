@@ -3,8 +3,7 @@ from tkinter.ttk import Progressbar, Separator, Frame
 
 from PIL import Image, ImageTk
 
-from Collect_data import trial_round_separate, trial_round_continuous, check_sample_rate, collect_data, \
-    init_data_collection, pair_devices
+from Collect_data import collect_data, init_data_collection
 from Constant import *
 from Process_data import process_raw_data
 from Save_Load import load_csv, create_directories
@@ -151,11 +150,10 @@ class IntroductionScreen(Frame):
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
-        self.description_text = StringVar()
-        self.description_text.set("Untertitel")
+        self.status_text = StringVar()
         self.countdown_value = StringVar()
 
-        self.description_label = Label(self, textvariable=self.description_text)
+        self.status_label = Label(self, textvariable=self.status_text)  # Start, Pause
         self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
 
         self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
@@ -163,7 +161,7 @@ class IntroductionScreen(Frame):
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
 
-        self.description_label.grid(row=1, column=0, pady=4, columnspan=2)
+        self.status_label.grid(row=1, column=0, pady=4)
 
         self.session_text = StringVar()
         self.gesture_text = StringVar()
@@ -211,11 +209,6 @@ class IntroductionScreen(Frame):
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
         introduction_window.update()
 
-    def init_gesturebar(self, record_time):
-        self.progressbar_gesture_val = 0
-        # self.progress_gesture["value"] = self.progressbar_gesture_val
-        # self.progress_gesture["maximum"] = record_time
-
     def init_sessionbar(self):
         self.progressbar_session_val = 0
         self.progress_session["value"] = self.progressbar_session_val
@@ -226,8 +219,8 @@ class IntroductionScreen(Frame):
         self.progress_total["value"] = self.progressbar_total_val
         self.progress_total["maximum"] = sessions * len(label_display)
 
-    def set_description_text(self, text):
-        self.description_text.set(text)
+    def set_status_text(self, text):
+        self.status_text.set(text)
         introduction_window.update()
 
     def set_gesture_label(self, text):
