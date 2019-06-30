@@ -1,6 +1,4 @@
-# from tkinter import *
-# pip install pillow
-from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton
+from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL
 from tkinter.ttk import Progressbar, Separator, Frame
 
 from PIL import Image, ImageTk
@@ -10,6 +8,9 @@ from Collect_data import trial_round_separate, trial_round_continuous, check_sam
 from Constant import *
 from Process_data import process_raw_data
 from Save_Load import load_csv, create_directories
+
+introduction_window = Tk()
+collect_window = Tk()
 
 
 class MainWindow(Frame):
@@ -78,78 +79,54 @@ class CollectDataWindow(Frame):
         self.pack(fill=BOTH, expand=1)
         self.user_path = ""
 
-        # icons
-        load_false = Image.open("icons8-false-100.png")
-        # load_false = load_false.resize((50, 50), Image.ANTIALIAS)
-        # self.icon_false = ImageTk.PhotoImage(load_false)
-        #
-        # load_true = Image.open("icons8-true-100.png")
-        # load_true = load_true.resize((50, 50), Image.ANTIALIAS)
-        # self.icon_true = ImageTk.PhotoImage(load_true)
-        #
-        # self.device_l_img = Label(self, image=self.icon_false)
-        # self.device_l_img.image = self.icon_false
-        # self.device_r_img = Label(self, image=self.icon_false)
-        # self.device_r_img.image = self.icon_false
-
         self.sessions_label = Label(self, text="Durchgänge")
         self.record_time_label = Label(self, text="Zeit pro Geste")
-        self.sep1 = Separator(self, orient=HORIZONTAL)
-        self.sep2 = Separator(self, orient=HORIZONTAL)
-
         self.device_r_label = Label(self, text="Armband rechts")
         self.device_l_label = Label(self, text="Armband links")
 
+        self.sep1 = Separator(self, orient=HORIZONTAL)
+        self.sep2 = Separator(self, orient=HORIZONTAL)
+
+        self.s_val = StringVar(self, value="10")
+        self.r_val = StringVar(self, value="5")
+        # self.trial_val = IntVar()
+        # self.mode_val = IntVar()
+
+        self.sessions_input = Entry(self, textvariable=self.s_val, width=3)
+        self.record_time_input = Entry(self, textvariable=self.r_val, width=3)
+
+        self.collect_separate_btn = Button(master=self, text="Collect Separate",
+                                           command=lambda: self.collect_data(mode=INDIVIDUAL, trial=False))
+        self.collect_continues_btn = Button(master=self, text="Collect Continues",
+                                            command=lambda: self.collect_data(mode=CONTINUES, trial=False))
+        self.trial_separate_btn = Button(master=self, text="Trial Separate",
+                                         command=lambda: self.collect_data(mode=INDIVIDUAL, trial=True))
+        self.trial_continues_btn = Button(master=self, text="Trial Continues",
+                                          command=lambda: self.collect_data(mode=CONTINUES, trial=True))
         self.close_btn = Button(self, text="Close", command=self.destroy)
-        s_val = StringVar(self, value="10")
-        r_val = StringVar(self, value="5")
-        self.sessions_input = Entry(self, textvariable=s_val, width=3)
-        self.record_time_input = Entry(self, textvariable=r_val, width=3)
 
-        # self.trial_separate_btn = Button(self, text="Trial round separated",command=lambda: trial_round_separate(save_label=save_label,display_label=hand_disinfection_description))
-        # self.trial_continuous_btn = Button(self, text="Trial round",command=lambda: trial_round_continuous(save_label=save_label,display_label=hand_disinfection_description))
-        # self.collect_continues_btn = Button(master=self, text="Durchgehender Ablauf",command=lambda: self.collect_data(sessions=int(self.sessions_input.get()),training_time=int(self.record_time_input.get()),raw_path=self.user_path + "/raw_separate",mode=CONTINUES))
-        self.collect_data_btn = Button(master=self, text="Start data collection", command=self.collect_data)
-
-        self.trial_val = IntVar()
-        self.trial_cbox = Checkbutton(self, text="Testdurchgang", variable=self.trial_val)
-
-        self.mode_val = IntVar()
-        self.mode_cbox = Checkbutton(self, text="Separate Aufzeichnung", variable=self.mode_val)
-        self.mode_cbox.var = self.mode_val
-        # self.device_l_label.grid(row=0,column=2,padx=4)
-        # self.device_r_label.grid(row=1, column=2, padx=4)
-        # self.device_l_img.grid(row=0,column=3,padx=4)
-        # self.device_r_img.grid(row=1, column=3, padx=4)
-
-        # self.trial_separate_btn.grid(row=0, column=0, pady=4, padx=4)
-        # self.trial_continuous_btn.grid(row=0, column=1, pady=4, padx=4)
-        # self.sep1.grid(row=1, column=0, columnspan=2, sticky=E)
         self.sessions_label.grid(row=0, column=0, pady=4, padx=2)
         self.sessions_input.grid(row=0, column=1)
 
         self.record_time_label.grid(row=1, column=0, pady=4, padx=2)
         self.record_time_input.grid(row=1, column=1)
 
-        self.mode_cbox.grid(row=2, column=0, pady=4, padx=4, sticky=W)
-        self.trial_cbox.grid(row=2, column=1, pady=4, padx=4, sticky=W)
-        self.collect_data_btn.grid(row=4, column=0, pady=4, padx=4)
+        self.collect_separate_btn.grid(row=4, column=0, pady=4, padx=8)
+        self.collect_continues_btn.grid(row=4, column=2, pady=4, padx=8)
+        Separator(self, orient=VERTICAL).grid(row=4, column=1, rowspan=3)
+        self.trial_separate_btn.grid(row=5, column=0, pady=4, padx=8)
+        self.trial_continues_btn.grid(row=5, column=2, pady=4, padx=8)
 
-        self.sep1.grid(row=5, column=0, sticky="ew", columnspan=2, padx=4)
+        self.sep1.grid(row=6, column=0, sticky="ew", columnspan=2, padx=4)
 
-        self.close_btn.grid(row=6, column=1, pady=8, padx=4, sticky=E)
+        self.close_btn.grid(row=7, column=1, pady=8, padx=4, sticky=E)
 
-    def collect_data(self):
-        # introduction_screen.update()
-        sessions = int(self.sessions_input.get())
-
-        if self.mode_val == 1:
+    def collect_data(self, mode, trial):
+        sessions = int(self.s_val.get())
+        if mode == INDIVIDUAL:
             raw_path = self.user_path + "/raw_separate"
         else:
             raw_path = self.user_path + "/raw_continues"
-
-        mode = self.mode_val.get()
-        trial = self.trial_val.get()
 
         introduction_window.deiconify()
         introduction_screen.init_totalbar(sessions)
@@ -158,10 +135,10 @@ class CollectDataWindow(Frame):
                              trial=trial,
                              mode=mode,
                              introduction_screen=introduction_screen,
-                             session=sessions,
-                             training_time=int(self.record_time_input.get()))
+                             training_time=int(self.r_val.get()))
         introduction_screen.sessions = sessions
-        introduction_screen.mode = self.mode_val
+        # introduction_screen.mode = self.mode_val
+
 
 class IntroductionScreen(Frame):
     def __init__(self, master=None):
@@ -170,7 +147,7 @@ class IntroductionScreen(Frame):
         self.pack(fill=BOTH, expand=1)
 
         load = Image.open("intro_screen.jpg")
-        load = load.resize((650, 600), Image.ANTIALIAS)
+        load = load.resize((450, 400), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -215,18 +192,19 @@ class IntroductionScreen(Frame):
         self.mode = ""
 
     def start_session(self):
-        if self.current_session < self.sessions:
+        if self.current_session <= self.sessions:
             self.init_sessionbar()
-            collect_data(self.current_session, self.mode)
+            collect_data(self.current_session)
             self.current_session += 1
-            self.update_total_bar(1)
+            self.update_progressbars(1)
             return
         else:
-            print("Data collection complete!")
+            self.set_description_val("Data collection complete!")
+            # print("Data collection complete!")
 
     def change_img(self, path):
         load = Image.open(path)
-        load = load.resize((650, 600), Image.ANTIALIAS)
+        load = load.resize((450, 400), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -235,8 +213,8 @@ class IntroductionScreen(Frame):
 
     def init_gesturebar(self, record_time):
         self.progressbar_gesture_val = 0
-        self.progress_gesture["value"] = self.progressbar_gesture_val
-        self.progress_gesture["maximum"] = record_time
+        # self.progress_gesture["value"] = self.progressbar_gesture_val
+        # self.progress_gesture["maximum"] = record_time
 
     def init_sessionbar(self):
         self.progressbar_session_val = 0
@@ -246,7 +224,7 @@ class IntroductionScreen(Frame):
     def init_totalbar(self, sessions):
         self.progressbar_total_val = 0
         self.progress_total["value"] = self.progressbar_total_val
-        self.progress_total["maximum"] = sessions
+        self.progress_total["maximum"] = sessions * len(label_display)
 
     def set_description_text(self, text):
         self.description_text.set(text)
@@ -260,23 +238,16 @@ class IntroductionScreen(Frame):
         self.countdown_value.set(text)
         introduction_window.update()
 
-    def update_total_bar(self, value):
-        self.progressbar_total_val += value
-        self.progress_total["value"] = self.progressbar_total_val
-        introduction_window.update()
-
-    def update_session_bar(self, value):
-        self.progressbar_session_val += value
-        self.progress_session["value"] = self.progressbar_session_val
+    def update_progressbars(self, value):
+        self.progress_session["value"] += value
+        self.progress_total["value"] += value
         introduction_window.update()
 
 
-introduction_window = Tk()
 introduction_screen = IntroductionScreen(introduction_window)
 introduction_window.wm_title("Introduction Screen")
 introduction_window.withdraw()
 
-collect_window = Tk()
 data_collect = CollectDataWindow(collect_window)
 collect_window.wm_title("Collect Data")
 collect_window.withdraw()

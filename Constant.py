@@ -27,7 +27,7 @@ POSITION_INTERVAL = 0.04
 COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
-INDIVIDUAL="individual"
+INDIVIDUAL = "individual"
 emg_count_list = []
 imu_count_list = []
 
@@ -59,5 +59,4 @@ imu_headline = ["timestamp",
 imu_identifier = ["x", "y", "z"]
 
 # GUI
-SEPARATE = "separate"
 CONTINUES = "continues"

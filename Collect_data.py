@@ -19,6 +19,8 @@ EMG = []  # emg
 ORI = []  # orientation
 GYR = []  # gyroscope
 ACC = []  # accelerometer
+emg_l, emg_r = [], []
+tmp = []
 status = 0
 
 TIME_NOW = time.localtime()
@@ -30,60 +32,100 @@ g_introduction_screen = None
 g_files = []
 g_training_time, g_mode = 0, 0
 g_raw_path, g_img_path = "", ""
-g_trial = None
+g_trial = False
 
-class GestureListener(libmyo.ApiDeviceListener):
+
+# class MyoListener(libmyo.ApiDeviceListener):
+#     def __init__(self, queue_size=1):
+#         super(MyoListener, self).__init__()
+#         self.lock = threading.Lock()
+#         self.emg_data_queue = collections.deque(maxlen=queue_size)
+#         self.ori_data_queue = collections.deque(maxlen=queue_size)
+#
+#     def on_connected(self, event):
+#         event.device.stream_emg(StreamEmg.enabled)
+#
+#     def on_emg(self, event):
+#         debug=1
+#         # with self.lock:
+#         if status:
+#             # emg_l.append(DEVICE_L.emg)
+#             # emg_r.append(DEVICE_R.emg)
+#             EMG.append([event.timestamp, event.emg])
+#
+#     def on_orientation(self, event):
+#         # with self.lock:
+#         if status:
+#             ORI.append([event.timestamp, event.orientation])
+#             ACC.append([event.timestamp, event.acceleration])
+#             GYR.append([event.timestamp, event.gyroscope])
+#
+#     def get_ori_data(self):
+#         with self.lock:
+#             return list(self.ori_data_queue)
+#
+#     # def devices(self):
+#     #     with self._cond:
+#     #         return list(self._devices.values())
+#
+
+class GestureListener(libmyo.DeviceListener):
     def __init__(self, queue_size=1):
-        super(GestureListener, self).__init__()
         self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
+
+    def on_arm_synced(self, event):
+        print("x")
 
     def on_connected(self, event):
         event.device.stream_emg(StreamEmg.enabled)
 
     def on_emg(self, event):
-        # with self.lock:
-        if status:
-            EMG.append([event.timestamp, event.emg])
+        with self.lock:
+            if status:
+                # emg_l.append(DEVICE_L.emg)
+                # emg_r.append(DEVICE_R.emg)
+                EMG.append([event.timestamp, event.emg])
 
     def on_orientation(self, event):
-        # with self.lock:
-        if status:
-            ORI.append([event.timestamp, event.orientation])
-            ACC.append([event.timestamp, event.acceleration])
-            GYR.append([event.timestamp, event.gyroscope])
+        with self.lock:
+            if status:
+                ORI.append([event.timestamp, event.orientation])
+                ACC.append([event.timestamp, event.acceleration])
+                GYR.append([event.timestamp, event.gyroscope])
 
     def get_ori_data(self):
         with self.lock:
             return list(self.ori_data_queue)
 
-    # def devices(self):
-    #     with self._cond:
-    #         return list(self._devices.values())
-
 
 init()
 hub = Hub()
-listener = GestureListener()
+listener = libmyo.ApiDeviceListener()
+listener_1 = GestureListener()
 
 
 def pair_devices():
     global DEVICE_L
     global DEVICE_R
     with hub.run_in_background(listener):
-        wait(2)
-        devices = listener.devices
-        for d in devices:
-            if d.arm == LEFT:
-                d.vibrate(libmyo.VibrationType.short)
-                DEVICE_L = d
-            elif d.arm == RIGHT:
-                d.vibrate(libmyo.VibrationType.short)
-                DEVICE_R = d
-        print("x")
+        wait(.5)
+        for i in range(3):
+            devices = listener.devices
+            for d in devices:
+                if d.arm == LEFT:
+                    DEVICE_L = d
+                    DEVICE_L.stream_emg(True)
+                elif d.arm == RIGHT:
+                    DEVICE_R = d
+                    DEVICE_R.stream_emg(True)
+            if not (DEVICE_L is None) and not (DEVICE_R is None):
+                DEVICE_R.vibrate(libmyo.VibrationType.short)
+                DEVICE_L.vibrate(libmyo.VibrationType.short)
+                return [DEVICE_L, DEVICE_R]
+            wait(2)
     hub.stop()
-    return [DEVICE_L, DEVICE_R]
 
 
 def check_sample_rate(runtime_s=100, warm_start=True):
@@ -160,40 +202,42 @@ def collect_raw_data(record_duration=1):
         status = 1
         end = time.time()
         dif = end - start
-        # g_introduction_screen.update_gesture_bar(1)
     status = 0
     emg_count_list.append(len(EMG))
     imu_count_list.append(len(ORI))
     return
 
 
-def collect_data(session, mode=INDIVIDUAL, trial=False):
+def collect_data(current_session):
     global g_introduction_screen
     global g_files
     global g_training_time
     global g_raw_path
     global g_img_path
     global DEVICE_R
+    global emg_r
+    global emg_l
 
-    with hub.run_in_background(listener.on_event):
+    with hub.run_in_background(listener_1.on_event):
         g_introduction_screen.init_sessionbar()
         countdown(g_introduction_screen, 3)
         for i in range(len(save_label)):
-            path = g_raw_path + "/" + "s" + str(session) + save_label[i]
+            path = g_raw_path + "/" + "s" + str(current_session) + save_label[i]
             g_introduction_screen.set_gesture_label(hand_disinfection_description[i])
             g_introduction_screen.set_description_val("")
             g_introduction_screen.change_img(g_img_path + g_files[i])
 
             wait(1)
 
-            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
+            DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_description_text("Start!")
+            emg_l, emg_r = [], []
             collect_raw_data(g_training_time)
             g_introduction_screen.set_description_text("Pause")
             DEVICE_L.vibrate(type=libmyo.VibrationType.medium)
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
-            if not trial:
+            if not g_trial:
                 if not os.path.isdir(path):
                     os.mkdir(path)
                 save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
@@ -204,16 +248,16 @@ def collect_data(session, mode=INDIVIDUAL, trial=False):
 
             wait(.5)
 
-            if mode == INDIVIDUAL:
+            if g_mode == INDIVIDUAL:
                 countdown(g_introduction_screen, 5)
             else:
                 DEVICE_R.vibrate(type=libmyo.VibrationType.short)
-            g_introduction_screen.update_session_bar(1)
+            g_introduction_screen.update_progressbars(1)
     hub.stop()
     return
 
 
-def init_data_collection(raw_path, introduction_screen, trial, mode, session=10, training_time=5):
+def init_data_collection(raw_path, introduction_screen, trial, mode, training_time=5):
     global g_introduction_screen
     global g_files
     global g_training_time
@@ -272,8 +316,8 @@ def collect_separate_training_data(raw_path, introduction_screen, session=10, tr
                 print("Pause")
                 wait(.5)
                 countdown(5)
-                introduction_screen.update_session_bar(1)
-            introduction_screen.update_total_bar(1)
+                introduction_screen.update_progressbars(1)
+            introduction_screen.update_progressbars(1)
 
             log.info("Session " + str(s + 1) + "completed")
             print("Session ", s + 1, "completed")
