@@ -37,7 +37,7 @@ class MainWindow(Frame):
         self.close_btn = self.close = Button(self, textvariable=self.close_val, command=self.destroy)
 
         self.collect_data_btn = Button(self, text="Collect data",
-                                       command=lambda: self.collect_data_ui(delete_old=False, session=2,
+                                       command=lambda: self.collect_data_ui(delete_old=False,
                                                                             proband=self.proband_input.get()))
 
         self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
@@ -60,7 +60,7 @@ class MainWindow(Frame):
 
         self.close_btn.grid(row=7, column=1, pady=8, padx=4)
 
-    def collect_data_ui(self, delete_old=True, session=2, proband="defaultUser"):
+    def collect_data_ui(self, delete_old=True, proband="defaultUser"):
         collect_window.deiconify()
         data_collect.user_path = "Collections/" + proband
         user_path = "Collections/" + proband
@@ -92,14 +92,14 @@ class CollectDataWindow(Frame):
         self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
 
         self.collect_separate_btn = Button(master=self, text="Collect Separate",
-                                           command=lambda: self.collect_data(mode=INDIVIDUAL, trial=False))
+                                           command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=False))
         self.collect_continues_btn = Button(master=self, text="Collect Continues",
-                                            command=lambda: self.collect_data(mode=CONTINUES, trial=False))
+                                            command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=False))
         self.trial_separate_btn = Button(master=self, text="Trial Separate",
-                                         command=lambda: self.collect_data(mode=INDIVIDUAL, trial=True))
+                                         command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=True))
         self.trial_continues_btn = Button(master=self, text="Trial Continues",
-                                          command=lambda: self.collect_data(mode=CONTINUES, trial=True))
-        self.close_btn = Button(self, text="Close", command=collect_window.destroy)
+                                          command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=True))
+        self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
 
         self.sessions_label.grid(row=0, column=0, pady=4, padx=2)
         self.sessions_input.grid(row=0, column=1)
@@ -116,14 +116,19 @@ class CollectDataWindow(Frame):
 
         self.close_btn.grid(row=7, column=1, pady=8, padx=4, sticky=E)
 
-    def collect_data(self, mode, trial):
+    def introduction_screen_ui(self, mode, trial):
+        introduction_window.deiconify()
         sessions = int(self.session_val.get())
         if mode == INDIVIDUAL:
+            title = "Collect separate data"
             raw_path = self.user_path + "/raw_separate"
         else:
+            title = "Collect continues data"
             raw_path = self.user_path + "/raw_continues"
+        if trial:
+            title += " TRIAL"
+        introduction_window.title(title)
 
-        introduction_window.deiconify()
         introduction_screen.init_totalbar(sessions)
         introduction_screen.init_sessionbar()
         init_data_collection(raw_path=raw_path,
@@ -139,7 +144,6 @@ class IntroductionScreen(Frame):
         Frame.__init__(self, master)
         self.master = master
         self.pack(fill=BOTH, expand=1)
-
         load = Image.open("intro_screen.jpg")
         load = load.resize((550, 500), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
@@ -152,15 +156,13 @@ class IntroductionScreen(Frame):
         self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
 
         self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
-        self.close_btn = Button(self, text="Close", command=introduction_window.destroy)
+        self.close_btn = Button(self, text="Close", command=introduction_window.withdraw)
 
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
 
-
         self.session_text = StringVar()
         self.gesture_text = StringVar()
-        # self.session_text.set("Session 1")
 
         self.session_label = Label(self, textvariable=self.session_text)
         self.gesture_label = Label(self, textvariable=self.gesture_text)

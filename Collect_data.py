@@ -68,17 +68,17 @@ class GestureListener(libmyo.DeviceListener):
 
 init()
 hub = Hub()
-listener = libmyo.ApiDeviceListener()
-listener_1 = GestureListener()
+device_listener = libmyo.ApiDeviceListener()
+gesture_listener = GestureListener()
 
 
 def pair_devices():
     global DEVICE_L
     global DEVICE_R
-    with hub.run_in_background(listener):
+    with hub.run_in_background(device_listener):
         wait(.5)
         for i in range(3):
-            devices = listener.devices
+            devices = device_listener.devices
             for d in devices:
                 if d.arm == LEFT:
                     DEVICE_L = d
@@ -133,7 +133,7 @@ def collect_data(current_session):
     g_introduction_screen.init_sessionbar()
     g_introduction_screen.set_countdown_text("")
 
-    with hub.run_in_background(listener_1.on_event):
+    with hub.run_in_background(gesture_listener.on_event):
         countdown(g_introduction_screen, 3)
         for i in range(len(save_label)):
             path = g_raw_path + "/" + "s" + str(current_session) + save_label[i]
@@ -149,7 +149,7 @@ def collect_data(current_session):
             g_introduction_screen.set_status_text("Start!")
             collect_raw_data(g_training_time)
 
-            DEVICE_L.vibrate(type=libmyo.VibrationType.medium)
+            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
             g_introduction_screen.set_status_text("Pause")
