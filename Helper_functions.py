@@ -10,7 +10,7 @@ def countdown(introduction_screen, t=5, ):
     while t:
         mins, secs = divmod(t, 60)
         timeformat = '{:02d}:{:02d}'.format(mins, secs)
-        introduction_screen.set_description_val(timeformat)
+        introduction_screen.set_countdown_text(timeformat)
         time.sleep(1)
         t -= 1
 

@@ -28,8 +28,6 @@ COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
 INDIVIDUAL = "individual"
-emg_count_list = []
-imu_count_list = []
 
 # Process_data
 MAX_EMG_VALUE = 127

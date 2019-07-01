@@ -25,7 +25,7 @@ class MainWindow(Frame):
         self.proband_label = Label(self, text="Proband Name:")
 
         self.p_val = StringVar(self, value="defaultUser")
-        self.proband = Entry(self, textvariable=self.p_val)
+        self.proband_input = Entry(self, textvariable=self.p_val)
 
         self.sep1 = Separator(self, orient=HORIZONTAL)
 
@@ -38,28 +38,27 @@ class MainWindow(Frame):
 
         self.collect_data_btn = Button(self, text="Collect data",
                                        command=lambda: self.collect_data_ui(delete_old=False, session=2,
-                                                                            proband=self.proband.get()))
-
-        self.check_rate_btn = Button(self, text="Check sample rate",
-                                     command=lambda: check_sample_rate(2, warm_start=False))
+                                                                            proband=self.proband_input.get()))
 
         self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
         self.load_feature_btn = Button(self, text="Load feature file", command=load_csv)
 
-        self.collect_label.grid(row=0, column=0, pady=4)
+        self.collect_label.grid(row=0, column=0, pady=4, columnspan=2)
 
-        self.collect_data_btn.grid(row=1, column=0, pady=8, padx=4, sticky=W)
+        self.proband_label.grid(row=1, column=0, pady=4)
+        self.proband_input.grid(row=1, column=1, padx=8)
 
-        self.proband_label.grid(row=2, column=0, pady=4)
-        self.proband.grid(row=2, column=1)
+        self.collect_data_btn.grid(row=2, column=0, pady=8, padx=4, sticky=W)
 
-        self.label3.grid(row=3, pady=4)
-        self.sep1.grid(row=3, column=0, sticky="ew", columnspan=5, padx=4)
-        self.check_rate_btn.grid(row=5, column=0, pady=8, padx=4)
-        self.process_data_btn.grid(row=5, column=1, pady=8, padx=4)
-        self.load_feature_btn.grid(row=5, column=3, pady=8, padx=4)
-        self.sep3.grid(row=9, column=0, sticky="ew", columnspan=5, padx=4)
-        self.close_btn.grid(row=10, column=1, pady=8, padx=4)
+        self.sep1.grid(row=3, column=0, sticky="ew", columnspan=5, padx=4, pady=8)
+        self.label3.grid(row=4, pady=4, columnspan=2)
+
+        self.process_data_btn.grid(row=5, column=0, pady=8, padx=4)
+        self.load_feature_btn.grid(row=5, column=1, pady=8, padx=4)
+
+        self.sep3.grid(row=6, column=0, sticky="ew", columnspan=5, padx=4)
+
+        self.close_btn.grid(row=7, column=1, pady=8, padx=4)
 
     def collect_data_ui(self, delete_old=True, session=2, proband="defaultUser"):
         collect_window.deiconify()
@@ -86,13 +85,11 @@ class CollectDataWindow(Frame):
         self.sep1 = Separator(self, orient=HORIZONTAL)
         self.sep2 = Separator(self, orient=HORIZONTAL)
 
-        self.s_val = StringVar(self, value="10")
-        self.r_val = StringVar(self, value="5")
-        # self.trial_val = IntVar()
-        # self.mode_val = IntVar()
+        self.session_val = StringVar(self, value="10")
+        self.record_time_val = StringVar(self, value="5")
 
-        self.sessions_input = Entry(self, textvariable=self.s_val, width=3)
-        self.record_time_input = Entry(self, textvariable=self.r_val, width=3)
+        self.sessions_input = Entry(self, textvariable=self.session_val, width=3)
+        self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
 
         self.collect_separate_btn = Button(master=self, text="Collect Separate",
                                            command=lambda: self.collect_data(mode=INDIVIDUAL, trial=False))
@@ -102,7 +99,7 @@ class CollectDataWindow(Frame):
                                          command=lambda: self.collect_data(mode=INDIVIDUAL, trial=True))
         self.trial_continues_btn = Button(master=self, text="Trial Continues",
                                           command=lambda: self.collect_data(mode=CONTINUES, trial=True))
-        self.close_btn = Button(self, text="Close", command=self.destroy)
+        self.close_btn = Button(self, text="Close", command=collect_window.destroy)
 
         self.sessions_label.grid(row=0, column=0, pady=4, padx=2)
         self.sessions_input.grid(row=0, column=1)
@@ -112,16 +109,15 @@ class CollectDataWindow(Frame):
 
         self.collect_separate_btn.grid(row=4, column=0, pady=4, padx=8)
         self.collect_continues_btn.grid(row=4, column=2, pady=4, padx=8)
-        Separator(self, orient=VERTICAL).grid(row=4, column=1, rowspan=3)
         self.trial_separate_btn.grid(row=5, column=0, pady=4, padx=8)
         self.trial_continues_btn.grid(row=5, column=2, pady=4, padx=8)
 
-        self.sep1.grid(row=6, column=0, sticky="ew", columnspan=2, padx=4)
+        self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
 
         self.close_btn.grid(row=7, column=1, pady=8, padx=4, sticky=E)
 
     def collect_data(self, mode, trial):
-        sessions = int(self.s_val.get())
+        sessions = int(self.session_val.get())
         if mode == INDIVIDUAL:
             raw_path = self.user_path + "/raw_separate"
         else:
@@ -134,9 +130,8 @@ class CollectDataWindow(Frame):
                              trial=trial,
                              mode=mode,
                              introduction_screen=introduction_screen,
-                             training_time=int(self.r_val.get()))
+                             training_time=int(self.record_time_val.get()))
         introduction_screen.sessions = sessions
-        # introduction_screen.mode = self.mode_val
 
 
 class IntroductionScreen(Frame):
@@ -146,7 +141,7 @@ class IntroductionScreen(Frame):
         self.pack(fill=BOTH, expand=1)
 
         load = Image.open("intro_screen.jpg")
-        load = load.resize((450, 400), Image.ANTIALIAS)
+        load = load.resize((550, 500), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -157,15 +152,15 @@ class IntroductionScreen(Frame):
         self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
 
         self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
+        self.close_btn = Button(self, text="Close", command=introduction_window.destroy)
 
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
 
-        self.status_label.grid(row=1, column=0, pady=4)
 
         self.session_text = StringVar()
         self.gesture_text = StringVar()
-        self.session_text.set("Session 1")
+        # self.session_text.set("Session 1")
 
         self.session_label = Label(self, textvariable=self.session_text)
         self.gesture_label = Label(self, textvariable=self.gesture_text)
@@ -174,16 +169,18 @@ class IntroductionScreen(Frame):
         # Style
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
 
-        self.gesture_countdown_label.grid(row=1, column=1, columnspan=2, pady=4)
+        self.status_label.grid(row=1, column=1, pady=4, padx=2, sticky=W)
+        self.gesture_countdown_label.grid(row=1, column=1, pady=4, sticky=E)
 
-        self.gesture_label.grid(row=2, column=0, columnspan=3, pady=2, padx=2, sticky=W)
+        self.gesture_label.grid(row=2, column=1, columnspan=3, pady=2, padx=2, sticky=W)
 
         self.session_label.grid(row=3, column=0, padx=2, sticky=W)
         self.progress_session.grid(row=3, column=1, pady=2, sticky=W)
-        self.start_session_btn.grid(row=3, column=2, padx=4, rowspan=2)
+        self.start_session_btn.grid(row=3, column=2, padx=4)
 
         self.total_label.grid(row=4, column=0, padx=2, sticky=W)
-        self.progress_total.grid(row=4, column=1, pady=4, sticky=W)
+        self.progress_total.grid(row=4, column=1, pady=8, sticky=W)
+        self.close_btn.grid(row=4, column=2, padx=4, pady=8)
 
         self.sessions = -1
         self.current_session = 0
@@ -197,12 +194,12 @@ class IntroductionScreen(Frame):
             self.update_progressbars(1)
             return
         else:
-            self.set_description_val("Data collection complete!")
+            self.set_countdown_text("Data collection complete!")
             # print("Data collection complete!")
 
     def change_img(self, path):
         load = Image.open(path)
-        load = load.resize((450, 400), Image.ANTIALIAS)
+        load = load.resize((550, 500), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -223,12 +220,16 @@ class IntroductionScreen(Frame):
         self.status_text.set(text)
         introduction_window.update()
 
-    def set_gesture_label(self, text):
+    def set_gesture_description(self, text):
         self.gesture_text.set(text)
         introduction_window.update()
 
-    def set_description_val(self, text):
+    def set_countdown_text(self, text):
         self.countdown_value.set(text)
+        introduction_window.update()
+
+    def set_session_text(self, text):
+        self.session_text.set(text)
         introduction_window.update()
 
     def update_progressbars(self, value):
