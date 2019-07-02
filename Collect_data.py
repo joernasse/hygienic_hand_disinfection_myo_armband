@@ -352,7 +352,6 @@ def collect_data(current_session):
     g_introduction_screen.set_session_text("Session " + str(current_session + 1))
     g_introduction_screen.set_countdown_text("")
 
-
     with hub.run_in_background(gesture_listener.on_event):
         countdown(g_introduction_screen, 3)
         for i in range(len(save_label)):
@@ -399,7 +398,6 @@ def collect_data(current_session):
                 if i < len(save_label) - 1:
                     countdown(g_introduction_screen, 5)
 
-    # hub.stop()
     g_introduction_screen.set_countdown_text("")
     g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
     g_introduction_screen.set_gesture_description("")
