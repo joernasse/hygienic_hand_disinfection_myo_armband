@@ -37,7 +37,7 @@ class MainWindow(Frame):
         self.close_btn = self.close = Button(self, textvariable=self.close_val, command=self.destroy)
 
         self.collect_data_btn = Button(self, text="Collect data",
-                                       command=lambda: self.collect_data_ui(delete_old=False,
+                                       command=lambda: self.collect_data_ui(delete_old=True,
                                                                             proband=self.proband_input.get()))
 
         self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
@@ -85,8 +85,8 @@ class CollectDataWindow(Frame):
         self.sep1 = Separator(self, orient=HORIZONTAL)
         self.sep2 = Separator(self, orient=HORIZONTAL)
 
-        self.session_val = StringVar(self, value="10")
-        self.record_time_val = StringVar(self, value="5")
+        self.session_val = IntVar(self, value=10)
+        self.record_time_val = IntVar(self, value=5)
 
         self.sessions_input = Entry(self, textvariable=self.session_val, width=3)
         self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
@@ -117,8 +117,9 @@ class CollectDataWindow(Frame):
         self.close_btn.grid(row=7, column=1, pady=8, padx=4, sticky=E)
 
     def introduction_screen_ui(self, mode, trial):
+        introduction_screen = IntroductionScreen(introduction_window, record_time=self.record_time_val.get(),
+                                                 sessions=self.session_val.get())
         introduction_window.deiconify()
-        sessions = int(self.session_val.get())
         if mode == INDIVIDUAL:
             title = "Collect separate data"
             raw_path = self.user_path + "/raw_separate"
@@ -129,21 +130,21 @@ class CollectDataWindow(Frame):
             title += " TRIAL"
         introduction_window.title(title)
 
-        introduction_screen.init_totalbar(sessions)
         introduction_screen.init_sessionbar()
         init_data_collection(raw_path=raw_path,
                              trial=trial,
                              mode=mode,
                              introduction_screen=introduction_screen,
-                             training_time=int(self.record_time_val.get()))
-        introduction_screen.sessions = sessions
+                             training_time=self.record_time_val.get())
+        introduction_window.mainloop()
 
 
 class IntroductionScreen(Frame):
-    def __init__(self, master=None):
+    def __init__(self, master=None, record_time=5, sessions=10):
         Frame.__init__(self, master)
         self.master = master
         self.pack(fill=BOTH, expand=1)
+
         load = Image.open("intro_screen.jpg")
         load = load.resize((550, 500), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
@@ -151,17 +152,25 @@ class IntroductionScreen(Frame):
         self.img.image = render
         self.status_text = StringVar()
         self.countdown_value = StringVar()
+        self.sessions = sessions
+        self.record_time = record_time
+        self.current_session = 0
+        self.mode = ""
 
         self.status_label = Label(self, textvariable=self.status_text)  # Start, Pause
         self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
 
         self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
-        self.close_btn = Button(self, text="Close", command=introduction_window.withdraw)
+        self.close_btn = Button(self, text="Close", command=self.quit)
 
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_total["maximum"] = self.sessions * len(label_display)
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_gesture["maximum"] = self.record_time
 
         self.session_text = StringVar()
+        self.session_text.set("Session 1")
         self.gesture_text = StringVar()
 
         self.session_label = Label(self, textvariable=self.session_text)
@@ -171,22 +180,21 @@ class IntroductionScreen(Frame):
         # Style
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
 
-        self.status_label.grid(row=1, column=1, pady=4, padx=2, sticky=W)
+        self.status_label.grid(row=1, column=1, pady=2, padx=2, sticky=W)
         self.gesture_countdown_label.grid(row=1, column=1, pady=4, sticky=E)
 
-        self.gesture_label.grid(row=2, column=1, columnspan=3, pady=2, padx=2, sticky=W)
+        self.gesture_label.grid(row=2, column=1, columnspan=3, pady=4, padx=2, sticky=W)
 
-        self.session_label.grid(row=3, column=0, padx=2, sticky=W)
-        self.progress_session.grid(row=3, column=1, pady=2, sticky=W)
-        self.start_session_btn.grid(row=3, column=2, padx=4)
+        self.progress_gesture.grid(row=3, column=1, padx=4, sticky=W)
 
-        self.total_label.grid(row=4, column=0, padx=2, sticky=W)
-        self.progress_total.grid(row=4, column=1, pady=8, sticky=W)
-        self.close_btn.grid(row=4, column=2, padx=4, pady=8)
+        self.session_label.grid(row=4, column=0, pady=4, sticky=W)
+        self.progress_session.grid(row=4, column=1, padx=4, sticky=W)
+        self.start_session_btn.grid(row=4, column=2, padx=4)
 
-        self.sessions = -1
-        self.current_session = 0
-        self.mode = ""
+        self.total_label.grid(row=5, column=0, pady=4, sticky=W)
+        self.progress_total.grid(row=5, column=1, padx=4, sticky=W)
+
+        self.close_btn.grid(row=5, column=2, padx=4, pady=8)
 
     def start_session(self):
         if self.current_session <= self.sessions:
@@ -197,7 +205,6 @@ class IntroductionScreen(Frame):
             return
         else:
             self.set_countdown_text("Data collection complete!")
-            # print("Data collection complete!")
 
     def change_img(self, path):
         load = Image.open(path)
@@ -212,11 +219,6 @@ class IntroductionScreen(Frame):
         self.progressbar_session_val = 0
         self.progress_session["value"] = self.progressbar_session_val
         self.progress_session["maximum"] = len(label_display)
-
-    def init_totalbar(self, sessions):
-        self.progressbar_total_val = 0
-        self.progress_total["value"] = self.progressbar_total_val
-        self.progress_total["maximum"] = sessions * len(label_display)
 
     def set_status_text(self, text):
         self.status_text.set(text)
@@ -239,8 +241,13 @@ class IntroductionScreen(Frame):
         self.progress_total["value"] += value
         introduction_window.update()
 
+    def update_gesture_bar(self, value):
+        if value > self.record_time:
+            value = self.record_time
+        self.progress_gesture["value"] = value
+        introduction_window.update()
 
-introduction_screen = IntroductionScreen(introduction_window)
+
 introduction_window.wm_title("Introduction Screen")
 introduction_window.withdraw()
 

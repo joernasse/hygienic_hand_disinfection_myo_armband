@@ -1,20 +1,18 @@
 # main_script
 # label_display = ['Step 0',
-label_display = ['Step 1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 4', 'Step 5', 'Step 5.1', 'Step 6',
+label_display = ['Step 0', 'Step 1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 4', 'Step 5', 'Step 5.1', 'Step 6',
                  'Step 6.1', 'Rest']
 
-# hand_disinfection = ['Step0',
-save_label = ['Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1',
-                     'Rest']
+save_label = ['Step0', 'Step1', 'Step2', 'Step2_1', 'Step3', 'Step4', 'Step5', 'Step5_1', 'Step6', 'Step6_1', 'Rest']
 
-# hand_disinfection_display = ['Step 0    - Take disinfectant',
-hand_disinfection_description = ['Step 1    - Palm and wrist',
-                             'Step 2    - Right palm on left back',
-                             'Step 2.1  - Left palm on right back',
-                             'Step 3    - Spread and interlocked fingers palm',
-                             'Step 4    - Interlock fingers',
-                             'Step 5    - Circular rubbing of the right thumb in the closed left palm of the hand',
-                             'Step 5.1  - Circular rubbing of the left thumb in the closed right palm of the hand ',
+hand_disinfection_description = ['Step 0    - Take disinfectant',
+                                 'Step 1    - Palm and wrist',
+                                 'Step 2    - Right palm on left back',
+                                 'Step 2.1  - Left palm on right back',
+                                 'Step 3    - Spread and interlocked fingers palm',
+                                 'Step 4    - Interlock fingers',
+                                 'Step 5    - Circular rubbing of the right thumb in the closed left palm of the hand',
+                                 'Step 5.1  - Circular rubbing of the left thumb in the closed right palm of the hand ',
                                  'Step 6    - Circular movement of closed fingertips of the right hand on the left palm of the hand',
                                  'Step 6.1  - Circular movement of closed fingertips of the left hand on the right palm of the hand',
                                  'Rest      - Do nothing']

@@ -5,6 +5,8 @@ import time
 import logging
 
 import logging as log
+from multiprocessing.pool import ThreadPool
+
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 from Constant import *
@@ -96,20 +98,22 @@ def pair_devices():
     return False
 
 
-def collect_raw_data(record_duration=1):
+def collect_raw_data():
     global EMG
     global ORI
     global ACC
     global GYR
     global status
+    global g_training_time
 
     EMG, ORI, ACC, GYR = [], [], [], []
     dif, status = 0, 0
     start = time.time()
-    while dif <= record_duration:
+    while dif <= g_training_time:
         status = 1
         end = time.time()
         dif = end - start
+        g_introduction_screen.update_gesture_bar(dif)
     status = 0
     logging.info("EMG %d", len(EMG))
     logging.info("IMU %d", len(ORI))
@@ -130,7 +134,6 @@ def collect_data(current_session):
     global emg_l
 
     g_introduction_screen.set_session_text("Session " + str(current_session + 1))
-    g_introduction_screen.init_sessionbar()
     g_introduction_screen.set_countdown_text("")
 
     with hub.run_in_background(gesture_listener.on_event):
@@ -143,11 +146,14 @@ def collect_data(current_session):
             g_introduction_screen.change_img(g_img_path + g_files[i])
 
             g_introduction_screen.set_countdown_text("")
-            wait(1)
+
+            if g_mode == INDIVIDUAL:
+                wait(0.7)
 
             DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_status_text("Start!")
-            collect_raw_data(g_training_time)
+
+            collect_raw_data()
 
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
@@ -173,8 +179,7 @@ def collect_data(current_session):
             if g_mode == INDIVIDUAL:
                 if i < len(save_label) - 1:
                     countdown(g_introduction_screen, 5)
-            else:
-                DEVICE_R.vibrate(type=libmyo.VibrationType.short)
+
     hub.stop()
     g_introduction_screen.set_countdown_text("")
     g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
@@ -183,6 +188,10 @@ def collect_data(current_session):
     logging.info("Data collection session %d complete", current_session)
     return
 
+
+def update_gesture_bar():
+    g_introduction_screen.update_gesture_bar()
+    wait(1)
 
 def init_data_collection(raw_path, introduction_screen, trial, mode, training_time=5):
     global g_introduction_screen
