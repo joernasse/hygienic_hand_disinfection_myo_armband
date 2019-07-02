@@ -128,7 +128,7 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
             shutil.rmtree(raw_con)
             log.info("Remove directory" + raw_path)
             os.mkdir(raw_sep)
-            os.mkdir(raw_path + "_continues")
+            os.mkdir(raw_con)
             log.info("Create directory" + raw_path)
     else:
         # os.mkdir(raw_path)

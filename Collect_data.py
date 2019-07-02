@@ -5,13 +5,16 @@ import time
 import logging
 
 import logging as log
-from multiprocessing.pool import ThreadPool
+from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL, \
+    DISABLED, NORMAL
+from tkinter.ttk import Progressbar, Separator, Frame
+from PIL import Image, ImageTk
 
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 from Constant import *
 from Helper_functions import countdown, wait
-from Save_Load import save_raw_csv
+from Save_Load import save_raw_csv, create_directories
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
@@ -35,6 +38,218 @@ g_trial = False
 emg_count_list, imu_count_list = [], []
 
 logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
+introduction_window = Tk()
+collect_window = Tk()
+
+
+class CollectDataWindow(Frame):
+    def __init__(self, master=None):
+        Frame.__init__(self, master)
+        self.master = master
+        self.pack(fill=BOTH, expand=1)
+        self.user_path = ""
+
+        self.sessions_label = Label(self, text="Durchgänge")
+        self.record_time_label = Label(self, text="Zeit pro Geste")
+        self.proband_label = Label(self, text="Proband Name")
+
+        self.sep1 = Separator(self, orient=HORIZONTAL)
+        self.sep2 = Separator(self, orient=HORIZONTAL)
+
+        self.session_val = IntVar(self, value=10)
+        self.record_time_val = IntVar(self, value=5)
+        self.proband_val = StringVar(self, value="defaultUser")
+
+        self.sessions_input = Entry(self, textvariable=self.session_val, width=3)
+        self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
+        self.proband_input = Entry(self, textvariable=self.proband_val, width=17)
+
+        self.collect_separate_btn = Button(master=self, text="Collect Separate",
+                                           command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=False))
+        self.collect_continues_btn = Button(master=self, text="Collect Continues",
+                                            command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=False))
+        self.trial_separate_btn = Button(master=self, text="Trial Separate",
+                                         command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=True))
+        self.trial_continues_btn = Button(master=self, text="Trial Continues",
+                                          command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=True))
+        self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
+
+        # Style
+        self.sessions_label.grid(row=0, column=0, pady=4, padx=4, sticky=W)
+        self.sessions_input.grid(row=0, column=1, padx=2, sticky=W)
+
+        self.record_time_label.grid(row=1, column=0, pady=4, padx=4, sticky=W)
+        self.record_time_input.grid(row=1, column=1, padx=2, sticky=W)
+
+        self.proband_label.grid(row=2, column=0, pady=4, padx=4, sticky=W)
+        self.proband_input.grid(row=2, column=1, padx=2, sticky=W)
+
+        self.collect_separate_btn.grid(row=4, column=0, pady=8, padx=8)
+        self.collect_continues_btn.grid(row=4, column=1, pady=4, padx=8)
+
+        self.trial_separate_btn.grid(row=5, column=0, pady=4, padx=8)
+        self.trial_continues_btn.grid(row=5, column=1, pady=4, padx=8)
+
+        self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
+
+        self.close_btn.grid(row=7, column=0, pady=8, padx=4, columnspan=2)
+
+    def introduction_screen_ui(self, mode, trial):
+        global g_introduction_screen
+
+        user_path = "Collections/" + self.proband_val.get()
+        raw_path = user_path + "/raw"
+        create_directories(proband=self.proband_val.get(), delete_old=True, raw_path=raw_path,
+                           raw_sep=user_path + "/raw_separate",
+                           raw_con=user_path + "/raw_continues")
+
+        sessions = self.session_val.get()
+        record_time = self.record_time_val.get()
+
+        if mode == INDIVIDUAL:
+            title = "Collect separate data"
+            raw_path = user_path + "/raw_separate"
+        else:
+            title = "Collect continues data"
+            raw_path = user_path + "/raw_continues"
+        if trial:
+            sessions = 1
+            record_time = .5
+            title += " TRIAL"
+
+        g_introduction_screen = IntroductionScreen(introduction_window, record_time=record_time, sessions=sessions)
+        introduction_window.title(title)
+
+        init_data_collection(raw_path=raw_path,
+                             trial=trial,
+                             mode=mode,
+                             training_time=record_time)
+        introduction_window.deiconify()
+        introduction_window.mainloop()
+
+
+class IntroductionScreen(Frame):
+    def __init__(self, master=None, record_time=5, sessions=10, ):
+        Frame.__init__(self, master)
+        self.master = master
+        self.pack(fill=BOTH, expand=1)
+
+        load = Image.open("intro_screen.jpg")
+        load = load.resize((550, 500), Image.ANTIALIAS)
+        render = ImageTk.PhotoImage(load)
+        self.img = Label(self, image=render)
+        self.img.image = render
+        self.status_text = StringVar()
+        self.session_total = StringVar()
+        self.countdown_value = StringVar()
+        self.battery_value = StringVar()
+        self.sessions = sessions
+        self.record_time = record_time
+        self.current_session = 0
+        self.mode = ""
+
+        self.status_label = Label(self, textvariable=self.status_text)  # Start, Pause
+        self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
+        self.session_total_label = Label(self, textvariable=self.session_total)
+        self.battery_label = Label(self, textvariable=self.battery_value)
+
+        self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
+        self.close_btn = Button(self, text="Close", command=self.close)
+
+        self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_total["maximum"] = self.sessions * len(label_display)
+        self.progress_gesture["maximum"] = self.record_time
+
+        self.session_text = StringVar()
+        self.session_text.set("Session 1")
+        self.gesture_text = StringVar()
+
+        self.session_label = Label(self, textvariable=self.session_text)
+        self.gesture_label = Label(self, textvariable=self.gesture_text)
+        self.total_label = Label(self, text="Total")
+
+        # Style
+        self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+
+        self.status_label.grid(row=1, column=1, pady=2, padx=2, sticky=W)
+        self.gesture_countdown_label.grid(row=1, column=1, pady=4, sticky=E)
+
+        self.session_total_label.grid(row=1, column=2, pady=4)
+        self.gesture_label.grid(row=2, column=1, columnspan=3, pady=4, padx=2, sticky=W)
+
+        self.progress_gesture.grid(row=3, column=1, padx=4, sticky=W)
+
+        self.session_label.grid(row=4, column=0, pady=4, sticky=W)
+        self.progress_session.grid(row=4, column=1, padx=4, sticky=W)
+        self.start_session_btn.grid(row=4, column=2, padx=4)
+
+        self.total_label.grid(row=5, column=0, pady=4, sticky=W)
+        self.progress_total.grid(row=5, column=1, padx=4, sticky=W)
+
+        self.close_btn.grid(row=5, column=2, padx=4, pady=8)
+
+    def start_session(self):
+        if self.current_session < self.sessions:
+            self.session_total.set(str(self.current_session + 1) + "/" + str(self.sessions) + " Sessions")
+            self.init_sessionbar()
+            self.start_session_btn['state'] = DISABLED
+            collect_data(self.current_session)
+            self.start_session_btn['state'] = NORMAL
+            self.current_session += 1
+            self.update_progressbars(1)
+        if self.current_session == self.sessions:
+            self.set_countdown_text("Data collection complete!")
+            self.close()
+        return
+
+    def close(self):
+        wait(3)
+        self.destroy()
+        introduction_window.withdraw()
+
+    def change_img(self, path):
+        load = Image.open(path)
+        load = load.resize((550, 500), Image.ANTIALIAS)
+        render = ImageTk.PhotoImage(load)
+        self.img = Label(self, image=render)
+        self.img.image = render
+        self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+        introduction_window.update()
+
+    def init_sessionbar(self):
+        self.progressbar_session_val = 0
+        self.progress_session["value"] = self.progressbar_session_val
+        self.progress_session["maximum"] = len(label_display)
+
+    def set_status_text(self, text):
+        self.status_text.set(text)
+        introduction_window.update()
+
+    def set_gesture_description(self, text):
+        self.gesture_text.set(text)
+        introduction_window.update()
+
+    def set_countdown_text(self, text):
+        self.countdown_value.set(text)
+        introduction_window.update()
+
+    def set_session_text(self, text):
+        self.session_text.set(text)
+        introduction_window.update()
+
+    def update_progressbars(self, value):
+        self.progress_session["value"] += value
+        self.progress_total["value"] += value
+        introduction_window.update()
+
+    def update_gesture_bar(self, value):
+        if value > self.record_time:
+            value = self.record_time
+        self.progress_gesture["value"] = value
+        introduction_window.update()
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -91,6 +306,7 @@ def pair_devices():
             if not (DEVICE_L is None) and not (DEVICE_R is None):
                 DEVICE_R.vibrate(libmyo.VibrationType.short)
                 DEVICE_L.vibrate(libmyo.VibrationType.short)
+
                 logging.info("Devices paired")
                 return True
             wait(2)
@@ -136,6 +352,7 @@ def collect_data(current_session):
     g_introduction_screen.set_session_text("Session " + str(current_session + 1))
     g_introduction_screen.set_countdown_text("")
 
+
     with hub.run_in_background(gesture_listener.on_event):
         countdown(g_introduction_screen, 3)
         for i in range(len(save_label)):
@@ -147,8 +364,9 @@ def collect_data(current_session):
 
             g_introduction_screen.set_countdown_text("")
 
+            g_introduction_screen.set_status_text("Ready!")
             if g_mode == INDIVIDUAL:
-                wait(0.7)
+                wait(1)
 
             DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_status_text("Start!")
@@ -159,6 +377,7 @@ def collect_data(current_session):
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
             g_introduction_screen.set_status_text("Pause")
+            g_introduction_screen.update_gesture_bar(0)
             g_introduction_screen.update_progressbars(1)
 
             if i < len(save_label) - 1:
@@ -180,7 +399,7 @@ def collect_data(current_session):
                 if i < len(save_label) - 1:
                     countdown(g_introduction_screen, 5)
 
-    hub.stop()
+    # hub.stop()
     g_introduction_screen.set_countdown_text("")
     g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
     g_introduction_screen.set_gesture_description("")
@@ -189,12 +408,7 @@ def collect_data(current_session):
     return
 
 
-def update_gesture_bar():
-    g_introduction_screen.update_gesture_bar()
-    wait(1)
-
-def init_data_collection(raw_path, introduction_screen, trial, mode, training_time=5):
-    global g_introduction_screen
+def init_data_collection(raw_path, trial, mode, training_time=5):
     global g_files
     global g_training_time
     global g_raw_path
@@ -204,7 +418,6 @@ def init_data_collection(raw_path, introduction_screen, trial, mode, training_ti
 
     if pair_devices():
         g_training_time = training_time
-        g_introduction_screen = introduction_screen
         g_introduction_screen.change_img("intro_screen.jpg")
         g_img_path = os.getcwd() + "/img/"
         g_files = os.listdir(g_img_path)
@@ -217,7 +430,12 @@ def init_data_collection(raw_path, introduction_screen, trial, mode, training_ti
 
 
 def main():
-    print("x")
+    introduction_window.wm_title("Introduction Screen")
+    introduction_window.withdraw()
+
+    data_collect = CollectDataWindow(collect_window)
+    collect_window.wm_title("Collect Data")
+    collect_window.mainloop()
 
 
 if __name__ == '__main__':
