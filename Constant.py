@@ -1,6 +1,6 @@
 label_display = ['Step 0',
-                 'Step 1', 'Step 1.1', 'Step 1.2'
-                                       'Step 2', 'Step 2.1',
+                 'Step 1', 'Step 1.1', 'Step 1.2',
+                 'Step 2', 'Step 2.1',
                  'Step 3',
                  'Step 4',
                  'Step 5', 'Step 5.1',
@@ -8,8 +8,8 @@ label_display = ['Step 0',
                  'Rest']
 
 save_label = ['Step0',
-              'Step1', 'Step1_1', 'Step1_2'
-                                  'Step2', 'Step2_1',
+              'Step1', 'Step1_1', 'Step1_2',
+              'Step2', 'Step2_1',
               'Step3',
               'Step4',
               'Step5', 'Step5_1',
@@ -24,10 +24,10 @@ hand_disinfection_description = ['Step 0    - Take disinfectant',
                                  'Step 2.1  - Left palm on right back',
                                  'Step 3    - Spread and interlocked fingers palm',
                                  'Step 4    - Interlock fingers',
-                                 'Step 5    - Circular rubbing of the right thumb in the closed left palm of the hand',
-                                 'Step 5.1  - Circular rubbing of the left thumb in the closed right palm of the hand ',
-                                 'Step 6    - Circular movement of closed fingertips of the right hand on the left palm of the hand',
-                                 'Step 6.1  - Circular movement of closed fingertips of the left hand on the right palm of the hand',
+                                 'Step 5    - Circular rubbing of the right thumb in the closed\n left palm of the hand',
+                                 'Step 5.1  - Circular rubbing of the left thumb in the closed\n right palm of the hand ',
+                                 'Step 6    - Circular movement of closed fingertips of the\n right hand on the left palm of the hand',
+                                 'Step 6.1  - Circular movement of closed fingertips of the\n left hand on the right palm of the hand',
                                  'Rest      - Do nothing']
 
 # Collect_data

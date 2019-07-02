@@ -100,7 +100,7 @@ class CollectDataWindow(Frame):
 
         user_path = "Collections/" + self.proband_val.get()
         raw_path = user_path + "/raw"
-        create_directories(proband=self.proband_val.get(), delete_old=True, raw_path=raw_path,
+        create_directories(proband=self.proband_val.get(), delete_old=False, raw_path=raw_path,
                            raw_sep=user_path + "/raw_separate",
                            raw_con=user_path + "/raw_continues")
 
@@ -115,7 +115,7 @@ class CollectDataWindow(Frame):
             raw_path = user_path + "/raw_continues"
         if trial:
             sessions = 1
-            record_time = .5
+            record_time = 5
             title += " TRIAL"
 
         g_introduction_screen = IntroductionScreen(introduction_window, record_time=record_time, sessions=sessions)
@@ -136,7 +136,7 @@ class IntroductionScreen(Frame):
         self.pack(fill=BOTH, expand=1)
 
         load = Image.open("intro_screen.jpg")
-        load = load.resize((550, 500), Image.ANTIALIAS)
+        load = load.resize((450, 400), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -188,8 +188,8 @@ class IntroductionScreen(Frame):
 
         self.total_label.grid(row=5, column=0, pady=4, sticky=W)
         self.progress_total.grid(row=5, column=1, padx=4, sticky=W)
-
         self.close_btn.grid(row=5, column=2, padx=4, pady=8)
+
 
     def start_session(self):
         if self.current_session < self.sessions:
@@ -212,7 +212,7 @@ class IntroductionScreen(Frame):
 
     def change_img(self, path):
         load = Image.open(path)
-        load = load.resize((550, 500), Image.ANTIALIAS)
+        load = load.resize((450, 400), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
