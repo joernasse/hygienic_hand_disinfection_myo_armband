@@ -36,6 +36,7 @@ g_training_time, g_mode = 0, 0
 g_raw_path, g_img_path = "", ""
 g_trial = False
 emg_count_list, imu_count_list = [], []
+img_w, img_h = 450, 400
 
 logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
@@ -50,9 +51,12 @@ class CollectDataWindow(Frame):
         self.pack(fill=BOTH, expand=1)
         self.user_path = ""
 
+        self.error_val = StringVar()
+        self.error_val.set("Status")
         self.sessions_label = Label(self, text="Durchgänge")
         self.record_time_label = Label(self, text="Zeit pro Geste")
         self.proband_label = Label(self, text="Proband Name")
+        self.error_label = Label(self, textvariable=self.error_val)
 
         self.sep1 = Separator(self, orient=HORIZONTAL)
         self.sep2 = Separator(self, orient=HORIZONTAL)
@@ -93,7 +97,8 @@ class CollectDataWindow(Frame):
 
         self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
 
-        self.close_btn.grid(row=7, column=0, pady=8, padx=4, columnspan=2)
+        # self.error_label.grid(row=7, column=0, pady=8,padx=4)
+        self.close_btn.grid(row=7, column=1, pady=8, padx=4)
 
     def introduction_screen_ui(self, mode, trial):
         global g_introduction_screen
@@ -121,12 +126,16 @@ class CollectDataWindow(Frame):
         g_introduction_screen = IntroductionScreen(introduction_window, record_time=record_time, sessions=sessions)
         introduction_window.title(title)
 
-        init_data_collection(raw_path=raw_path,
-                             trial=trial,
-                             mode=mode,
-                             training_time=record_time)
-        introduction_window.deiconify()
-        introduction_window.mainloop()
+        if init_data_collection(raw_path=raw_path,
+                                trial=trial,
+                                mode=mode,
+                                training_time=record_time):
+            introduction_window.deiconify()
+            introduction_window.mainloop()
+        else:
+            self.error_val.set("Paired failure")
+            collect_window.update()
+            print("Paired failure")
 
 
 class IntroductionScreen(Frame):
@@ -136,7 +145,7 @@ class IntroductionScreen(Frame):
         self.pack(fill=BOTH, expand=1)
 
         load = Image.open("intro_screen.jpg")
-        load = load.resize((450, 400), Image.ANTIALIAS)
+        load = load.resize((img_w, img_h), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -202,17 +211,17 @@ class IntroductionScreen(Frame):
             self.update_progressbars(1)
         if self.current_session == self.sessions:
             self.set_countdown_text("Data collection complete!")
+            wait(3)
             self.close()
         return
 
     def close(self):
-        wait(3)
         self.destroy()
         introduction_window.withdraw()
 
     def change_img(self, path):
         load = Image.open(path)
-        load = load.resize((450, 400), Image.ANTIALIAS)
+        load = load.resize((img_w, img_h), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
         self.img = Label(self, image=render)
         self.img.image = render
@@ -306,7 +315,6 @@ def pair_devices():
             if not (DEVICE_L is None) and not (DEVICE_R is None):
                 DEVICE_R.vibrate(libmyo.VibrationType.short)
                 DEVICE_L.vibrate(libmyo.VibrationType.short)
-
                 logging.info("Devices paired")
                 return True
             wait(2)
@@ -362,17 +370,16 @@ def collect_data(current_session):
             g_introduction_screen.change_img(g_img_path + g_files[i])
 
             g_introduction_screen.set_countdown_text("")
-
-            g_introduction_screen.set_status_text("Ready!")
-            if g_mode == INDIVIDUAL:
-                wait(1)
+            # Test ob ohne Ready besser
+            # if g_mode == INDIVIDUAL:
+            #     g_introduction_screen.set_status_text("Ready!")
+            #     wait(1)
 
             DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_status_text("Start!")
 
             collect_raw_data()
 
-            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
             DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
             g_introduction_screen.set_status_text("Pause")
@@ -392,9 +399,9 @@ def collect_data(current_session):
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
 
-            wait(.5)
 
             if g_mode == INDIVIDUAL:
+                wait(.5)
                 if i < len(save_label) - 1:
                     countdown(g_introduction_screen, 5)
 
@@ -417,7 +424,8 @@ def init_data_collection(raw_path, trial, mode, training_time=5):
     if pair_devices():
         g_training_time = training_time
         g_introduction_screen.change_img("intro_screen.jpg")
-        g_img_path = os.getcwd() + "/img/"
+        g_img_path = os.getcwd() + "/gestures/"
+        # g_img_path = os.getcwd() + "/img/"
         g_files = os.listdir(g_img_path)
         g_introduction_screen.set_status_text("Hold every gesture for 5 seconds")
         g_raw_path = raw_path
