@@ -32,7 +32,7 @@ TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday)
 # data collection shared variables
 g_introduction_screen = None
 g_files = []
-g_training_time, g_mode = 0, 0
+g_training_time, g_mode, g_break = 0, 0, 0
 g_raw_path, g_img_path = "", ""
 g_trial = False
 emg_count_list, imu_count_list = [], []
@@ -51,7 +51,7 @@ class CollectDataWindow(Frame):
         self.pack(fill=BOTH, expand=1)
         self.user_path = ""
 
-        self.error_val = StringVar()
+        self.error_val = StringVar(self, value="Status")
         self.error_val.set("Status")
         self.sessions_label = Label(self, text="Durchgänge")
         self.record_time_label = Label(self, text="Zeit pro Geste")
@@ -97,7 +97,7 @@ class CollectDataWindow(Frame):
 
         self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
 
-        # self.error_label.grid(row=7, column=0, pady=8,padx=4)
+        self.error_label.grid(row=7, column=0, pady=8, padx=4)
         self.close_btn.grid(row=7, column=1, pady=8, padx=4)
 
     def introduction_screen_ui(self, mode, trial):
@@ -166,6 +166,9 @@ class IntroductionScreen(Frame):
         self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
         self.close_btn = Button(self, text="Close", command=self.close)
 
+        self.deviating_time_val = IntVar(self, value=record_time)
+        self.deviating_time_input = Entry(self, textvariable=self.deviating_time_val, width=5)
+
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
@@ -180,33 +183,40 @@ class IntroductionScreen(Frame):
         self.gesture_label = Label(self, textvariable=self.gesture_text)
         self.total_label = Label(self, text="Total")
 
-        # Style
+        # Style---------------------------------------------------------------------------
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
 
         self.status_label.grid(row=1, column=1, pady=2, padx=2, sticky=W)
         self.gesture_countdown_label.grid(row=1, column=1, pady=4, sticky=E)
 
         self.session_total_label.grid(row=1, column=2, pady=4)
-        self.gesture_label.grid(row=2, column=1, columnspan=3, pady=4, padx=2, sticky=W)
+        self.gesture_label.grid(row=2, column=1, rowspan=2, columnspan=2, pady=4, padx=2, sticky=W)
 
-        self.progress_gesture.grid(row=3, column=1, padx=4, sticky=W)
+        self.progress_gesture.grid(row=4, column=1, padx=4, sticky=W)
+        self.deviating_time_input.grid(row=4, column=2, pady=8, padx=4)
 
-        self.session_label.grid(row=4, column=0, pady=4, sticky=W)
-        self.progress_session.grid(row=4, column=1, padx=4, sticky=W)
-        self.start_session_btn.grid(row=4, column=2, padx=4)
+        self.session_label.grid(row=5, column=0, pady=4, sticky=W)
+        self.progress_session.grid(row=5, column=1, padx=4, sticky=W)
+        self.start_session_btn.grid(row=5, column=2, padx=4)
 
-        self.total_label.grid(row=5, column=0, pady=4, sticky=W)
-        self.progress_total.grid(row=5, column=1, padx=4, sticky=W)
-        self.close_btn.grid(row=5, column=2, padx=4, pady=8)
+        self.total_label.grid(row=6, column=0, pady=4, sticky=W)
+        self.progress_total.grid(row=6, column=1, padx=4, sticky=W)
+        self.close_btn.grid(row=6, column=2, padx=4, pady=8)
 
 
     def start_session(self):
+        global g_break
         if self.current_session < self.sessions:
+            g_break = self.deviating_time_val.get()
             self.session_total.set(str(self.current_session + 1) + "/" + str(self.sessions) + " Sessions")
             self.init_sessionbar()
+
+            self.deviating_time_input['state'] = DISABLED
             self.start_session_btn['state'] = DISABLED
             collect_data(self.current_session)
             self.start_session_btn['state'] = NORMAL
+            self.deviating_time_input['state'] = NORMAL
+
             self.current_session += 1
             self.update_progressbars(1)
         if self.current_session == self.sessions:
@@ -399,11 +409,10 @@ def collect_data(current_session):
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
 
-
             if g_mode == INDIVIDUAL:
                 wait(.5)
                 if i < len(save_label) - 1:
-                    countdown(g_introduction_screen, 5)
+                    countdown(g_introduction_screen, g_break)
 
     g_introduction_screen.set_countdown_text("")
     g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
