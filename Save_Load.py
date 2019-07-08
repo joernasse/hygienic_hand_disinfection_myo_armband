@@ -6,16 +6,7 @@ from tkinter import filedialog
 import numpy as np
 import logging as log
 
-emg_headline = ["timestamp",
-                "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7",
-                "label"]
-imu_headline = ["timestamp",
-                "x_ori", "y_ori", "z_ori",
-                "x_gyr", "y_gyr", "z_gyr",
-                "x_acc", "y_acc", "z_acc",
-                "label"]
-imu_identifier = ["x", "y", "z"]
-COLLECTION_DIR = "Collections"
+from Constant import emg_headline, imu_headline, COLLECTION_DIR
 
 
 def save_raw_csv(data, label, file_emg, file_imu):
@@ -104,23 +95,39 @@ def load_raw_csv(emg_path, imu_path):
     return emg_load_data, imu_load_data
 
 
-def load_csv():
-    file = filedialog.askopenfile(filetypes=[("CSV files", "*.csv")])
-    data_name = file.name.split("/")
+def load_feature_csv(dir_path):
+    files = open(dir_path + "/imu.csv"), open(dir_path + "/emg.csv")
+    identifier, label, emg, imu = [], [], [], []
+    i = 0
+    for file in files:
+        i += 1
+        if file.name.__contains__('emg'):
+            data = emg
+        else:
+            data = imu
+        reader = csv.reader(file, delimiter=';')
+        for column in reader:
+            data.append([float(x) for x in column[0:-2]])
+            if i < 2:
+                label.append(int(column[-1]))
 
-    print("Start -- loading data")
-    with open(file.name) as csv_file:
-        train_x = []
-        train_y = []
-        csv_reader = csv.reader(csv_file, delimiter=';')
-        for row in csv_reader:
-            tmp = []
-            for i in range(len(row) - 1):
-                tmp.append(float(row[i]))
-            train_x.append(np.asarray(tmp))
-            train_y.append(int(row[len(row) - 1]))
-        print("Done -- loading data")
-        return np.asarray(train_x), np.asarray(train_y), data_name[-1]
+    return emg, imu, label
+
+    # data_name = file.name.split("/")
+    #
+    # print("Start -- loading data")
+    # with open(file.name) as csv_file:
+    #     train_x = []
+    #     train_y = []
+    #     csv_reader = csv.reader(csv_file, delimiter=';')
+    #     for row in csv_reader:
+    #         tmp = []
+    #         for i in range(len(row) - 1):
+    #             tmp.append(float(row[i]))
+    #         train_x.append(np.asarray(tmp))
+    #         train_y.append(int(row[len(row) - 1]))
+    #     print("Done -- loading data")
+    #     return np.asarray(train_x), np.asarray(train_y), data_name[-1]
 
 
 def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
@@ -137,7 +144,7 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
             shutil.rmtree(raw_con)
             log.info("Remove directory" + raw_path)
             os.mkdir(raw_sep)
-            os.mkdir(raw_path + "_continues")
+            os.mkdir(raw_con)
             log.info("Create directory" + raw_path)
     else:
         # os.mkdir(raw_path)

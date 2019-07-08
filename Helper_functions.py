@@ -6,10 +6,18 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def countdown(t=5):
+def countdown(introduction_screen, t=5, ):
     while t:
         mins, secs = divmod(t, 60)
         timeformat = '{:02d}:{:02d}'.format(mins, secs)
-        print(timeformat)
+        introduction_screen.set_status_text("Pause! " + timeformat)
         time.sleep(1)
         t -= 1
+
+
+def wait(time_in_sec):
+    dif = 0
+    start = time.time()
+    while dif <= time_in_sec:
+        end = time.time()
+        dif = end - start

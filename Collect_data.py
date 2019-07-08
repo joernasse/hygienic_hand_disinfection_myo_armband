@@ -1,39 +1,282 @@
-import time
-import numpy as np
 import collections
+import os
+import threading
+import time
+import logging
 
-from Feature_extraction import feature_transformation, transform_data_collection
-from HelperFunctions import countdown, cls
-from Save_Load import save_feature_csv
+import logging as log
+from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL, \
+    DISABLED, NORMAL
+from tkinter.ttk import Progressbar, Separator, Frame
+from PIL import Image, ImageTk
+
 from myo import init, Hub, StreamEmg
 import myo as libmyo
+from Constant import *
+from Helper_functions import countdown, wait
+from Save_Load import save_raw_csv, create_directories
 
-TRAINING_TIME: int = 6
-PREDICT_TIME: float = 2.5
-DATA_POINT_WINDOW_SIZE = 20
-EMG_INTERVAL = 0.01
-POSITION_INTERVAL = 0.04
+DEVICE_L, DEVICE_R = None, None
+EMG = []  # emg
+ORI = []  # orientation
+GYR = []  # gyroscope
+ACC = []  # accelerometer
+emg_l, emg_r = [], []
+tmp = []
+status = 0
 
-RIGHT = "right"
-LEFT = "left"
-# TRAINING_TIME: int = 1
-# PREDICT_TIME: float = 2.5
+TIME_NOW = time.localtime()
+TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday) + str(TIME_NOW.tm_hour) + str(
+    TIME_NOW.tm_min) + str(TIME_NOW.tm_sec)
 
-WINDOW_EMG = 20
-DEGREE_OF_OVERLAP = 0.5
-OFFSET_EMG = WINDOW_EMG * DEGREE_OF_OVERLAP
-SCALING_FACTOR_IMU_DESKTOP = 3.815  # calculated value at desktop PC, problems with Bluetooth connection 3.815821888279855
+# data collection shared variables
+g_introduction_screen = None
+g_files = []
+g_training_time, g_mode, g_break = 0, 0, 0
+g_raw_path, g_img_path = "", ""
+g_trial = False
+emg_count_list, imu_count_list = [], []
+img_w, img_h = 450, 400
+
+logging.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
+
+introduction_window = Tk()
+collect_window = Tk()
 
 
-# WINDOW_IMU = WINDOW_EMG / SCALING_FACTOR_IMU_DESKTOP
-# OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+class CollectDataWindow(Frame):
+    def __init__(self, master=None):
+        Frame.__init__(self, master)
+        self.master = master
+        self.pack(fill=BOTH, expand=1)
+        self.user_path = ""
+
+        self.error_val = StringVar(self, value="Status")
+        self.error_val.set("Status")
+        self.sessions_label = Label(self, text="Durchgänge")
+        self.record_time_label = Label(self, text="Zeit pro Geste")
+        self.proband_label = Label(self, text="Proband Name")
+        self.error_label = Label(self, textvariable=self.error_val)
+
+        self.sep1 = Separator(self, orient=HORIZONTAL)
+        self.sep2 = Separator(self, orient=HORIZONTAL)
+
+        self.session_val = IntVar(self, value=10)
+        self.record_time_val = IntVar(self, value=5)
+        self.proband_val = StringVar(self, value="defaultUser")
+
+        self.sessions_input = Entry(self, textvariable=self.session_val, width=3)
+        self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
+        self.proband_input = Entry(self, textvariable=self.proband_val, width=17)
+
+        self.collect_separate_btn = Button(master=self, text="Collect Separate",
+                                           command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=False))
+        self.collect_continues_btn = Button(master=self, text="Collect Continues",
+                                            command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=False))
+        self.trial_separate_btn = Button(master=self, text="Trial Separate",
+                                         command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=True))
+        self.trial_continues_btn = Button(master=self, text="Trial Continues",
+                                          command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=True))
+        self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
+
+        # Style
+        self.sessions_label.grid(row=0, column=0, pady=4, padx=4, sticky=W)
+        self.sessions_input.grid(row=0, column=1, padx=2, sticky=W)
+
+        self.record_time_label.grid(row=1, column=0, pady=4, padx=4, sticky=W)
+        self.record_time_input.grid(row=1, column=1, padx=2, sticky=W)
+
+        self.proband_label.grid(row=2, column=0, pady=4, padx=4, sticky=W)
+        self.proband_input.grid(row=2, column=1, padx=2, sticky=W)
+
+        self.collect_separate_btn.grid(row=4, column=0, pady=8, padx=8)
+        self.collect_continues_btn.grid(row=4, column=1, pady=4, padx=8)
+
+        self.trial_separate_btn.grid(row=5, column=0, pady=4, padx=8)
+        self.trial_continues_btn.grid(row=5, column=1, pady=4, padx=8)
+
+        self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
+
+        self.error_label.grid(row=7, column=0, pady=8, padx=4)
+        self.close_btn.grid(row=7, column=1, pady=8, padx=4)
+
+    def introduction_screen_ui(self, mode, trial):
+        global g_introduction_screen
+        user_path = "Collections/" + self.proband_val.get()
+        raw_path = user_path + "/raw"
+        create_directories(proband=self.proband_val.get(), delete_old=False, raw_path=raw_path,
+                           raw_sep=user_path + SEPARATE_PATH,
+                           raw_con=user_path + CONTINUES_PATH)
+
+        sessions = self.session_val.get()
+        record_time = self.record_time_val.get()
+
+        if mode == INDIVIDUAL:
+            title = "Collect separate data"
+            raw_path = user_path + SEPARATE_PATH
+        else:
+            title = "Collect continues data"
+            raw_path = user_path + CONTINUES_PATH
+        if trial:
+            sessions = 1
+            record_time = 5
+            title += " TRIAL"
+
+        g_introduction_screen = IntroductionScreen(introduction_window, record_time=record_time, sessions=sessions)
+        introduction_window.title(title)
+
+        if init_data_collection(raw_path=raw_path,
+                                trial=trial,
+                                mode=mode,
+                                training_time=record_time):
+            introduction_window.deiconify()
+            introduction_window.mainloop()
+        else:
+            self.error_val.set("Paired failure")
+            collect_window.update()
+            print("Paired failure")
+
+
+class IntroductionScreen(Frame):
+    def __init__(self, master=None, record_time=5, sessions=10, ):
+        Frame.__init__(self, master)
+        self.master = master
+        self.pack(fill=BOTH, expand=1)
+
+        load = Image.open("intro_screen.jpg")
+        load = load.resize((img_w, img_h), Image.ANTIALIAS)
+        render = ImageTk.PhotoImage(load)
+        self.img = Label(self, image=render)
+        self.img.image = render
+        self.status_text = StringVar()
+        self.session_total = StringVar()
+        self.countdown_value = StringVar()
+        self.battery_value = StringVar()
+        self.sessions = sessions
+        self.record_time = record_time
+        self.current_session = 0
+        self.mode = ""
+
+        self.status_label = Label(self, textvariable=self.status_text)  # Start, Pause
+        self.gesture_countdown_label = Label(self, textvariable=self.countdown_value)
+        self.session_total_label = Label(self, textvariable=self.session_total)
+        self.battery_label = Label(self, textvariable=self.battery_value)
+
+        self.start_session_btn = Button(self, text="Start Session", command=self.start_session)
+        self.close_btn = Button(self, text="Close", command=self.close)
+
+        self.deviating_time_val = IntVar(self, value=record_time)
+        self.deviating_time_input = Entry(self, textvariable=self.deviating_time_val, width=5)
+
+        self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
+        self.progress_total["maximum"] = self.sessions * len(label_display)
+        self.progress_gesture["maximum"] = self.record_time
+
+        self.session_text = StringVar()
+        self.session_text.set("Session 1")
+        self.gesture_text = StringVar()
+
+        self.session_label = Label(self, textvariable=self.session_text)
+        self.gesture_label = Label(self, textvariable=self.gesture_text)
+        self.total_label = Label(self, text="Total")
+
+        # Style---------------------------------------------------------------------------
+        self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+
+        self.status_label.grid(row=1, column=1, pady=2, padx=2, sticky=W)
+        self.gesture_countdown_label.grid(row=1, column=1, pady=4, sticky=E)
+
+        self.session_total_label.grid(row=1, column=2, pady=4)
+        self.gesture_label.grid(row=2, column=1, rowspan=2, columnspan=2, pady=4, padx=2, sticky=W)
+
+        self.progress_gesture.grid(row=4, column=1, padx=4, sticky=W)
+        self.deviating_time_input.grid(row=4, column=2, pady=8, padx=4)
+
+        self.session_label.grid(row=5, column=0, pady=4, sticky=W)
+        self.progress_session.grid(row=5, column=1, padx=4, sticky=W)
+        self.start_session_btn.grid(row=5, column=2, padx=4)
+
+        self.total_label.grid(row=6, column=0, pady=4, sticky=W)
+        self.progress_total.grid(row=6, column=1, padx=4, sticky=W)
+        self.close_btn.grid(row=6, column=2, padx=4, pady=8)
+
+    def start_session(self):
+        global g_break
+        if self.current_session < self.sessions:
+            g_break = self.deviating_time_val.get()
+            self.session_total.set(str(self.current_session + 1) + "/" + str(self.sessions) + " Sessions")
+            self.init_sessionbar()
+
+            self.deviating_time_input['state'] = DISABLED
+            self.start_session_btn['state'] = DISABLED
+            collect_data(self.current_session)
+            self.start_session_btn['state'] = NORMAL
+            self.deviating_time_input['state'] = NORMAL
+
+            self.current_session += 1
+            self.update_progressbars(1)
+        if self.current_session == self.sessions:
+            self.set_countdown_text("Data collection complete!")
+            wait(3)
+            self.close()
+        return
+
+    def close(self):
+        self.destroy()
+        introduction_window.withdraw()
+
+    def change_img(self, path):
+        load = Image.open(path)
+        load = load.resize((img_w, img_h), Image.ANTIALIAS)
+        render = ImageTk.PhotoImage(load)
+        self.img = Label(self, image=render)
+        self.img.image = render
+        self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
+        introduction_window.update()
+
+    def init_sessionbar(self):
+        self.progressbar_session_val = 0
+        self.progress_session["value"] = self.progressbar_session_val
+        self.progress_session["maximum"] = len(label_display)
+
+    def set_status_text(self, text):
+        self.status_text.set(text)
+        introduction_window.update()
+
+    def set_gesture_description(self, text):
+        self.gesture_text.set(text)
+        introduction_window.update()
+
+    def set_countdown_text(self, text):
+        self.countdown_value.set(text)
+        introduction_window.update()
+
+    def set_session_text(self, text):
+        self.session_text.set(text)
+        introduction_window.update()
+
+    def update_progressbars(self, value):
+        self.progress_session["value"] += value
+        self.progress_total["value"] += value
+        introduction_window.update()
+
+    def update_gesture_bar(self, value):
+        if value > self.record_time:
+            value = self.record_time
+        self.progress_gesture["value"] = value
+        introduction_window.update()
+
 
 class GestureListener(libmyo.DeviceListener):
     def __init__(self, queue_size=1):
-        # super(GestureListener, self).__init__()
-        # self.lock = threading.Lock()
+        self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
+
+    def on_arm_synced(self, event):
+        print("x")
 
     def on_connected(self, event):
         event.device.stream_emg(StreamEmg.enabled)
@@ -41,7 +284,9 @@ class GestureListener(libmyo.DeviceListener):
     def on_emg(self, event):
         with self.lock:
             if status:
-                EMG.append(np.asarray([event.timestamp, event.emg]))
+                emg_l.append(DEVICE_L.emg)
+                emg_r.append(DEVICE_R.emg)
+                EMG.append([event.timestamp, event.emg])
 
     def on_orientation(self, event):
         with self.lock:
@@ -55,288 +300,156 @@ class GestureListener(libmyo.DeviceListener):
             return list(self.ori_data_queue)
 
 
-EMG = []  # emg
-ORI = []  # orientation
-GYR = []  # gyroscope
-ACC = []  # accelerometer
-
-hand_disinfection = ['Step 1', 'Step 2', 'Step 3', 'Step 4', 'Step 5', 'Step 6', 'Rest']
-
-hand_disinfection_1 = ['Step 1', 'Step 1.1', 'Step 2', 'Step 2.1', 'Step 3', 'Step 3.1', 'Step 4',
-                       'Step 4.1', 'Step 5',
-                       'Step 5.1', 'Step 6', 'Step 6.1', 'Rest']
-hand_disinfection_light = ['Step 1', 'Step 4', 'Rest']
-
 init()
 hub = Hub()
-listener = GestureListener()
+device_listener = libmyo.ApiDeviceListener()
+gesture_listener = GestureListener()
 
 
-def collect_raw_data_of_2_armband(device_left, device_right, data_type='emg', windowing=True):
-    device_left.stream_emg(True)
-    device_right.stream_emg(True)
-
-    emg_left = []
-    ori_left = []
-    acc_left = []
-    gyro_left = []
-
-    emg_right = []
-    ori_right = []
-    acc_right = []
-    gyro_right = []
-
-    time.sleep(0.5)
-    dif = 0
-    start = time.time()
-    while dif < TRAINING_TIME:
-        end = time.time()
-        dif = end - start
-        if data_type == 'emg':
-            emg_left.append(np.asarray(device_left.emg))
-            emg_right.append(np.asarray(device_right.emg))
-            time.sleep(EMG_INTERVAL)
-        elif data_type == 'pos':
-            ori_left.append(np.asarray(device_left.orientation))
-            acc_left.append(np.asarray(device_left.acceleration))
-            gyro_left.append(np.asarray(device_left.gyroscope))
-
-            ori_right.append(np.asarray(device_right.orientation))
-            acc_right.append(np.asarray(device_right.acceleration))
-            gyro_right.append(np.asarray(device_right.gyroscope))
-            time.sleep(POSITION_INTERVAL)
-
-    device_right.stream_emg(False)
-    device_left.stream_emg(False)
-
-    if data_type == 'emg':
-        if windowing:
-            emg_left_windowed = [emg_left[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                 range(0, len(emg_left), DATA_POINT_WINDOW_SIZE)]
-
-            emg_right_windowed = [emg_right[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                  range(0, len(emg_right), DATA_POINT_WINDOW_SIZE)]
-
-            n = len(emg_right_windowed)
-            if len(emg_right_windowed[n - 1]) < 20 or len(emg_left_windowed[n - 1]) < 20:
-                emg_right_windowed.pop(len(emg_right_windowed) - 1)
-                emg_left_windowed.pop(len(emg_left_windowed) - 1)
-            return [emg_left_windowed, emg_right_windowed]
-        return [emg_left, emg_right]
-    elif data_type == 'pos':
-        if windowing:
-            ori_left_windowed = [ori_left[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                 range(0, len(ori_left), DATA_POINT_WINDOW_SIZE)]
-            acc_left_windowed = [acc_left[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                 range(0, len(acc_left), DATA_POINT_WINDOW_SIZE)]
-            gyro_left_windowed = [gyro_left[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                  range(0, len(gyro_left), DATA_POINT_WINDOW_SIZE)]
-
-            ori_right_windowed = [ori_right[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                  range(0, len(ori_right), DATA_POINT_WINDOW_SIZE)]
-            acc_right_windowed = [acc_right[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                  range(0, len(acc_right), DATA_POINT_WINDOW_SIZE)]
-            gyro_right_windowed = [gyro_right[x:x + DATA_POINT_WINDOW_SIZE] for x in
-                                   range(0, len(gyro_right), DATA_POINT_WINDOW_SIZE)]
-
-            n = len(ori_left_windowed)
-            if len(ori_left_windowed[n - 1]) < 20 or len(acc_left_windowed[n - 1]) < 20 or len(
-                    gyro_left_windowed) < 20 or len(ori_right_windowed) < 20 or len(acc_right_windowed) < 20 or len(
-                gyro_right_windowed) < 20:
-                ori_left_windowed.pop(len(ori_left_windowed) - 1)
-                acc_left_windowed.pop(len(acc_left_windowed) - 1)
-                gyro_left_windowed.pop(len(gyro_left_windowed) - 1)
-
-                ori_right_windowed.pop(len(ori_right_windowed) - 1)
-                acc_right_windowed.pop(len(acc_right_windowed) - 1)
-                gyro_right_windowed.pop(len(gyro_right_windowed) - 1)
-
-            left = [ori_left_windowed, acc_left_windowed, gyro_left_windowed]
-            right = [ori_right_windowed, acc_right_windowed, gyro_right_windowed]
-            return left, right
-        left = [ori_left, acc_left, gyro_left]
-        right = [ori_right, acc_right, gyro_right]
-        return left, right
+def pair_devices():
+    global DEVICE_L
+    global DEVICE_R
+    with hub.run_in_background(device_listener):
+        wait(.5)
+        for i in range(3):
+            devices = device_listener.devices
+            for d in devices:
+                if d.arm == LEFT:
+                    DEVICE_L = d
+                    DEVICE_L.stream_emg(True)
+                elif d.arm == RIGHT:
+                    DEVICE_R = d
+                    DEVICE_R.stream_emg(True)
+            if not (DEVICE_L is None) and not (DEVICE_R is None):
+                DEVICE_R.vibrate(libmyo.VibrationType.short)
+                DEVICE_L.vibrate(libmyo.VibrationType.short)
+                logging.info("Devices paired")
+                return True
+            wait(2)
+    hub.stop()
+    return False
 
 
-def collect_training_data():
-    time_now = time.localtime()
-    timestamp = str(time_now.tm_year) + str(time_now.tm_mon) + str(time_now.tm_mday) \
-                + str(time_now.tm_hour) + str(time_now.tm_min) + str(time_now.tm_sec)
-    # global hub
-    # global status
-    # global EMG
-    # global ORI
-    # global ACC
-    # global GYR
-    # global hand_disinfection
-
-    time.sleep(1)
-    # status = 0
-    label_window = []
-    raw_data_window = {'EMG': [], 'ORI': [], 'GYR': [], 'ACC': []}
-    raw_data = {'EMG': [], 'ORI': [], 'GYR': [], 'ACC': []}
-    label_raw = []
-
-    with hub.run_in_background(listener.on_event):
-        for emg in range(1, 3):
-            for i in range(len(hand_disinfection)):
-                for j in range(1, 3):
-                    print("\nGesture -- ", hand_disinfection[i], " : Ready?")
-                    input("Countdown start after press...")
-                    countdown(2)
-                    cls()
-                    print("Start")
-                    tmp_data_window, tmp_data_raw = collect_raw_data(TRAINING_TIME)
-
-                    # window data
-                    entries = len(tmp_data_window['EMG'])
-                    raw_data_window['EMG'].extend(tmp_data_window['EMG'])
-                    raw_data_window['ACC'].extend(tmp_data_window['ACC'])
-                    raw_data_window['GYR'].extend(tmp_data_window['GYR'])
-                    raw_data_window['ORI'].extend(tmp_data_window['ORI'])
-                    label_window.extend(np.full((1, entries), i)[0])
-
-                    # raw data
-                    entries = len(tmp_data_raw['EMG'])
-                    raw_data['EMG'].extend(tmp_data_raw['EMG'])
-                    raw_data['ACC'].extend(tmp_data_raw['ACC'])
-                    raw_data['GYR'].extend(tmp_data_raw['GYR'])
-                    raw_data['ORI'].extend(tmp_data_raw['ORI'])
-                    label_raw.extend(np.full((1, entries), i)[0])
-
-                    # for k in range(len(tmp_data_window)):
-                    #     raw_data_window.append(tmp_data_window[k])
-                    #     train_y_windowed.append(i)
-                    # for k in range(len(tmp_data_raw)):
-                    #     raw_data.append(tmp_data_raw[k])
-                    #     train_y_raw.append(i)
-
-                    print("Stop")
-                    print("Switch hands")
-
-                print("Collected windowed data: ", len(raw_data_window))
-                print("Collected raw data: ", len(raw_data))
-
-            print("Saving collected data...")
-
-            transformed_data_collection = transform_data_collection(raw_data_window)
-            res = save_feature_csv(transformed_data_collection, label_window,
-                           "hand_disinfection_collection_windowed" + timestamp + ".csv")
-            res = save_feature_csv(raw_data, label_window, "hand_disinfection_collection_raw" + timestamp + ".csv")
-            if res is not None:
-                print("Saving succeed")
-
-    save_feature_csv(transformed_data_collection, label_window, "hand_disinfection_collection" + timestamp + ".csv")
-
-
-def collect_raw_data_old(record_duration):
-    # global EMG
-    # global ORI
-    # global ACC
-    # global GYR
+def collect_raw_data():
+    global EMG
+    global ORI
+    global ACC
+    global GYR
     global status
-    # global WINDOW_IMU
-    # global OFFSET_IMU
-    EMG = []
-    ORI = []
-    ACC = []
-    GYR = []
-    raw_data = {'EMG': EMG, 'ORI': ORI, 'GYR': GYR, 'ACC': ACC}
-    raw_data_window = {'EMG': [], 'ORI': [], 'GYR': [], 'ACC': []}
-    dif = 0
-    status = 0
-    start = time.time()
+    global g_training_time
 
-    while dif <= record_duration:
+    EMG, ORI, ACC, GYR = [], [], [], []
+    dif, status = 0, 0
+    start = time.time()
+    while dif <= g_training_time:
         status = 1
         end = time.time()
         dif = end - start
+        g_introduction_screen.update_gesture_bar(dif)
     status = 0
+    logging.info("EMG %d", len(EMG))
+    logging.info("IMU %d", len(ORI))
 
-    WINDOW_IMU = WINDOW_EMG / (len(EMG) / len(ORI))
-    OFFSET_IMU = WINDOW_IMU * DEGREE_OF_OVERLAP
+    emg_count_list.append(len(EMG))
+    imu_count_list.append(len(ORI))
+    return
 
-    blocks = int(len(EMG) / abs(WINDOW_EMG - OFFSET_EMG))
-    first = 0
-    for i in range(blocks):
-        last = first + WINDOW_EMG
-        raw_data_window['EMG'].append(np.asarray(EMG[first:last]))
-        first += int(WINDOW_EMG - OFFSET_EMG)
 
-    blocks = int(len(ORI) / abs(WINDOW_IMU - OFFSET_IMU))
-    first = 0
-    for i in range(blocks):
-        last = int(first + WINDOW_IMU)
-        raw_data_window['ORI'].append(np.asarray(ORI[first:last]))
-        raw_data_window['GYR'].append(GYR[first:last])
-        raw_data_window['ACC'].append(ACC[first:last])
-        first += int(WINDOW_IMU - OFFSET_IMU)
+def collect_data(current_session):
+    global g_introduction_screen
+    global g_files
+    global g_training_time
+    global g_raw_path
+    global g_img_path
+    global DEVICE_R
+    global emg_r
+    global emg_l
 
-    return raw_data_window, raw_data
+    g_introduction_screen.set_session_text("Session " + str(current_session + 1))
+    g_introduction_screen.set_countdown_text("")
 
-# old version of data collection
-# def collect_training_data_of_2_armband():
-#     libmyo.init()
-#     hub = libmyo.Hub()
-#     listener = libmyo.ApiDeviceListener()
-#
-#     raw_data_collection_right = []
-#     raw_data_collection_left = []
-#     label_collection = []
-#
-#     with hub.run_in_background(listener.on_event):
-#         pool = ThreadPool(processes=2)
-#         time.sleep(1)
-#         for d in listener.devices:
-#             if d.arm == RIGHT:
-#                 device_r = d
-#             elif d.arm == LEFT:
-#                 device_l = d
-#         time.sleep(0.1)
-#
-#         for emg in range(1, 2):
-#             for i in range(len(hand_disinfection_light)):
-#                 cls()
-#                 print("\nGesture -- ", hand_disinfection_light[i], " : Ready?")
-#                 input("Countdown start after press...")
-#                 countdown(2)
-#                 print("Start")
-#
-#                 async_result_emg = pool.apply_async(collect_raw_data_of_2_armband, args=(device_l, device_r, 'emg'))
-#                 async_result_position = pool.apply_async(collect_raw_data_of_2_armband,
-#                                                          args=(device_l, device_r, 'pos'))
-#
-#                 return_val_emg = async_result_emg.get()
-#                 return_val_position = async_result_position.get()
-#
-#                 for j in range(len(return_val_emg[0])):
-#                     raw_data_collection_left.append(np.asarray(return_val_emg[0][j]))  # 0: left
-#                     raw_data_collection_right.append(np.asarray(return_val_emg[1][j]))  # 1: right
-#                     label_collection.append(np.asarray(i))
-#
-#                 for j in range(len(return_val_position[0])):
-#                     raw_data_collection_left.append(
-#                         np.asarray(return_val_position[0][0][j]))  # [0][0]: left,orientation
-#                     raw_data_collection_left.append(
-#                         np.asarray(return_val_position[0][1][j]))  # [0][1]: left,acceleration
-#                     raw_data_collection_left.append(np.asarray(return_val_position[0][2][j]))  # [0][2]: left, gyroscope
-#
-#                     raw_data_collection_right.append(
-#                         np.asarray(return_val_position[1][0][j]))  # [1][0]: right,orientation
-#                     raw_data_collection_right.append(
-#                         np.asarray(return_val_position[1][1][j]))  # [1][1]: right,acceleration
-#                     raw_data_collection_right.append(
-#                         np.asarray(return_val_position[1][2][j]))  # [1][2]: right, gyroscope
-#
-#                     label_collection.append(np.asarray(i))
-#
-#                 print("Stop")
-#
-#         transformed_data_collection_left = transform_data_collection(raw_data_collection_left)
-#         transformed_data_collection_right = transform_data_collection(raw_data_collection_right)
-#
-#         time_now = time.localtime()
-#         timestamp = str(time_now.tm_year) + str(time_now.tm_mon) + str(time_now.tm_mday) \
-#                     + str(time_now.tm_hour) + str(time_now.tm_min) + str(time_now.tm_sec)
-#         # save_csv(transformed_data_collection, train_y, "hand_disinfection_collection" + timestamp + ".csv")
+    with hub.run_in_background(gesture_listener.on_event):
+        countdown(g_introduction_screen, 3)
+        for i in range(len(save_label)):
+            path = g_raw_path + "/" + "s" + str(current_session) + save_label[i]
+            emg_l, emg_r = [], []
+
+            g_introduction_screen.set_gesture_description(hand_disinfection_description[i])
+            g_introduction_screen.change_img(g_img_path + g_files[i])
+
+            g_introduction_screen.set_countdown_text("")
+            # Test ob ohne Ready besser
+            # if g_mode == INDIVIDUAL:
+            #     g_introduction_screen.set_status_text("Ready!")
+            #     wait(1)
+
+            DEVICE_R.vibrate(type=libmyo.VibrationType.short)
+            g_introduction_screen.set_status_text("Start!")
+
+            collect_raw_data()
+
+            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
+
+            g_introduction_screen.set_status_text("Pause")
+            g_introduction_screen.update_gesture_bar(0)
+            g_introduction_screen.update_progressbars(1)
+
+            if i < len(save_label) - 1:
+                g_introduction_screen.set_gesture_description("Next: " + hand_disinfection_description[i + 1])
+                g_introduction_screen.change_img(g_img_path + g_files[i + 1])
+
+            if not g_trial:
+                if not os.path.isdir(path):
+                    os.mkdir(path)
+                save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                             path + "/emg.csv",
+                             path + "/imu.csv")
+                log.info("Collected emg data: " + str(len(EMG)))
+                log.info("Collected imu data:" + str(len(ORI)))
+
+            if g_mode == INDIVIDUAL:
+                wait(.5)
+                if i < len(save_label) - 1:
+                    countdown(g_introduction_screen, g_break)
+
+    g_introduction_screen.set_countdown_text("")
+    g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
+    g_introduction_screen.set_gesture_description("")
+    g_introduction_screen.change_img("intro_screen.jpg")
+    logging.info("Data collection session %d complete", current_session)
+    return
+
+
+def init_data_collection(raw_path, trial, mode, training_time=5):
+    global g_files
+    global g_training_time
+    global g_raw_path
+    global g_img_path
+    global g_mode
+    global g_trial
+
+    if pair_devices():
+        g_training_time = training_time
+        g_introduction_screen.change_img("intro_screen.jpg")
+        g_img_path = os.getcwd() + "/gestures/"
+        # g_img_path = os.getcwd() + "/img/"
+        g_files = os.listdir(g_img_path)
+        g_introduction_screen.set_status_text("Hold every gesture for 5 seconds")
+        g_raw_path = raw_path
+        g_mode = mode
+        g_trial = trial
+        return True
+    return False
+
+
+def main():
+    introduction_window.wm_title("Introduction Screen")
+    introduction_window.withdraw()
+
+    data_collect = CollectDataWindow(collect_window)
+    collect_window.wm_title("Collect Data")
+    collect_window.mainloop()
+
+
+if __name__ == '__main__':
+    main()

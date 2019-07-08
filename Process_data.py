@@ -1,35 +1,44 @@
 import os
+import time
 from tkinter import filedialog
 from sampen import sampen2
-
 import numpy as np
 import math
 
+from Constant import identifier_emg, identifier_imu, MAX_EMG_VALUE, threshold, SEPARATE_PATH, CONTINUES_PATH
 from Save_Load import load_raw_csv, save_feature_csv
-
-MAX = 127
-threshold = 0.30 * MAX
-
-identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
-identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 
 
 # Select user directory --  load all emg and imu data, window it, feature extraction
 def process_raw_data(feature_extraction_mode="default"):
+    start = time.time()
     emg_feature, imu_feature = [], []
     load_path = filedialog.askdirectory(title="Select raw from user directory")
-    save_path = filedialog.askdirectory(title="Select user directory")
-    directories = os.listdir(load_path)
+    save_path = load_path
+    separate_files = os.listdir(load_path + SEPARATE_PATH)
+    continues_files = os.listdir(load_path + CONTINUES_PATH)
 
-    for dir_name in directories:
-        full_path = load_path + "/" + dir_name
-        files = os.listdir(full_path)
-        emg_data, imu_data = load_raw_csv(full_path + "/" + files[0], full_path + "/" + files[1])
-        current_label = int(emg_data['label'][0])
-        emg_window, imu_window = window_data(emg_data, imu_data)
+    separate = True
+    for mode_folder in [separate_files, continues_files]:
+        if separate:
+            path_add = SEPARATE_PATH
+            separate = False
+        else:
+            path_add = CONTINUES_PATH
+        for steps in mode_folder:
+            s_path = load_path + path_add + "/" + steps
 
-        emg_feature.append(feature_extraction_default(emg_window, 1, 1, current_label))
-        imu_feature.append(feature_extraction_default(imu_window, 1, 1, current_label))
+            emg_data, imu_data = load_raw_csv(emg_path=s_path + "/emg.csv", imu_path=s_path + "/imu.csv")
+            current_label = int(emg_data['label'][0])
+
+            emg_window, imu_window = window_data(emg_data, imu_data)
+            print(steps, " window finish")
+
+            emg_feature.append(
+                feature_extraction_default(emg_window, skip_timestamp=True, skip_last=1, label=current_label))
+            imu_feature.append(
+                feature_extraction_default(imu_window, skip_timestamp=True, skip_last=1, label=current_label))
+            print(steps, " feature finish")
 
     save_path = save_path + "/feature_" + feature_extraction_mode
     if not os.path.isdir(save_path):
@@ -37,6 +46,8 @@ def process_raw_data(feature_extraction_mode="default"):
     save_feature_csv(emg_feature, save_path + "/emg.csv")
     save_feature_csv(imu_feature, save_path + "/imu.csv")
     print("Feature extraction successfully completed")
+    end = time.time()
+    print("Duration for load, window, feature extraction and save [second]", end - start)
     return
 
 
@@ -71,12 +82,16 @@ def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5):
     return emg_window, imu_window
 
 
-def feature_extraction_default(window_list, skip_first=0, skip_last=0, label=-1):
+def feature_extraction_default(window_list, skip_timestamp=True, skip_last=0, label=-1):
     features = []
+    if skip_timestamp:
+        begin = 1
+    else:
+        begin = 0
     for window in window_list:
         data_area = len(window) - 1 - skip_last
         feature = []
-        for i in range(skip_first, data_area):
+        for i in range(begin, data_area):
             feature.extend([rms(window[i]),
                             iav(window[i]),
                             ssi(window[i]),
@@ -126,7 +141,7 @@ def normalization(channel):
     channel_norm = []
     x_max = np.max(channel)
     for xi in channel:
-        channel_norm.append((MAX / x_max) * xi)
+        channel_norm.append((MAX_EMG_VALUE / x_max) * xi)
     return channel_norm
 
 
@@ -263,8 +278,10 @@ def ampSpec(array):  # Amplitude Spectrum
         sum += np.abs(a)
     return sum
 
-# def mmdf(array):  # Modified Median Frequency
-#     sum=0
-#     for a in array:
-#         sum+=ampSpec([a])
-#     return 0.5*sum
+
+def main():
+    process_raw_data()
+
+
+if __name__ == '__main__':
+    main()

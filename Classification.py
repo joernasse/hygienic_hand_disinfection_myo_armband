@@ -1,122 +1,164 @@
+import datetime
+import multiprocessing
 import pickle
-import multiprocessing as mplib
+import timeit
+from multiprocessing import Process, Queue
 import time
+from tkinter import filedialog
 
 import numpy as np
+from sklearn import metrics
 from sklearn.ensemble import RandomForestClassifier, AdaBoostClassifier
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score
 
 from Data_transformation import transform_data_collection
 from Helper_functions import countdown, cls
-from Myo_communication import collect_raw_data
-from Save_Load import load_csv, load_classifier
+from Collect_data import collect_raw_data
+from Save_Load import load_feature_csv, load_classifier
 
 counter = 0
 TEST_SIZE = 0.2
 rfc_list, results = [], []
-
-min_forest = 2
-times = 2
-max_forest = 4
-
-process_number = 1
+min_forest = 32
+times = 4
+max_forest = 128
+process_number = multiprocessing.cpu_count()
 border = int(times / process_number)
-n = np.linspace(min_forest, max_forest, times, dtype=int)
-for i in n:
-    rfc_list.append(RandomForestClassifier(n_estimators=i))
-
-grid_parameter = {"max_depth": [10, None],
-                  "max_features": [1, 3, 10],
-                  "min_samples_split": [2, 3, 10],
-                  "bootstrap": [True, False],
-                  "criterion": ["gini", "entropy"]}
 
 
-def train_classifier():
-    # clf = AdaBoostClassifier(n_estimators=7, learning_rate=1)  # , random_state=np.random.randint(0,9))
-    # rfc = RandomForestClassifier(n_estimators=20)
-    # rfc_25 = RandomForestClassifier(n_estimators=25)
-    # svm = SVC(gamma='auto')
-    global results
-    results = []
-    processes = []
-    que = mplib.Queue()
-    x, y, name_extension = load_csv()
-    print("Start -- training models ")
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=TEST_SIZE, random_state=42)
+class Classifier:
+    def __init__(self):
+        self.load_path = ""
+        self.que = Queue()
+        self.x_train = []
+        self.x_test = []
+        self.y_train = []
+        self.y_test = []
+        self.results = []
+        self.rfc_list = []
+        self.grid_search_res = []
 
-    for j in range(process_number):
-        s = j * border
-        t = (j + 1) * border
-        classifier = rfc_list[s:t]
-        process = mplib.Process(name="GridSearch", target=GridSearch,
-                                args=(classifier, grid_parameter, x_train, y_train, que))
-        processes.append(process)
+        for i in np.linspace(min_forest, max_forest, times, dtype=int):
+            self.rfc_list.append(RandomForestClassifier(n_estimators=i, criterion="gini", bootstrap=True))
 
-    print("Start -- Grid Search")
-    start = time.time()
-    for process in processes:
-        process.start()
+        self.grid_parameter = {"max_features": [10, 30, None],
+                               "min_samples_split": [5, 10, 20, 30, 40]}
+        # "bootstrap": [True, False],
+        # "criterion": ["gini", "entropy"]}
+        # self.grid_parameter = {"max_depth": [10, None],
+        #                        "max_features": [10, 20, 30, 40, 50],
+        #                        "min_samples_split": [2, 3, 10],
+        #                        "bootstrap": [True, False],
+        #                        "criterion": ["gini", "entropy"]}
 
-    while 1:
-        if any(p.is_alive() for p in processes):
-            if que.qsize() == times:
-                print("All processes are done")
-                for p in processes:
-                    # p.terminate()
-                    # print("terminate",p)
-                    p.join()
-                    print("join", p)
-                break
-    end = time.time()
-    print("duration: ", end - start)
+    def train_classifier(self, x, y):
+        # clf = AdaBoostClassifier(n_estimators=7, learning_rate=1)  # , random_state=np.random.randint(0,9))
+        # rfc = RandomForestClassifier(n_estimators=20)
 
-    # print("merge results")
-    # print(results)
-    res = [que.get() for p in processes]
+        # svm = SVC(gamma='auto')
 
-    input("debug")
-    best_score = 0
-    for x in res:
-        if x.best_score > best_score:
-            best_score = x.best_score
-            best_estimator = x
+        print("Start -- Train classifier ")
+        self.x_train, self.x_test, self.y_train, self.y_test = train_test_split(x, y, test_size=TEST_SIZE,
+                                                                                random_state=42)
+        processes = []
+        manager = multiprocessing.Manager()
+        return_dict = manager.dict()
 
-    filename = "classifier" + name_extension + ".joblib"
-    # save
-    with open(filename, 'wb') as file:
-        pickle.dump(best_estimator, file)
+        print("Start -- Grid search")
+        start = timeit.default_timer()
+        for j in range(process_number):
+            s = j * border
+            t = (j + 1) * border
+            process = Process(name="GridSearch", target=self.grid_search, args=(self.rfc_list[s:t], return_dict))
+            processes.append(process)
+            process.start()
 
-    # y_i = rfc.predict(x_test)
-    # y_i2 = rfc.predict(x_test)
-    # y_i3 = rfc_25.predict(x_test)
-    # print('SkLearn : ', metrics.accuracy_score(y_test, y_i))
-    # print('SkLearn : ', metrics.accuracy_score(y_test, y_i2))
-    # print('SkLearn : ', metrics.accuracy_score(y_test, y_i3))
-    #
+        for p in processes:
+            p.join()
 
+        print("debug")
+        res = return_dict.values()
 
-# def GridSearch_(classifiers, params, x, y, output):
-#     best_results = []
-#     for clf in classifiers:
-#         grid_search = GridSearchCV(clf, param_grid=params, cv=5, iid=False)
-#         grid_search.fit(x, y)
-#         report(results=grid_search.cv_results_, best_results=best_results, n=clf.n_estimators)
-#     output.put(best_results)
+        stop = timeit.default_timer()
+        print('Time: ', datetime.timedelta(seconds=(stop - start)))
 
+        print(return_dict.values())
+        print("debug")
 
-def GridSearch(classifiers, params, x, y, que):
-    global results
-    best_score = 0
-    for clf in classifiers:
-        # print("Start -- tree size ", clf.n_estimators)
-        grid_search = GridSearchCV(clf, param_grid=params, cv=5, iid=False)
-        tmp = grid_search.fit(x, y)
-        # results.append(tmp.best_estimator_)
-        que.put(tmp.best_estimator_)
-        print("Done -- ", clf.n_estimators, " | Score", tmp.best_score_, " | Estimator", tmp.best_estimator_)
-    return
-    # return True
+        #  Pool part
+        # for c in rfc_list:
+        #     results = [pool.apply_async(self.grid_search, args=(c,))]
+        # pool.close()
+        # pool.join()
+
+        # process = Process(name="GridSearch", target=self.grid_search, args=(classifier,))
+        # processes.append(process)
+        # process.start()
+
+        # for
+
+        # for process in processes:
+        #     process.start()
+        #
+        # for process in processes:
+        #     process.join()
+
+        # while 1:
+        #     if any(p.is_alive() for p in processes):
+        #         if que.qsize() == times:
+        #             print("All processes are done")
+        #             for p in processes:
+        #                 p.terminate()
+        #                 print("terminate",p)
+        #                 p.join()
+        #                 print("join", p)
+        #             break
+
+        # res = [que.get() for p in processes]
+        # try:
+        #     res = que.get_nowait()
+        # except:
+        #     print("nothing happen")
+
+        # output = [p.get() for p in results]
+
+        best_score = 0
+        best_estimator = None
+        for x in res:
+            if x[1] > best_score:
+                best_score = x[1]
+                best_estimator = x[0]
+
+        filename = "classifier" + str(time.time()) + ".joblib"
+        # save
+        with open(filename, 'wb') as file:
+            pickle.dump(best_estimator, file)
+
+        # y_i = rfc.predict(x_test)
+        # y_i2 = rfc.predict(x_test)
+        # y_i3 = rfc_25.predict(x_test)
+
+        # print('SkLearn : ', metrics.accuracy_score(y_test, y_i2))
+        # print('SkLearn : ', metrics.accuracy_score(y_test, y_i3))
+        #
+
+    # def GridSearch_(classifiers, params, x, y, output):
+    #     best_results = []
+    #     for clf in classifiers:
+    #         grid_search = GridSearchCV(clf, param_grid=params, cv=5, iid=False)
+    #         grid_search.fit(x, y)
+    #         report(results=grid_search.cv_results_, best_results=best_results, n=clf.n_estimators)
+    #     output.put(best_results)
+
+    def grid_search(self, classifier, return_dict):
+
+        for classifier in classifier:
+            print("Start -- Grid search for tree size ", classifier.n_estimators)
+            grid_search = GridSearchCV(classifier, param_grid=self.grid_parameter, cv=5, iid=False)
+            result = grid_search.fit(self.x_train, self.y_train)
+            return_dict[classifier.n_estimators] = [result.best_estimator_, result.best_score_]
+            print("Done - Tree size ", classifier.n_estimators, " \n| Score", result.best_score_, " \n| Estimator",
+                  result.best_estimator_)
 
 
 # def report(results, best_results, n):
@@ -160,3 +202,34 @@ def predict(label_information, prediction_time=1):
 
             if marjory >= n / 2:
                 print("\n", label_information[marjory])
+
+
+def train_simple_classifier(x, y):
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=TEST_SIZE, random_state=42)
+
+    rfc = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=2, n_jobs=2)
+    rfc.fit(x_train, y_train)
+    predict_val = rfc.predict_proba(x_test)
+
+    tmp = rfc.predict_proba(x_test)[0:10]
+    y_pred = rfc.predict(x_test)
+    errors = abs(y_pred - y_test)
+
+    print('SkLearn : ', metrics.accuracy_score(y_test, y_pred))
+
+
+def main():
+    global g_load_path
+    g_load_path = filedialog.askdirectory(title="Select feature folder in User directory")
+    emg, imu, label = load_feature_csv(g_load_path)
+
+    # train_simple_classifier(emg, label)
+    classifier = Classifier()
+    classifier.train_classifier(x=emg, y=label)
+
+    # emg try
+    # train_classifier(emg, label)
+
+
+if __name__ == '__main__':
+    main()
