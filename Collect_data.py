@@ -196,12 +196,15 @@ class IntroductionScreen(Frame):
         self.deviating_time_input.grid(row=4, column=2, pady=8, padx=4)
 
         self.session_label.grid(row=5, column=0, pady=4, sticky=W)
-        self.progress_session.grid(row=5, column=1, padx=4, sticky=W)
+        self.progress_session.grigd(row=5, column=1, padx=4, sticky=W)
         self.start_session_btn.grid(row=5, column=2, padx=4)
 
         self.total_label.grid(row=6, column=0, pady=4, sticky=W)
         self.progress_total.grid(row=6, column=1, padx=4, sticky=W)
         self.close_btn.grid(row=6, column=2, padx=4, pady=8)
+
+
+
 
 
     def start_session(self):
