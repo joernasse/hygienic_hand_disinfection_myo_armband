@@ -1,37 +1,63 @@
 import os
-from tkinter import filedialog
-from sampen import sampen2
-import numpy as np
-import math
+import time
 
-from Constant import identifier_emg, identifier_imu, MAX_EMG_VALUE, threshold
+from Constant import *
 from Save_Load import load_raw_csv, save_feature_csv
+from Feature_extraction import *
 
 
 # Select user directory --  load all emg and imu data, window it, feature extraction
-def process_raw_data(feature_extraction_mode="default"):
-    emg_feature, imu_feature = [], []
-    load_path = filedialog.askdirectory(title="Select raw from user directory")
-    save_path = filedialog.askdirectory(title="Select user directory")
-    directories = os.listdir(load_path)
+def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None, feature=None):
+    features = []
+    load_path = collections_default_path + user
+    save_path = load_path
 
-    for dir_name in directories:
-        full_path = load_path + "/" + dir_name
-        files = os.listdir(full_path)
-        emg_data, imu_data = load_raw_csv(full_path + "/" + files[0], full_path + "/" + files[1])
-        current_label = int(emg_data['label'][0])
-        emg_window, imu_window = window_data(emg_data, imu_data)
+    try:
+        directories,path_add = [], []
+        if SEPARATE in dataset:
+            directories.append(os.listdir(load_path + SEPARATE_PATH))
+            path_add.append(SEPARATE_PATH)
+        if CONTINUES in dataset:
+            directories.append(os.listdir(load_path + CONTINUES_PATH))
+            path_add.append(CONTINUES_PATH)
 
-        emg_feature.append(feature_extraction_default(emg_window, 1, 1, current_label))
-        imu_feature.append(feature_extraction_default(imu_window, 1, 1, current_label))
+        for i in range(len(directories)):
+                tmp_features = []
+                for steps in directories[i]:
+                    features=[]
+                    s_path = load_path + path_add[i] + "/" + steps
 
-    save_path = save_path + "/feature_" + feature_extraction_mode
-    if not os.path.isdir(save_path):
-        os.mkdir(save_path)
-    save_feature_csv(emg_feature, save_path + "/emg.csv")
-    save_feature_csv(imu_feature, save_path + "/imu.csv")
-    print("Feature extraction successfully completed")
-    return
+                    emg_raw, imu_raw = load_raw_csv(emg_path=s_path + "/emg.csv", imu_path=s_path + "/imu.csv")
+                    emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap)
+                    current_label = int(emg_raw['label'][0])
+
+                    if EMG in sensor:
+                        res = feature_extraction(emg_window, label=current_label, mode=feature)
+                        features.append(res)
+                    if IMU in sensor:
+                        res = feature_extraction(imu_window, label=current_label, mode=feature)
+                        features.append(res)
+                    if EMG + IMU in sensor:
+                        tmp = []
+                        for j in range(len(features[0])):
+                            merged_feature = features[0][j]['fs'] + features[1][j]['fs']
+                            if features[0][j]['label'] == features[1][j]['label']:
+                                tmp.append({"fs": merged_feature, "label": features[1][j]['label']})
+                            else:
+                                print("ERROR! Should not happen!")
+                        tmp_features.append(tmp)
+                features = tmp_features
+
+        filename = user + "-" + dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
+        save_path = save_path + "/features"
+        if not os.path.isdir(save_path):
+            os.mkdir(save_path)
+        save_feature_csv(features, save_path + "/" + filename + ".csv")
+        print(filename)
+        return features
+    except:
+        print("ERROR!", user, steps, dataset, sensor, ValueError)
+        raise
 
 
 def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5):
@@ -63,202 +89,3 @@ def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5):
         imu_window.append(imu)
         first_imu += int(window_imu - offset_imu)
     return emg_window, imu_window
-
-
-def feature_extraction_default(window_list, skip_first=0, skip_last=0, label=-1):
-    features = []
-    for window in window_list:
-        data_area = len(window) - 1 - skip_last
-        feature = []
-        for i in range(skip_first, data_area):
-            feature.extend([rms(window[i]),
-                            iav(window[i]),
-                            ssi(window[i]),
-                            var(window[i]),
-                            wl(window[i]),
-                            aac(window[i])])
-        features.append({"fs": feature,
-                         "label": label})
-
-    return features
-
-
-# Paper [5] Feature choice
-def feature_extraction_phinyomark(window_list, skip_first=0, skip_last=0, label=-1):
-    features = []
-    for window in window_list:
-        data_area = len(window) - 1 - skip_last
-        feature = []
-        for i in range(skip_first, data_area):
-            feature.extend([sampen2(window[i])[i],
-                            cc(window[i]),
-                            rms(window[i]),
-                            wl(window[i])])
-        features.append({"fs": feature,
-                         "label": label})
-
-        # result = sampen2(window[1])  # SampEn test # ch0, result index 0 Epoch
-        # # 1 is SampEn
-        # # 2 is Std deviation
-
-
-def feat_trans_def(saving_list, features, options=0):
-    if len(saving_list) == 0:
-        return [rms(features), iav(features), ssi(features), var(features), wl(features), aac(features)]
-    else:
-        saving_list.append(rms(features))
-        saving_list.append(iav(features))
-        saving_list.append(ssi(features))
-        saving_list.append(var(features))
-        saving_list.append(wl(features))
-        saving_list.append(aac(features))
-        return saving_list
-    # feat_transf.append(tm3(array))
-
-
-def normalization(channel):
-    channel_norm = []
-    x_max = np.max(channel)
-    for xi in channel:
-        channel_norm.append((MAX_EMG_VALUE / x_max) * xi)
-    return channel_norm
-
-
-def rms(array):  # root mean square
-    sum = 0
-    n = len(array)
-    for a in array:
-        sum += a * a
-    return np.sqrt(1 / n * sum)
-
-
-def mav(array):  # Mean Absolute Value
-    sum = 0
-    n = len(array)
-    for a in array:
-        sum += np.abs(a)
-    return 1 / n * sum
-
-
-def energy(array):  # Energy Ratio
-    sum = 0
-    for a in array:
-        sum += a * a
-    return sum
-
-
-def var(array):  # Variance
-    n = len(array)
-    sum = 0
-    for a in array:
-        sum += np.abs(a)
-    return 1 / (n - 1) * sum
-
-
-def wamp(array):  # Willison Amplitude
-    n = len(array)
-    sum = 0
-    for i in range(n - 1):
-        if np.abs(array[i] - array[i + 1]) >= threshold:
-            sum += 1
-        else:
-            sum += 0
-    return sum
-
-
-def zc(array):  # Zero Crossing
-    n = len(array)
-    sum = 0
-    for i in range(n - 1):
-        x = array[i]
-        y = array[i + 1]
-        if (x * y <= threshold) and (np.abs(x - y) >= threshold):
-            sum += 1
-        else:
-            sum += 0
-    return sum
-
-
-def unison_shuffled_copies(a, b):
-    assert len(a) == len(b)
-    p = np.random.permutation(len(a))
-    return a[p], b[p]
-
-
-def iav(array):
-    sum = 0
-    for a in array:
-        sum += np.abs(a)
-    return sum
-
-
-def ssi(array):
-    sum = 0
-    for a in array:
-        sum += a * a
-    return sum
-
-
-def tm3(array):
-    n = len(array)
-    print('n : ', n)
-    sum = 0
-    for a in array:
-        sum += a * a * a
-    return np.power((1 / float(n)) * sum, 1 / float(3))
-
-
-def wl(array):  # Waveform length
-    sum = 0
-    for a in range(0, len(array) - 1):
-        sum += abs(array[a + 1] - array[a])
-    return sum
-
-
-def cc(array):  # cepstral coeffcients
-    print("cc")
-    # do some stuff
-
-
-def aac(array):
-    n = len(array)
-    sum = 0
-    for a in range(0, n - 1):
-        sum += array[a + 1] - array[a]
-    return sum / float(n)
-
-
-def toEuler(quat):
-    magnitude = math.sqrt(quat.x ** 2 + quat.y ** 2 + quat.z ** 2 + quat.w ** 2)
-    quat.x = quat.x / magnitude
-    quat.y = quat.y / magnitude
-    quat.z = quat.z / magnitude
-    quat.w = quat.w / magnitude
-
-    # Roll
-    roll = math.atan2(2.0 * (quat.w * quat.x + quat.y * quat.z),
-                      1.0 - 2.0 * (quat.x * quat.x + quat.y * quat.y))
-
-    # Pitch
-    pitch = math.asin(max(-1.0, min(1.0, 2.0 * quat.w * quat.y - quat.z * quat.x)))
-
-    # Yaw
-    yaw = math.atan2(2.0 * (quat.w * quat.z + quat.x * quat.y),
-                     1.0 - 2.0 * (quat.y * quat.y + quat.z * quat.z))
-    return [pitch, roll, yaw]
-
-
-# frequency domain
-def ampSpec(array):  # Amplitude Spectrum
-    freq_array = np.fft.fft(array)
-    n = len(freq_array)
-    sum = 0
-    for a in freq_array:
-        sum += np.abs(a)
-    return sum
-
-# def mmdf(array):  # Modified Median Frequency
-#     sum=0
-#     for a in array:
-#         sum+=ampSpec([a])
-#     return 0.5*sum

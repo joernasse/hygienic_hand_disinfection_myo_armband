@@ -1,12 +1,12 @@
 import csv
 import os
 import shutil
+import sys
 from tkinter import filedialog
 
-import numpy as np
 import logging as log
 
-from Constant import emg_headline, imu_headline, COLLECTION_DIR
+from Constant import *
 
 
 def save_raw_csv(data, label, file_emg, file_imu):
@@ -51,9 +51,9 @@ def save_feature_csv(data, file_name):
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for entry in data:
-            for t in entry:
-                tmp = t['fs']
-                tmp.extend([t['label']])
+            for dict in entry:
+                tmp = dict['fs']
+                tmp.extend([dict['label']])
                 writer.writerow(tmp)
     return f
 
@@ -63,55 +63,57 @@ def load_classifier():
 
 
 def load_raw_csv(emg_path, imu_path):
-    imu_file, emg_file = open(imu_path), open(emg_path)
-    load_data, identifier = [], []
-    imu_load_data = {"timestamp": [],
-                     "x_ori": [], "y_ori": [], "z_ori": [],
-                     "x_gyr": [], "y_gyr": [], "z_gyr": [],
-                     "x_acc": [], "y_acc": [], "z_acc": [],
-                     "label": []}
-    emg_load_data = {"timestamp": [],
-                     "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
-                     "label": []}
+    try:
+        imu_file, emg_file = open(imu_path), open(emg_path)
+        load_data, identifier = [], []
+        imu_load_data = {"timestamp": [],
+                         "x_ori": [], "y_ori": [], "z_ori": [],
+                         "x_gyr": [], "y_gyr": [], "z_gyr": [],
+                         "x_acc": [], "y_acc": [], "z_acc": [],
+                         "label": []}
+        emg_load_data = {"timestamp": [],
+                         "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
+                         "label": []}
 
-    for file in [emg_file, imu_file]:
-        if file.name.__contains__('emg'):
-            load_data = emg_load_data
-        elif file.name.__contains__('imu'):
-            load_data = imu_load_data
-        reader = csv.reader(file, delimiter=';')
-        first_line = True
-        for column in reader:
-            if first_line:
-                first_line = False
-                identifier = column
-                continue
-            length = len(identifier)
-            for i in range(length):
-                load_data[identifier[i]].append(float(column[i]))
-    imu_file.close()
-    emg_file.close()
+        for file in [emg_file, imu_file]:
+            if file.name.__contains__('emg'):
+                load_data = emg_load_data
+            elif file.name.__contains__('imu'):
+                load_data = imu_load_data
+            reader = csv.reader(file, delimiter=';')
+            first_line = True
+            for column in reader:
+                if first_line:
+                    first_line = False
+                    identifier = column
+                    continue
 
-    return emg_load_data, imu_load_data
+                # try:
+                #     for i in column[1:len(identifier)]:
+                #         t=float(i)
+                # except:
+                #     # print("Error! Cannot convert str->float")
+                #     cannotConvert = cannotConvert+1
+                #     continue
+
+                for i in range(1, len(identifier)):
+                    load_data[identifier[i]].append(float(column[i]))
+
+        imu_file.close()
+        emg_file.close()
+        return emg_load_data, imu_load_data
+    except:
+        print(sys.exc_info()[0])
 
 
-def load_csv():
-    file = filedialog.askopenfile(filetypes=[("CSV files", "*.csv")])
-    data_name = file.name.split("/")
+def load_feature_csv(file):
+    label, data = [], []
+    reader = csv.reader(file, delimiter=';')
+    for column in reader:
+        data.append([float(x) for x in column[:-1]])
+        label.append(int(column[-1]))
 
-    print("Start -- loading data")
-    with open(file.name) as csv_file:
-        train_x = []
-        train_y = []
-        csv_reader = csv.reader(csv_file, delimiter=';')
-        for row in csv_reader:
-            tmp = []
-            for i in range(len(row) - 1):
-                tmp.append(float(row[i]))
-            train_x.append(np.asarray(tmp))
-            train_y.append(int(row[len(row) - 1]))
-        print("Done -- loading data")
-        return np.asarray(train_x), np.asarray(train_y), data_name[-1]
+    return data, label
 
 
 def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
@@ -131,7 +133,6 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
             os.mkdir(raw_con)
             log.info("Create directory" + raw_path)
     else:
-        # os.mkdir(raw_path)
         os.mkdir(raw_sep)
         os.mkdir(raw_con)
         log.info("Create directory" + raw_path)

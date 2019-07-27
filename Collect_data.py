@@ -203,10 +203,6 @@ class IntroductionScreen(Frame):
         self.progress_total.grid(row=6, column=1, padx=4, sticky=W)
         self.close_btn.grid(row=6, column=2, padx=4, pady=8)
 
-
-
-
-
     def start_session(self):
         global g_break
         if self.current_session < self.sessions:

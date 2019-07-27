@@ -6,7 +6,7 @@ from PIL import Image, ImageTk
 from Collect_data import collect_data, init_data_collection
 from Constant import *
 from Process_data import process_raw_data
-from Save_Load import load_csv, create_directories
+from Save_Load import load_feature_csv, create_directories
 
 introduction_window = Tk()
 collect_window = Tk()
@@ -41,7 +41,7 @@ class MainWindow(Frame):
                                                                             proband=self.proband_input.get()))
 
         self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
-        self.load_feature_btn = Button(self, text="Load feature file", command=load_csv)
+        self.load_feature_btn = Button(self, text="Load feature file", command=load_feature_csv)
 
         self.collect_label.grid(row=0, column=0, pady=4, columnspan=2)
 

@@ -1,3 +1,5 @@
+import multiprocessing
+
 label_display = ['Step 0',
                  'Step 1', 'Step 1.1', 'Step 1.2',
                  'Step 2', 'Step 2.1',
@@ -46,15 +48,13 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
+collections_default_path = 'D:/Masterarbeit/EMG_Recognition/Collections/'
 
-# Classification
-counter = 0
-TEST_SIZE = 0.2
-rfc_list, results = [], []
-min_forest = 2
-times = 2
-max_forest = 4
-process_number = 1
+SEPARATE_PATH = "/raw_separate"
+CONTINUES_PATH = "/raw_continues"
+
+SEPARATE = "separate"
+CONTINUES = "continues"
 
 # Save_Load_CSV
 emg_headline = ["timestamp",
@@ -67,5 +67,26 @@ imu_headline = ["timestamp",
                 "label"]
 imu_identifier = ["x", "y", "z"]
 
-# GUI
-CONTINUES = "continues"
+EMG = "EMG"
+IMU = "IMU"
+W_100 = 100
+W_50 = 50
+O_90 = 0.9
+O_50 = 0.5
+O_0 = 0
+O_75 = 0.75
+F1 = "phinyomark"
+# F2=
+Fd = "default"
+
+# Standard Varianten
+USERS = ["User001", "User002", "User003", "User004",
+         "User005", "User006", "User007", "User008",
+         "User009", "User010","User011", "User012",
+         "User013", "User014", "User015"]
+level_1 = [SEPARATE, CONTINUES, SEPARATE + CONTINUES]
+# level_2 = [EMG, IMU, EMG + IMU]
+level_2 = [EMG + IMU]
+level_3 = [W_100, W_50]
+level_4 = [O_50, O_0, O_90, O_75]
+level_5 = [Fd]  # F1 geht momentan nicht 24.7.19
