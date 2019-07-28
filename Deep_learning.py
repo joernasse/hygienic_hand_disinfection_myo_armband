@@ -1,14 +1,18 @@
-import TF.Learn
+# import TF.Learn
 import tensorflow as tf
+from sklearn.model_selection import train_test_split
+
+from Classification import TEST_SIZE
+from Helper_functions import divide_chunks
 
 
 def dnn_default(x_data, label):
-    # DNN EMGIMU-default -> 8+9=17
-    n_inputs = 17
+
+    # DNN EMGIMU-default ->8*6+9*6=102
+    n_inputs = 102
     n_hidden1 = 70
     n_hidden2 = 50
     n_output = 13
-
     X = tf.placeholder(tf.float32, shape=(None, n_inputs), name="X")
     y = tf.placeholder(tf.int64, shape=(None), name="y")
 
@@ -32,11 +36,14 @@ def dnn_default(x_data, label):
     init = tf.global_variables_initializer()
     saver = tf.train.Saver()
 
+    # Training section
     n_epochs = 40
     bach_size = 50
 
+    X_train, X_test, y_train, y_test = train_test_split(x_data, label, test_size=TEST_SIZE, random_state=42)
     X_batch, y_batch = [], []  # batch berechnen!
-    X_test, y_test = [], []
+    X_batch = divide_chunks(X_train, bach_size)
+    y_batch = divide_chunks(y_train, bach_size)
 
     with tf.Session() as sess:
         init.run()

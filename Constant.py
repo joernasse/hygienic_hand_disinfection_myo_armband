@@ -48,7 +48,10 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-collections_default_path = 'D:/Masterarbeit/EMG_Recognition/Collections/'
+# collections_default_path = 'D:/Masterarbeit/EMG_Recognition/Collections/'
+# laptop
+collections_default_path = 'C:/EMG_Recognition/Collections/'
+
 
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
