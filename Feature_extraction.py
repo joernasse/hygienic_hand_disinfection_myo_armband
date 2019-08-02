@@ -1,7 +1,11 @@
 import math
+
+import python_speech_features
+from pyentrp import entropy as ent
+from UliEngineering.SignalProcessing.Utils import zero_crossings
 from sampen import sampen2
 
-from Constant import MAX_EMG_VALUE, threshold, F1
+from Constant import MAX_EMG_VALUE, threshold, F1, F2, EMG, IMU, F3, F4
 import numpy as np
 
 
@@ -55,16 +59,14 @@ def wamp(array):  # Willison Amplitude
     return sum
 
 
-def zc(array):  # Zero Crossing
-    n = len(array)
+# Zero Crossing
+def zc(x):
+    n = len(x)
     sum = 0
     for i in range(n - 1):
-        x = array[i]
-        y = array[i + 1]
-        if (x * y <= threshold) and (np.abs(x - y) >= threshold):
+
+        if (x[i] * x[i + 1] <= threshold) and (np.abs(x[i] - x[i + 1]) >= threshold):
             sum += 1
-        else:
-            sum += 0
     return sum
 
 
@@ -74,13 +76,15 @@ def unison_shuffled_copies(a, b):
     return a[p], b[p]
 
 
+# integrated absolute value
+# IEMG
 def iav(array):
     sum = 0
     for a in array:
         sum += np.abs(a)
     return sum
 
-
+# Simple Square Integra
 def ssi(array):
     sum = 0
     for a in array:
@@ -105,12 +109,18 @@ def wl(array):  # Waveform length
 
 
 def cc(x):  # cepstral coeffcients
-    c = np.fft.ifft(np.log(np.abs(np.fft.fft(x))))
-    for n in range(len(c)):
-        y = +c[n]
-    return y
+    try:
+        fft = np.fft.fft(x)
+        ab = np.abs(fft)
+        l = np.log(ab)
+        c = np.fft.ifft(l)
+        for n in range(len(c)):
+            y = +c[n]
+        return y
+    except RuntimeWarning:
+        print(RuntimeWarning)
 
-
+# amino acids’ composition
 def aac(array):
     n = len(array)
     sum = 0
@@ -149,45 +159,62 @@ def ampSpec(array):  # Amplitude Spectrum
     return sum
 
 
-def feature_extraction(windows, mode, label=-1):
+# Rehman-EMGHandDeepLearning-2018.pdf
+def rehman(data):
+    return [mav(data), wl(data), ssc(data), zero_crossings(data).size]
+
+
+# Georgi-HandFingerGesturesIMUEMG-2015.pdf
+def georgi(data, sensor):
+    if sensor == EMG:
+        return [np.std(data)]
+    if sensor == IMU:
+        return [np.mean(data), np.std(data)]
+
+
+def feature_extraction(windows, mode, sensor):
     features = []
     for window in windows:
         feature = []
-        for data in window[1:len(window) - 1]:
+        for data in window[:- 1]:
             if mode == F1:
                 feature.extend(phinyomark(data=data))
+            elif mode == F2:
+                feature.extend(rehman(data=data))
+            elif mode == F3:
+                feature.extend(georgi(data, sensor))
+            elif mode == F4:
+                feature.extend(robinson(data))
             else:
-                feature.extend(feature_extraction_default(data=data))
-        features.append({"fs": feature, "label": label})
+                feature.extend(default(data=data))
+
+        features.append({"fs": feature, "label": int(window[-1])})
     return features
 
 
+# [ent.sample_entropy(data, 2, 0.2), cc(data), rms(data), wl(data)]     phinyomark
+# [mav(data), wl(data), ssc(data), zero_crossings(data)]                rehman
+# [np.mean(data), np.std(data)]                                         georgi
+# [rms(data), wl(data), ssc(data)]                                      robinson
+# [rms(data), iav(data), ssi(data), var(data), wl(data), aac(data)]     rajiv_mantena
+
+
 # Default feature extraction from Rajiv_Mantena (GitHub)
-def feature_extraction_default(data):
+def default(data):
     return [rms(data), iav(data), ssi(data), var(data), wl(data), aac(data)]
 
 
 # Paper [5] Feature choice
 def phinyomark(data):
-    return [sampen2(data)[0][1], cc(data), rms(data), wl(data)]
+    # a=sampen2(data,2,0.2)
+    b = ent.sample_entropy(data, 2, 0.2)
+    # mfcc=python_speech_features.mfcc(data,len(data))
+    cc1 = cc(data)
+    return [ent.sample_entropy(data, 2, 0.2)[1], cc(data), rms(data), wl(data)]
 
     # result = sampen2(window[1])  # SampEn test # ch0, result index 0 Epoch
     # # 1 is SampEn
     # # 2 is Std deviation
-
-
-def feat_trans_def(saving_list, features, options=0):
-    if len(saving_list) == 0:
-        return [rms(features), iav(features), ssi(features), var(features), wl(features), aac(features)]
-    else:
-        saving_list.append(rms(features))
-        saving_list.append(iav(features))
-        saving_list.append(ssi(features))
-        saving_list.append(var(features))
-        saving_list.append(wl(features))
-        saving_list.append(aac(features))
-        return saving_list
-    # feat_transf.append(tm3(array))
 
 
 # mean abs Value Slope
@@ -196,10 +223,17 @@ def mavs(ch):
 
 
 # Slope Sign Changes
-def ssc(ch):
-    pass
+# https://pdfs.semanticscholar.org/3d85/7e8fa4bc59b614e6d220f2af644c3e886ba9.pdf
+def ssc(x):
+    f = 0
+    for n in range(1, len(x) - 1):
+        res = (x[n] - x[n - 1]) * x[n] - x[n + 1]
+        if res >= threshold:
+            f += 1
+    return f
 
 
-def robinson_pattern(data):
-    return [mav(data), mavs(data), wl(data), ssc(data), zc(data)]
-
+# Robinson-PatternClassificationHand-2017.pdf
+def robinson(data):
+    return [rms(data), wl(data), ssc(data)]  # C6 RMS,WL,Scc 90,53%
+    # return [mav(data), mavs(data), wl(data), ssc(data), zc(data) #C7 (TD) 90,57%

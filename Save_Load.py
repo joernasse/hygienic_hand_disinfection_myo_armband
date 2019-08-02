@@ -6,6 +6,8 @@ from tkinter import filedialog
 
 import logging as log
 
+import numpy
+
 from Constant import *
 
 
@@ -75,6 +77,7 @@ def load_raw_csv(emg_path, imu_path):
                          "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
                          "label": []}
 
+        array = []
         for file in [emg_file, imu_file]:
             if file.name.__contains__('emg'):
                 load_data = emg_load_data
@@ -106,11 +109,35 @@ def load_raw_csv(emg_path, imu_path):
         print(sys.exc_info()[0])
 
 
+def load_feature_csv_all_user(config):
+    users_data = []
+    for user in USERS:
+        data, label = [], []
+        try:
+            file = open("E:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
+        except:
+            return []
+        reader = csv.reader(file, delimiter=';')
+        for column in reader:
+            data.append([float(x) for x in column[:-1]])
+            label.append(int(column[-1]))
+        users_data.append({'data': data, 'label': label})
+    return users_data
+
+
 def load_feature_csv(file):
     label, data = [], []
     reader = csv.reader(file, delimiter=';')
     for column in reader:
-        data.append([float(x) for x in column[:-1]])
+        tmp = []
+        for x in column[:-1]:
+            if x == "inf":
+                tmp.append(sys.float_info.max)
+            try:
+                tmp.append(numpy.float64(x))
+            except:
+                tmp.append(numpy.abs(complex(x)))
+        data.append(tmp)
         label.append(int(column[-1]))
 
     return data, label
@@ -136,3 +163,12 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
         os.mkdir(raw_sep)
         os.mkdir(raw_con)
         log.info("Create directory" + raw_path)
+
+
+def load_overview():
+    overview = []
+    file = open("E:/Masterarbeit/overview.csv")
+    reader = csv.reader(file, delimiter=';')
+    for column in reader:
+        overview.append(column)
+    return overview

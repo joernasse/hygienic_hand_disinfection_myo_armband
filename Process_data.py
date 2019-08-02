@@ -5,6 +5,8 @@ from Constant import *
 from Save_Load import load_raw_csv, save_feature_csv
 from Feature_extraction import *
 
+np.seterr(divide='ignore')
+
 
 # Select user directory --  load all emg and imu data, window it, feature extraction
 def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None, feature=None):
@@ -28,16 +30,11 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                 s_path = load_path + path_add[i] + "/" + steps
 
                 emg_raw, imu_raw = load_raw_csv(emg_path=s_path + "/emg.csv", imu_path=s_path + "/imu.csv")
-                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap)
-                current_label = int(emg_raw['label'][0])
+                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap, skip_timestamp=1)
 
-                if EMG in sensor:
-                    res = feature_extraction(emg_window, label=current_label, mode=feature)
-                    features.append(res)
-                if IMU in sensor:
-                    res = feature_extraction(imu_window, label=current_label, mode=feature)
-                    features.append(res)
                 if EMG + IMU in sensor:
+                    features.append(feature_extraction(emg_window, mode=feature,sensor=EMG))
+                    features.append(feature_extraction(imu_window, mode=feature,sensor=IMU))
                     tmp = []
                     for j in range(len(features[0])):
                         merged_feature = features[0][j]['fs'] + features[1][j]['fs']
@@ -46,6 +43,11 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                         else:
                             print("ERROR! Should not happen!")
                     tmp_features.append(tmp)
+                    continue
+                if EMG in sensor:
+                    tmp_features.append(feature_extraction(emg_window, mode=feature,sensor=EMG))
+                if IMU in sensor:
+                    tmp_features.append(feature_extraction(imu_window, mode=feature,sensor=IMU))
             features = tmp_features
 
         filename = user + "-" + dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
@@ -59,6 +61,18 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
         print("ERROR!", user, steps, dataset, sensor, ValueError)
         raise
 
+
+def window_data_matrix(emg_data, imu_data, window=20, degree_of_overlap=0.5):
+    emg_window, imu_window = [], []
+    emg_length, imu_length = len(emg_data), len(imu_data)
+
+    window_imu = window / (emg_length / imu_length)
+    offset_imu = window_imu * degree_of_overlap
+    offset_emg = window * degree_of_overlap
+
+    # define blocks (should be equal, for imu and emg) for calculation emg data used
+    blocks = int(emg_length / abs(window - offset_emg))
+    label = emg_data[0,7]
 
 def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5,skip_timestamp=0):
     emg_window, imu_window = [], []
