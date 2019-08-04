@@ -3,11 +3,8 @@ import os
 import shutil
 import sys
 from tkinter import filedialog
-
-import logging as log
-
 import numpy
-
+import logging as log
 from Constant import *
 
 
@@ -111,17 +108,25 @@ def load_raw_csv(emg_path, imu_path):
 
 def load_feature_csv_all_user(config):
     users_data = []
+    sum = 0
     for user in USERS:
         data, label = [], []
         try:
-            file = open("E:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
+            # E Desktop
+            # G laptop
+            # path = os.getcwd()
+            # file = open(path + "\\best_mean_sets\\" + user + "-" + config + ".csv")
+            file = open("G:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
+
         except:
             return []
         reader = csv.reader(file, delimiter=';')
         for column in reader:
             data.append([float(x) for x in column[:-1]])
             label.append(int(column[-1]))
+        sum += len(data)
         users_data.append({'data': data, 'label': label})
+    print(sum)
     return users_data
 
 
@@ -167,7 +172,7 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
 
 def load_overview():
     overview = []
-    file = open("E:/Masterarbeit/overview.csv")
+    file = open("E:/Masterarbeit/classification_config_mean_result_edit.csv")
     reader = csv.reader(file, delimiter=';')
     for column in reader:
         overview.append(column)

@@ -48,7 +48,7 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-collections_default_path = 'E:/Masterarbeit/Collections/'
+collections_default_path = 'G:/Masterarbeit/Collections/'
 # laptop
 # collections_default_path = 'C:/EMG_Recognition/Collections/'
 # externe HDD
@@ -95,125 +95,27 @@ USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
-
+USERS_2 = ["User001"]
+# Without user007
 USERS_cross = ["User001", "User002", "User003", "User004",
-               "User005", "User006", "User007", "User008",
+               "User005", "User006", "User008",
                "User009", "User010", "User011", "User012",
-               "User013", "User014"]
+               "User013", "User014", "User015"]
 
-user_cross_val_feature_selection = ["separate-EMGIMU-100-0.9-default",
-                                    "separate-IMU-50-0.9-default",
-                                    "separate-EMGIMU-50-0.9-default",
-                                    "separate-IMU-100-0.75-default",
-                                    "separatecontinues-EMGIMU-100-0.9-default",
-                                    "continues-EMGIMU-100-0.9-default",
-                                    "separatecontinues-EMGIMU-50-0.9-default",
-                                    "separate-EMGIMU-100-0.75-default",
-                                    "continues-EMGIMU-50-0.9-default",
-                                    "separatecontinues-IMU-100-0.9-default",
-                                    "continues-IMU-100-0.9-default",
-                                    "separate-IMU-50-0.75-default",
-                                    "separate-IMU-100-0.5-default",
-                                    "separatecontinues-IMU-50-0.9-default",
-                                    "continues-IMU-50-0.9-default",
-                                    "separatecontinues-EMGIMU-100-0.75-default",
-                                    "continues-EMGIMU-100-0.75-default",
-                                    "separate-EMGIMU-50-0.75-default",
-                                    "separate-EMGIMU-100-0-default",
-                                    "continues-IMU-100-0.75-default",
-                                    "separate-IMU-50-0.5-default",
-                                    "separate-EMGIMU-100-0.5-default",
-                                    "separate-IMU-50-0-default",
-                                    "separate-IMU-100-0-default",
-                                    "separate-EMGIMU-50-0.5-default",
-                                    "continues-IMU-100-0.5-default",
-                                    "separatecontinues-EMGIMU-50-0.75-default",
-                                    "continues-EMGIMU-50-0.75-default",
-                                    "separatecontinues-IMU-100-0.75-default",
-                                    "continues-IMU-50-0.75-default",
-                                    "separatecontinues-IMU-100-0.5-default",
-                                    "separate-EMG-100-0.9-default",
-                                    "continues-IMU-100-0-default",
-                                    "separate-EMGIMU-50-0-default",
-                                    "separate-EMG-50-0.9-default",
-                                    "continues-EMG-100-0.9-default",
-                                    "separate-EMGIMU-100-0-georgi",
-                                    "separatecontinues-EMGIMU-100-0-default",
-                                    "continues-EMGIMU-100-0-default",
-                                    "separate-EMGIMU-100-0.5-georgi",
-                                    "separatecontinues-EMGIMU-100-0.5-default",
-                                    "continues-EMGIMU-100-0.5-default",
-                                    "separatecontinues-IMU-50-0.75-default",
-                                    "separatecontinues-EMG-100-0.9-default",
-                                    "continues-IMU-50-0.5-default",
-                                    "separatecontinues-IMU-100-0-default",
-                                    "continues-EMGIMU-50-0.5-default",
-                                    "separatecontinues-EMGIMU-50-0.5-default",
-                                    "continues-IMU-50-0-default",
-                                    "continues-EMG-50-0.9-default",
-                                    "separate-EMGIMU-100-0.5-rehman",
-                                    "separatecontinues-EMG-50-0.9-default",
-                                    "separatecontinues-IMU-50-0.5-default",
-                                    "separate-EMGIMU-100-0-rehman",
-                                    "separate-EMGIMU-100-0.75-robinson",
-                                    "continues-EMGIMU-100-0.75-georgi",
-                                    "separatecontinues-EMGIMU-100-0.75-georgi",
-                                    "separate-EMGIMU-50-0.75-georgi",
-                                    "separate-EMG-100-0.75-default",
-                                    "continues-EMGIMU-50-0-default",
-                                    "separate-EMGIMU-50-0.5-georgi",
-                                    "separate-EMGIMU-100-0-robinson",
-                                    "continues-EMGIMU-100-0.5-georgi",
-                                    "separatecontinues-EMGIMU-100-0.5-georgi",
-                                    "separatecontinues-EMGIMU-50-0-default",
-                                    "separate-EMGIMU-50-0-georgi",
-                                    "separate-EMG-50-0.75-default",
-                                    "continues-EMGIMU-100-0.75-rehman",
-                                    "separatecontinues-EMGIMU-100-0.75-rehman",
-                                    "separatecontinues-EMG-100-0.75-default",
-                                    "continues-EMGIMU-100-0-georgi",
-                                    "separatecontinues-EMGIMU-100-0-georgi",
-                                    "separate-EMGIMU-50-0.75-rehman",
-                                    "separatecontinues-IMU-50-0-default",
-                                    "continues-EMG-100-0.75-default",
-                                    "continues-EMGIMU-100-0.5-rehman",
-                                    "separatecontinues-EMGIMU-100-0.5-rehman",
-                                    "continues-EMGIMU-100-0.75-robinson",
-                                    "separatecontinues-EMGIMU-100-0.75-robinson",
-                                    "separate-EMGIMU-50-0-rehman",
-                                    "separate-EMG-100-0.5-default",
-                                    "continues-EMGIMU-100-0.5-robinson",
-                                    "separatecontinues-EMGIMU-100-0.5-robinson",
-                                    "continues-EMGIMU-100-0-robinson",
-                                    "separatecontinues-EMGIMU-100-0-robinson",
-                                    "continues-IMU-100-0.5-georgi",
-                                    "separatecontinues-IMU-100-0.5-georgi",
-                                    "continues-EMGIMU-100-0-rehman",
-                                    "separatecontinues-EMGIMU-100-0-rehman",
-                                    "separate-EMGIMU-50-0-robinson",
-                                    "separatecontinues-EMG-50-0.75-default",
-                                    "continues-EMGIMU-50-0.5-georgi",
-                                    "separatecontinues-EMGIMU-50-0.5-georgi",
-                                    "separate-EMGIMU-50-0.75-robinson",
-                                    "separate-EMGIMU-50-0.5-robinson",
-                                    "continues-IMU-100-0.75-georgi",
-                                    "separatecontinues-IMU-100-0.75-georgi",
-                                    "continues-EMG-50-0.75-default",
-                                    "separatecontinues-EMG-100-0.5-default",
-                                    "continues-EMGIMU-50-0-georgi",
-                                    "separatecontinues-EMGIMU-50-0-georgi",
-                                    "continues-IMU-100-0.5-robinson",
-                                    "separatecontinues-IMU-100-0.5-robinson",
-                                    "continues-EMG-100-0.5-default",
-                                    "separate-EMG-100-0-default",
-                                    "separate-IMU-100-0.5-georgi",
-                                    "continues-EMGIMU-50-0.75-georgi",
-                                    "separatecontinues-EMGIMU-50-0.75-georgi",
-                                    "continues-IMU-100-0-robinson",
-                                    "separatecontinues-IMU-100-0-robinson",
-                                    "continues-IMU-100-0.75-robinson",
-                                    "separatecontinues-IMU-100-0.75-robinson",
-                                    "separate-IMU-100-0.75-georgi"]
+# Config rating from user dependent accuracy
+best_config_qda = "separate-EMGIMU-100-0.75-default"
+
+best_config_rf = "separate-EMGIMU-100-0.75-georgi"
+sec_config_rf = "separate-EMGIMU-50-0.75-georgi"
+
+best_config_lda = "separate-EMGIMU-100-0.75-default"
+sec_config_lda = "separate-EMGIMU-100-0.5-default"
+
+best_config_knn = "separate-EMGIMU-100-0.75-georgi"
+best_config_bayers = "separate-EMGIMU-100-0.75-georgi"
+best_config_svm = "separate-EMGIMU-100-0.75-georgi"
+
+most_data = "separatecontinues-IMU-50-0.75-default"
 
 level_1 = [CONTINUES, SEPARATE, SEPARATE + CONTINUES]
 level_2 = [EMG, IMU, EMG + IMU]

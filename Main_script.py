@@ -1,34 +1,29 @@
 from __future__ import print_function
 
-# ordentliche prediction Ergebnisse
-# PREDICT_TIME: float = 0.5
-import datetime
-import timeit
-from multiprocessing import Process
-
-import numpy
-
-from Classification import train_classifier_user_cross_validation, train_classifier_1
+import Classification
+from Constant import *
 # from Deep_learning import dnn_default
+from Deep_learning import cnn
 
 from Process_data import process_raw_data, window_data, window_data_matrix
 from Save_Load import *
 
 
 def main():
-    train_dep = train_user_dependent()
-    if train_dep:
-        return True
+    # train_dep = train_user_dependent()
+    # if train_dep:
+    #     return True
     # calculation_config_statistics()
     # deep_learning = False
     # classifier = False
     # featureExtraction = False
     # user_cross_val = True
-    # n_job = True
     # processes = []
     #
-    # if n_job:
-    #     prepare_data_for_cross_validation_over_user(user_cross_val_feature_selection)
+
+    path = os.getcwd()
+    # train_user_independent(best_config_rf)
+    train_dnn(50, 0.75)
     #
     # if user_cross_val:
     #     process_number = 1
@@ -63,10 +58,9 @@ def main():
     # return True
 
 
-def prepare_data_for_cross_validation_over_user(level_1_local):
-    for config in level_1_local:
-        users_data = load_feature_csv_all_user(config)
-        train_classifier_user_cross_validation(users_data, config)
+def train_user_independent(config):
+    users_data = load_feature_csv_all_user(config)
+    Classification.train_user_independent(users_data, config, "RandomForest")
     return True
 
 
@@ -86,31 +80,39 @@ def prepare_data_for_cross_validation_over_user(level_1_local):
 #     return True
 
 
-# def train_dnn(user, window, overlap):
-#     emg_window_collection, imu_window_collection = [], []
-#     # emg and imu, sep and conti
-#     directories = [os.listdir(collections_default_path +"-"+ user +"-"+ SEPARATE_PATH), \
-#                    os.listdir(collections_default_path +"-"+ user +"-"+ CONTINUES_PATH)]
-#     path_add = [SEPARATE_PATH, CONTINUES_PATH]
-#     windows, labels = [], []
-#     for i in range(len(directories)):
-#         matrix_collection, matrix_collection_imu = [], []
-#         for steps in directories[i]:
-#             s_path = collections_default_path +"-"+ user +"-"+ path_add[i] +"-"+ "/" +"-"+ steps
-#             emg_raw, imu_raw = load_raw_csv(s_path +"-"+ "/emg.csv", s_path +"-"+ "/imu.csv")
-#             emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap,
-#                                                  skip_timestamp=1)
-#
-#             merged = []
-#             for j in range(len(emg_window)):
-#                 windows.append([emg for emg in emg_window[j][:-1]])
-#             labels.extend([int(emg_raw['label'][0])] * len(emg_window))
-#
-#     matrix = []
-#     for item in windows:
-#         matrix.append(numpy.asarray(item))
-#     # matrix_merged = numpy.asmatrix(tmp)
-#     dnn_default(matrix, labels)
+def train_dnn(window, overlap):
+    emg_window_collection, imu_window_collection = [], []
+    # emg and imu, sep and conti
+
+    path_add = [SEPARATE_PATH, CONTINUES_PATH]
+    collect_emg, collect_imu = [], []
+    for user in USERS_2:
+        directories = [os.listdir(collections_default_path + user + SEPARATE_PATH), \
+                       os.listdir(collections_default_path + user + CONTINUES_PATH)]
+        for i in range(len(directories)):
+            for steps in directories[i]:
+                emg_raw, imu_raw = load_raw_csv(
+                    collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv",
+                    collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv")
+                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window,
+                                                     degree_of_overlap=overlap, skip_timestamp=1)
+                collect_imu.extend(imu_window)
+                collect_emg.extend(emg_window)
+        print(user, "done")
+
+    matrix, label = [], []
+    for item in collect_imu:
+        data = [numpy.asarray(x) for x in item[:-1]]
+        label.append(item[-1])
+        matrix_data_tmp = numpy.asmatrix(data)
+        matrix.append(matrix_data_tmp)
+
+    cnn(matrix,label)
+
+    # for j in range(len(emg_window)):
+    #     windows.append([emg for emg in emg_window[j][:-1]])
+    # labels.extend([int(emg_raw['label'][0])] * len(emg_window))
+    # dnn_default(matrix_imu, labels)
 
 
 def train_user_dependent():
@@ -123,7 +125,7 @@ def train_user_dependent():
                         users_data = load_feature_csv_all_user(config)
                         if not users_data:
                             continue
-                        train_classifier_1(users_data, config)
+                        Classification.train_user_dependent(users_data, config)
     return True
 
 
@@ -153,11 +155,7 @@ def calculation_config_statistics():
                         config_items = []
 
                         for item in overview:
-                            if item[3] == dataset and \
-                                    item[4] == sensor and \
-                                    item[5] == str(window) and \
-                                    item[6] == str(overlap) and \
-                                    item[7] == feature:
+                            if config == item[17]:
                                 config_items.append(item)
                         if config_items:
                             tmp = [config]
