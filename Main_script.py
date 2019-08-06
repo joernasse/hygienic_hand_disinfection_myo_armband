@@ -83,12 +83,10 @@ def train_user_independent(config):
 
 
 def train_cnn(window, overlap):
-    emg_window_collection, imu_window_collection = [], []
-
     # emg and imu, sep and conti
 
     path_add = [SEPARATE_PATH, CONTINUES_PATH]
-    collect_emg, collect_imu = [], []
+    emg_col, imu_col, label_col = [], [], []
     for step in save_label:
         emg, imu = [], []
         for user in USERS_cross:
@@ -96,16 +94,22 @@ def train_cnn(window, overlap):
                            os.listdir(collections_default_path + user + CONTINUES_PATH)]
             for i in range(len(directories)):
                 for steps in directories[i]:
-                    if step in steps:
+                    t="s"+str(i)+step
+                    if t == steps:
                         emg.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv"))
                         imu.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv"))
+                        print(len(imu))
+
 
         emg, imu, label = window_data_matrix(emg, imu, 50, 0)
-        collect_imu.extend(numpy.asarray(imu))
-        collect_emg.extend(numpy.asarray(emg))
-        print(step, "done")
-    tmp=numpy.asarray(collect_imu)
-    cnn(numpy.asmatrix(tmp[0]), label)
+        imu_col.extend(numpy.asarray(imu))
+        emg_col.extend(numpy.asarray(emg))
+        label_col.extend(numpy.asarray(label))
+        print(step, "done", imu.shape)
+    # tmp = numpy.asarray(imu_col)
+    print(len(imu_col), len(label_col))
+    tmp=numpy.asarray(imu_col)
+    cnn(numpy.asarray(imu_col), numpy.asarray(label_col))
 
     # emg_raw, imu_raw = load_raw_csv(
     #     collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv",

@@ -48,38 +48,52 @@
 
 
 # CNN
+from collections import Counter
+
 import numpy
+from keras.utils import to_categorical
 from numpy.polynomial.tests.test_laguerre import L2
 from sklearn.model_selection import train_test_split
 from tensorflow.python import keras
 from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import Conv2D, Flatten, Dense, MaxPooling2D
 from keras.datasets import mnist
+import tensorflow as tf
 
 from Classification import TEST_SIZE
+import matplotlib.pyplot as plt
 
 
 def cnn(x, y):
-    # xa=numpy.reshape(x,(9,10))
-    train = int(len(x) * (1 - TEST_SIZE))
-    x_train = x[:train]
-    y_train = y[:train]
-    y_test = y[train:]
-    x_test = x[train:]
+    classes=len(Counter(y).keys())
+
+    x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=TEST_SIZE)
+
+    x_train = numpy.array(x_train)[:, :, :, numpy.newaxis]
+    x_test = numpy.array(x_test)[:, :, :, numpy.newaxis]
+    y_train = to_categorical(y_train)
+    y_test = to_categorical(y_test)
+
+    # plt.imshow(x[0])
+    # plt.imshow(x[1])
+    # plt.imshow(x[2])
 
     model = Sequential()
-    model.add(Conv2D(32,
-                     kernel_size=3,
-                     activation='relu',
-                     input_shape=(x_train[0].shape[0], x_train[0].shape[1], 1)))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-    model.add(Dense(128, activation='relu'))
-    model.add(Dense(13, activation='softmax'))
+    model.add(Conv2D(64, kernel_size=3, activation='relu',
+                     input_shape=(12, 9, 1)))
+    model.add(Conv2D(32, kernel_size=3, activation='relu'))
+    model.add(Flatten())
+    # model.add(MaxPooling2D(pool_size=(2, 2)))
+    # model.add(Dense(128, activation='relu'))
+    model.add(Dense(classes, activation='softmax'))
 
-    sgd = optimizers.SGD(lr=0.1, momentum=0.95, nesterov=True)
+    # sgd = optimizers.SGD(lr=0.1, momentum=0.95, nesterov=True)
+    # sgd = optimizers.SGD(lr=0.01, clipnorm=1.)
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer='adam', metrics=['accuracy'])
+    model.fit(x_train, y_train, validation_data=(x_test, y_test))
 
-    model.compile(loss=keras.losses.categorical_crossentropy, optimizer=sgd, metrics=['accuracy'])
-
-    model.fit(x_train, y_train, batch_size=256, epochs=25, verbose=1, validation_data=(x_test, y_test))
+    # predict first 4 images in the test set
+    model.predict(x_test[:4])
 
     print("")
