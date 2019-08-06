@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+from numpy import newaxis
+
 import Classification
 from Constant import *
 # from Deep_learning import dnn_default
@@ -23,7 +25,7 @@ def main():
 
     path = os.getcwd()
     # train_user_independent(best_config_rf)
-    train_dnn(50, 0.75)
+    train_cnn(50, 0.75)
     #
     # if user_cross_val:
     #     process_number = 1
@@ -80,39 +82,45 @@ def train_user_independent(config):
 #     return True
 
 
-def train_dnn(window, overlap):
+def train_cnn(window, overlap):
     emg_window_collection, imu_window_collection = [], []
+
     # emg and imu, sep and conti
 
     path_add = [SEPARATE_PATH, CONTINUES_PATH]
     collect_emg, collect_imu = [], []
-    for user in USERS_2:
-        directories = [os.listdir(collections_default_path + user + SEPARATE_PATH), \
-                       os.listdir(collections_default_path + user + CONTINUES_PATH)]
-        for i in range(len(directories)):
-            for steps in directories[i]:
-                emg_raw, imu_raw = load_raw_csv(
-                    collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv",
-                    collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv")
-                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window,
-                                                     degree_of_overlap=overlap, skip_timestamp=1)
-                collect_imu.extend(imu_window)
-                collect_emg.extend(emg_window)
-        print(user, "done")
+    for step in save_label:
+        emg, imu = [], []
+        for user in USERS_cross:
+            directories = [os.listdir(collections_default_path + user + SEPARATE_PATH), \
+                           os.listdir(collections_default_path + user + CONTINUES_PATH)]
+            for i in range(len(directories)):
+                for steps in directories[i]:
+                    if step in steps:
+                        emg.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv"))
+                        imu.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv"))
 
-    matrix, label = [], []
-    for item in collect_imu:
-        data = [numpy.asarray(x) for x in item[:-1]]
-        label.append(item[-1])
-        matrix_data_tmp = numpy.asmatrix(data)
-        matrix.append(matrix_data_tmp)
+        emg, imu, label = window_data_matrix(emg, imu, 50, 0)
+        collect_imu.extend(numpy.asarray(imu))
+        collect_emg.extend(numpy.asarray(emg))
+        print(step, "done")
+    tmp=numpy.asarray(collect_imu)
+    cnn(numpy.asmatrix(tmp[0]), label)
 
-    cnn(matrix,label)
+    # emg_raw, imu_raw = load_raw_csv(
+    #     collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv",
+    #     collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv")
+    # emg_window, imu_window = window_data(emg_raw, imu_raw, window=window,
+    #                                      degree_of_overlap=overlap, skip_timestamp=1)
 
-    # for j in range(len(emg_window)):
-    #     windows.append([emg for emg in emg_window[j][:-1]])
-    # labels.extend([int(emg_raw['label'][0])] * len(emg_window))
-    # dnn_default(matrix_imu, labels)
+    # matrix, label = [], []
+    # for item in collect_imu:
+    #     data = [numpy.asarray(x) for x in item[:-1]]
+    #     label.append(item[-1])
+    #     matrix_data_tmp = numpy.asarray(data)
+    #     matrix.append(numpy.asarray(matrix_data_tmp))
+    #
+    # cnn(matrix, label)
 
 
 def train_user_dependent():
@@ -138,8 +146,6 @@ def feature_extraction(users):
                         for feature in level_5:
                             process_raw_data(user, dataset=dataset, overlap=overlap,
                                              sensor=sensor, window=window, feature=feature)
-                            # if classifier:
-                            #     Classifier.train_classifier()
     return True
 
 
@@ -162,30 +168,11 @@ def calculation_config_statistics():
                             tmp.extend([numpy.mean([float(x[0]) for x in config_items])])
                             config_mean.append(tmp)
 
-    f = open("E:/Masterarbeit/config_mean.csv", 'w', newline='')
+    f = open("G:/Masterarbeit/config_mean.csv", 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in config_mean:
             writer.writerow(item)
-
-    # index = ["accuracy", "classifier", "mode", "sensor", "window", "overlap", "feature_set"]
-    # classifier_results = {
-    #     'accuracy': [],
-    #     'classifier': [],
-    #     'mode': [],
-    #     'sensor': [],
-    #     'window': [],
-    #     'overlap': [],
-    #     'feature_set': []
-    # }
-    #
-    # for item in user_cross_val_feature_selection:
-    #     users_data = load_feature_csv_all_user(item)
-    #     # reader=csv file
-    #     # for column in reader:
-    #     #     for n in range(len(column)):
-    #     #         classifier_results[n]=column[n]
-    #     # return classifier_results
 
 
 if __name__ == '__main__':

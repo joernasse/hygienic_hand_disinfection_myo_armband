@@ -61,6 +61,16 @@ def load_classifier():
     classifier = filedialog.askopenfile(filetypes=[("Classifier", "*.joblib")])
 
 
+def load_raw_2(path):
+    data = []
+    file = open(path)
+    reader = csv.reader(file, delimiter=';')
+    next(reader, None)
+    for column in reader:
+        data.append(numpy.asarray([float(x) for x in column]))
+    return data
+
+
 def load_raw_csv(emg_path, imu_path):
     try:
         imu_file, emg_file = open(imu_path), open(emg_path)

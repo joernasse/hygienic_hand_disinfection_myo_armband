@@ -60,19 +60,14 @@ from Classification import TEST_SIZE
 
 
 def cnn(x, y):
-    (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
-    x_train = x_train.reshape(60000, 28, 28, 1)
-    x_test = x_test.reshape(10000, 28, 28, 1)
-
+    # xa=numpy.reshape(x,(9,10))
     train = int(len(x) * (1 - TEST_SIZE))
-    # print(len(x))
-    x_train = numpy.asarray(x[:train])
-    y_train = numpy.asarray(y[:train])
-    y_test = numpy.asarray(y[train:])
-    x_test = numpy.asarray(x[train:])
-    model = Sequential()
+    x_train = x[:train]
+    y_train = y[:train]
+    y_test = y[train:]
+    x_test = x[train:]
 
+    model = Sequential()
     model.add(Conv2D(32,
                      kernel_size=3,
                      activation='relu',
@@ -86,3 +81,5 @@ def cnn(x, y):
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer=sgd, metrics=['accuracy'])
 
     model.fit(x_train, y_train, batch_size=256, epochs=25, verbose=1, validation_data=(x_test, y_test))
+
+    print("")

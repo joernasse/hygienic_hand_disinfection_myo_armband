@@ -30,11 +30,12 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                 s_path = load_path + path_add[i] + "/" + steps
 
                 emg_raw, imu_raw = load_raw_csv(emg_path=s_path + "/emg.csv", imu_path=s_path + "/imu.csv")
-                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap, skip_timestamp=1)
+                emg_window, imu_window = window_data(emg_raw, imu_raw, window=window, degree_of_overlap=overlap,
+                                                     skip_timestamp=1)
 
                 if EMG + IMU in sensor:
-                    features.append(feature_extraction(emg_window, mode=feature,sensor=EMG))
-                    features.append(feature_extraction(imu_window, mode=feature,sensor=IMU))
+                    features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
+                    features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
                     tmp = []
                     for j in range(len(features[0])):
                         merged_feature = features[0][j]['fs'] + features[1][j]['fs']
@@ -45,9 +46,9 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                     tmp_features.append(tmp)
                     continue
                 if EMG in sensor:
-                    tmp_features.append(feature_extraction(emg_window, mode=feature,sensor=EMG))
+                    tmp_features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
                 if IMU in sensor:
-                    tmp_features.append(feature_extraction(imu_window, mode=feature,sensor=IMU))
+                    tmp_features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
             features = tmp_features
 
         filename = user + "-" + dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
@@ -63,18 +64,30 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
 
 
 def window_data_matrix(emg_data, imu_data, window=20, degree_of_overlap=0.5):
-    emg_window, imu_window = [], []
+    emg_window, imu_window, label = [], [], []
     emg_length, imu_length = len(emg_data), len(imu_data)
 
+    emg_data_1 = [np.asarray(x[1:-1]) for x in emg_data]
+    imu_data_1 = [np.asarray(x[1:-1]) for x in imu_data]
     window_imu = window / (emg_length / imu_length)
     offset_imu = window_imu * degree_of_overlap
     offset_emg = window * degree_of_overlap
 
     # define blocks (should be equal, for imu and emg) for calculation emg data used
     blocks = int(emg_length / abs(window - offset_emg))
-    label = emg_data[0,7]
+    first_emg, first_imu = 0, 0
+    for i in range(blocks):
+        last_emg = first_emg + window
+        last_imu = int(first_imu + window_imu)
+        emg_window.append(np.asarray(emg_data_1[first_emg:last_emg]))
+        imu_window.append(np.asarray(imu_data_1[first_imu:last_imu]))
+        label.append(emg_data[0][-1])
+        first_emg += int(window - offset_emg)
+        first_imu += int(window_imu - offset_imu)
+    return np.asarray(emg_window),np.asarray(imu_window),label
 
-def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5,skip_timestamp=0):
+
+def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5, skip_timestamp=0):
     emg_window, imu_window = [], []
     emg_length, imu_length = len(emg_data['label']), len(imu_data['label'])
 

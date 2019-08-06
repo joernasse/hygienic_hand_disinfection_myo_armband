@@ -7,6 +7,7 @@ from sklearn import metrics, clone
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
 # from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.multiclass import OneVsRestClassifier
 
 from sklearn.svm import SVC
 import sklearn
@@ -61,16 +62,15 @@ def train_user_independent(users_data, config, name):
     classifier = RandomForestClassifier(n_jobs=-1, criterion='gini', n_estimators=1000, min_samples_split=2,
                                         bootstrap=True, max_depth=16, max_features=3)
     # classifier = GAUSS()
-    # svc = SVC(gamma='scale', kernel='rbf')
+    # classifier = SVC(C=2,gamma='scale', kernel='rbf',shrinking=True)
     # classifier = OneVsRestClassifier(svc,n_jobs=-1)
     # classifier = sklearn.neighbors.KNeighborsClassifier(n_jobs=-1)
 
-    rf_p = {'n_estimators': [256],
-            'criterion': ['gini', 'entropy'],
-            'max_depth': [None, 3],
-            'min_samples_split': [2, 3, 10],
-            # 'min_samples_leaf': [3, 4, 5],
-            # "max_features": [1, 3, 10],
+    rf_p = {'criterion': ['gini'],
+            'max_depth': [16, 64],
+            'min_samples_split': [2, 3],
+            'min_samples_leaf': [3, 4],
+            "max_features": [3, 10],
             'bootstrap': [True, False]}
     # lda_best = LDA(solver='lsqr',shrinkage='auto')
     # params = LDA().get_params()
@@ -81,10 +81,10 @@ def train_user_independent(users_data, config, name):
     # classifier = QDA()
 
     accuracy = []
-    print("norm-" + name + "-" + config)
+    print("not_norm-" + name + "-" + config)
     print(classifier.get_params())
 
-    # grid_search = GridSearchCV(classifier, rf_p, n_jobs=-1, cv=5, iid=False)
+    # grid_search = GridSearchCV(classifier, rf_p,  cv=5, iid=False)
     for n in range(len(USERS_cross)):
         test_user = users_data[n].copy()
         train_users = users_data.copy()
@@ -93,13 +93,13 @@ def train_user_independent(users_data, config, name):
         x_train, y_train = flat_data_user_cross_val(train_users)
         x_test, y_test = flat_data_user_cross_val([test_user])
         # Norm
-        sc_tr.fit(x_train)
-        sc_test.fit(x_test)
-        X = sc_tr.transform(x_train)
-        X_test = sc_test.transform(x_test)
-
-        # X = x_train
-        # X_test = x_test
+        # sc_tr.fit(x_train)
+        # sc_test.fit(x_test)
+        # X = sc_tr.transform(x_train)
+        # X_test = sc_test.transform(x_test)
+        #
+        X = x_train
+        X_test = x_test
 
         clf = clone(classifier)
         clf.fit(X, y_train)
