@@ -68,7 +68,7 @@ def load_raw_2(path):
     next(reader, None)
     for column in reader:
         data.append(numpy.asarray([float(x) for x in column]))
-    return data
+    return numpy.asarray(data)
 
 
 def load_raw_csv(emg_path, imu_path):

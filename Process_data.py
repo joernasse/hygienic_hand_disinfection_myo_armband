@@ -1,9 +1,8 @@
 import os
-import time
 
 from Constant import *
-from Save_Load import load_raw_csv, save_feature_csv
 from Feature_extraction import *
+from Save_Load import load_raw_csv, save_feature_csv
 
 np.seterr(divide='ignore')
 
@@ -84,7 +83,30 @@ def window_data_matrix(emg_data, imu_data, window=20, degree_of_overlap=0.5):
         label.append(emg_data[0][-1])
         first_emg += int(window - offset_emg)
         first_imu += int(window_imu - offset_imu)
-    return np.asarray(emg_window),np.asarray(imu_window),label
+    return np.asarray(emg_window), np.asarray(imu_window), label
+
+
+def window_only_imu(imu, window=12, degree_of_overlap=0):
+    try:
+        offset = window * degree_of_overlap
+        imu_data_1 = [np.asarray(x[1:-1]) for x in imu]
+        imu_window, label = [], []
+        length = len(imu)
+        blocks = int(length / abs(window - offset))
+        first_imu = 0
+        for i in range(blocks):
+            last_imu = int(first_imu + window)
+            data = imu_data_1[first_imu:last_imu]
+            if not len(data) == window:
+                print("first/last", first_imu, last_imu)
+                first_imu += int(window - offset)
+                continue
+            imu_window.append(np.asarray(data))
+            label.append(imu[0][-1])
+            first_imu += int(window - offset)
+        return np.asarray(imu_window), label
+    except:
+        print("")
 
 
 def window_data(emg_data, imu_data, window=20, degree_of_overlap=0.5, skip_timestamp=0):

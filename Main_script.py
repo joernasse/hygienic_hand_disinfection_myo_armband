@@ -1,5 +1,8 @@
 from __future__ import print_function
 
+from copy import copy
+
+import sklearn
 from numpy import newaxis
 
 import Classification
@@ -7,7 +10,7 @@ from Constant import *
 # from Deep_learning import dnn_default
 from Deep_learning import cnn
 
-from Process_data import process_raw_data, window_data, window_data_matrix
+from Process_data import process_raw_data, window_data, window_data_matrix, window_only_imu
 from Save_Load import *
 
 
@@ -25,7 +28,20 @@ def main():
 
     path = os.getcwd()
     # train_user_independent(best_config_rf)
-    train_cnn(50, 0.75)
+    train_cnn(25, 0.75)
+      ### Used all User Data,separate & continuous, 80% Training, 20% Test !IMU ONLY! ###
+        # 12-0.5 T0.2   ->  46,64%      244417/244417 [==============================] - 50s 205us/sample - loss: 1.5746 - acc: 0.4664 - val_loss: 1.4192 - val_acc: 0.5255
+        # 12-0.75 T.02  ->  49,87%      488831/488831 [==============================] - 98s 201us/sample - loss: 1.4751 - acc: 0.4987 - val_loss: 1.3235 - val_acc: 0.5478
+        # 12-0 T0.2     ->  42,07%      122212/122212 [==============================] - 24s 200us/sample - loss: 1.7015 - acc: 0.4207 - val_loss: 1.5457 - val_acc: 0.4663
+        # 25-0.5 T0.2   ->  51,11%      117323/117323 [==============================] - 52s 442us/sample - loss: 1.4507 - acc: 0.5111 - val_loss: 1.2352 - val_acc: 0.5850
+        # 25-0.75 T0.2  ->  57,01%      234651/234651 [==============================] - 103s 437us/sample - loss: 1.2821 - acc: 0.5702 - val_loss: 1.0990 - val_acc: 0.6316
+        # 25-0 T0.2     ->  47,64%      58660/58660 [==============================] - 26s 446us/sample - loss: 1.5607 - acc: 0.4765 - val_loss: 1.3220 - val_acc: 0.5630
+
+        # 90% Training, 10% Test
+        # 25-0.75 T0.1  ->  56,36%      263982/263982 [==============================] - 108s 408us/sample - loss: 1.3001 - acc: 0.5636 - val_loss: 1.1108 - val_acc: 0.6279
+
+
+
     #
     # if user_cross_val:
     #     process_number = 1
@@ -81,50 +97,66 @@ def train_user_independent(config):
 #             # dnn_default(x, y)
 #     return True
 
+def load_raw_data_for_nn():
+    path_add = [SEPARATE_PATH, CONTINUES_PATH]
+    imu_dict = {
+        'Step0': [],
+        'Step1': [],
+        'Step1_1': [],
+        'Step1_2': [],
+        'Step2': [],
+        'Step2_1': [],
+        'Step3': [],
+        'Step4': [],
+        'Step5': [],
+        'Step5_1': [],
+        'Step6': [],
+        'Step6_1': [],
+        'Rest': []
+    }
+    emg_dict = {'Step0': [],
+                'Step1': [],
+                'Step1_1': [],
+                'Step1_2': [],
+                'Step2': [],
+                'Step2_1': [],
+                'Step3': [],
+                'Step4': [],
+                'Step5': [],
+                'Step5_1': [],
+                'Step6': [],
+                'Step6_1': [],
+                'Rest': []}
+    for user in USERS:
+        path = collections_default_path + user
+        directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
+        for i in range(len(directories)):
+            for steps in directories[i]:
+                index = steps[2:]
+                path_data = path + path_add[i] + "/" + steps
+                imu_dict[index].extend(load_raw_2(path_data + "/imu.csv"))
+                # emg_data[index].extend(load_raw_2(path_data + "/emg.csv"))
+        print(user, "done")
+    return imu_dict, emg_dict
+
+
+def window_raw_data_for_nn(window, overlap, imu_dict, emg_dict):
+    labels, imu_data, emg_data = [], [], []
+    for key in save_label:
+        imu, label = window_only_imu(imu_dict[key], window=window, degree_of_overlap=overlap)
+        # emg, imu, label = window_data_matrix(emg_dict[key], imu_data[n], window, overlap)
+        imu_data.extend(imu)
+
+        s = numpy.vstack((imu_data, imu))
+        # emg_col.extend(numpy.asarray(emg))
+        labels.extend(numpy.asarray(label))
+    return imu_data, emg_data, labels
+
 
 def train_cnn(window, overlap):
-    # emg and imu, sep and conti
-
-    path_add = [SEPARATE_PATH, CONTINUES_PATH]
-    emg_col, imu_col, label_col = [], [], []
-    for step in save_label:
-        emg, imu = [], []
-        for user in USERS_cross:
-            directories = [os.listdir(collections_default_path + user + SEPARATE_PATH), \
-                           os.listdir(collections_default_path + user + CONTINUES_PATH)]
-            for i in range(len(directories)):
-                for steps in directories[i]:
-                    t="s"+str(i)+step
-                    if t == steps:
-                        emg.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv"))
-                        imu.extend(load_raw_2(collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv"))
-                        print(len(imu))
-
-
-        emg, imu, label = window_data_matrix(emg, imu, 50, 0)
-        imu_col.extend(numpy.asarray(imu))
-        emg_col.extend(numpy.asarray(emg))
-        label_col.extend(numpy.asarray(label))
-        print(step, "done", imu.shape)
-    # tmp = numpy.asarray(imu_col)
-    print(len(imu_col), len(label_col))
-    tmp=numpy.asarray(imu_col)
-    cnn(numpy.asarray(imu_col), numpy.asarray(label_col))
-
-    # emg_raw, imu_raw = load_raw_csv(
-    #     collections_default_path + user + path_add[i] + "/" + steps + "/emg.csv",
-    #     collections_default_path + user + path_add[i] + "/" + steps + "/imu.csv")
-    # emg_window, imu_window = window_data(emg_raw, imu_raw, window=window,
-    #                                      degree_of_overlap=overlap, skip_timestamp=1)
-
-    # matrix, label = [], []
-    # for item in collect_imu:
-    #     data = [numpy.asarray(x) for x in item[:-1]]
-    #     label.append(item[-1])
-    #     matrix_data_tmp = numpy.asarray(data)
-    #     matrix.append(numpy.asarray(matrix_data_tmp))
-    #
-    # cnn(matrix, label)
+    imu_dict, emg_dict = load_raw_data_for_nn()
+    imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu_dict, emg_dict)
+    cnn(numpy.asarray(imu_windows), numpy.asarray(labels))
 
 
 def train_user_dependent():

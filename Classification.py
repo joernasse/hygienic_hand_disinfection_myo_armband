@@ -21,7 +21,7 @@ from sklearn.metrics import accuracy_score
 from Constant import USERS, USERS_cross
 
 counter = 0
-TEST_SIZE = 0.2
+TEST_SIZE = 0.1
 rfc_list, results = [], []
 min_forest = 32
 times = 4

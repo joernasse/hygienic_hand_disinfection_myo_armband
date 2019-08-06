@@ -51,6 +51,7 @@
 from collections import Counter
 
 import numpy
+import sklearn
 from keras.utils import to_categorical
 from numpy.polynomial.tests.test_laguerre import L2
 from sklearn.model_selection import train_test_split
@@ -65,22 +66,19 @@ import matplotlib.pyplot as plt
 
 
 def cnn(x, y):
-    classes=len(Counter(y).keys())
+    classes = len(Counter(y).keys())
 
     x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=TEST_SIZE)
 
+    x_train = numpy.asarray(x_train)
     x_train = numpy.array(x_train)[:, :, :, numpy.newaxis]
     x_test = numpy.array(x_test)[:, :, :, numpy.newaxis]
     y_train = to_categorical(y_train)
     y_test = to_categorical(y_test)
 
-    # plt.imshow(x[0])
-    # plt.imshow(x[1])
-    # plt.imshow(x[2])
-
     model = Sequential()
     model.add(Conv2D(64, kernel_size=3, activation='relu',
-                     input_shape=(12, 9, 1)))
+                     input_shape=(x_train.shape[1], x_train.shape[2], 1)))
     model.add(Conv2D(32, kernel_size=3, activation='relu'))
     model.add(Flatten())
     # model.add(MaxPooling2D(pool_size=(2, 2)))
@@ -94,6 +92,6 @@ def cnn(x, y):
     model.fit(x_train, y_train, validation_data=(x_test, y_test))
 
     # predict first 4 images in the test set
-    model.predict(x_test[:4])
+    # print(model.predict(x_test[:4]))
 
-    print("")
+    print("finish")
