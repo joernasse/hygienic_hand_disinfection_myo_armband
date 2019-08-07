@@ -96,7 +96,6 @@ USERS = ["User001", "User002", "User003", "User004",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
 
-USERS_2 = ["User001", "User002", "User003"]
 
 # Without user007
 USERS_cross = ["User001", "User002", "User003", "User004",

@@ -2,9 +2,15 @@ from __future__ import print_function
 
 from copy import copy
 
+import os
+
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 import sklearn
 from numpy import newaxis
+from sklearn.model_selection import train_test_split
 
+import numpy as np
 import Classification
 from Constant import *
 # from Deep_learning import dnn_default
@@ -12,6 +18,7 @@ from Deep_learning import cnn
 
 from Process_data import process_raw_data, window_data, window_data_matrix, window_only_imu
 from Save_Load import *
+import tensorflow as tf
 
 
 def main():
@@ -28,19 +35,23 @@ def main():
 
     path = os.getcwd()
     # train_user_independent(best_config_rf)
+
     train_cnn(25, 0.75)
-      ### Used all User Data,separate & continuous, 80% Training, 20% Test !IMU ONLY! ###
-        # 12-0.5 T0.2   ->  46,64%      244417/244417 [==============================] - 50s 205us/sample - loss: 1.5746 - acc: 0.4664 - val_loss: 1.4192 - val_acc: 0.5255
-        # 12-0.75 T.02  ->  49,87%      488831/488831 [==============================] - 98s 201us/sample - loss: 1.4751 - acc: 0.4987 - val_loss: 1.3235 - val_acc: 0.5478
-        # 12-0 T0.2     ->  42,07%      122212/122212 [==============================] - 24s 200us/sample - loss: 1.7015 - acc: 0.4207 - val_loss: 1.5457 - val_acc: 0.4663
-        # 25-0.5 T0.2   ->  51,11%      117323/117323 [==============================] - 52s 442us/sample - loss: 1.4507 - acc: 0.5111 - val_loss: 1.2352 - val_acc: 0.5850
-        # 25-0.75 T0.2  ->  57,01%      234651/234651 [==============================] - 103s 437us/sample - loss: 1.2821 - acc: 0.5702 - val_loss: 1.0990 - val_acc: 0.6316
-        # 25-0 T0.2     ->  47,64%      58660/58660 [==============================] - 26s 446us/sample - loss: 1.5607 - acc: 0.4765 - val_loss: 1.3220 - val_acc: 0.5630
+    ### Used all User Data,separate & continuous, 80% Training, 20% Test !IMU ONLY! ###
+    # 12-0.5 T0.2   ->  46,64%      244417/244417 [==============================] - 50s 205us/sample - loss: 1.5746 - acc: 0.4664 - val_loss: 1.4192 - val_acc: 0.5255
+    # 12-0.75 T.02  ->  49,87%      488831/488831 [==============================] - 98s 201us/sample - loss: 1.4751 - acc: 0.4987 - val_loss: 1.3235 - val_acc: 0.5478
+    # 12-0 T0.2     ->  42,07%      122212/122212 [==============================] - 24s 200us/sample - loss: 1.7015 - acc: 0.4207 - val_loss: 1.5457 - val_acc: 0.4663
+    # 25-0.5 T0.2   ->  51,11%      117323/117323 [==============================] - 52s 442us/sample - loss: 1.4507 - acc: 0.5111 - val_loss: 1.2352 - val_acc: 0.5850
+    # 25-0.75 T0.2  ->  57,01%      234651/234651 [==============================] - 103s 437us/sample - loss: 1.2821 - acc: 0.5702 - val_loss: 1.0990 - val_acc: 0.6316
+    # 25-0 T0.2     ->  47,64%      58660/58660 [==============================] - 26s 446us/sample - loss: 1.5607 - acc: 0.4765 - val_loss: 1.3220 - val_acc: 0.5630
 
-        # 90% Training, 10% Test
-        # 25-0.75 T0.1  ->  56,36%      263982/263982 [==============================] - 108s 408us/sample - loss: 1.3001 - acc: 0.5636 - val_loss: 1.1108 - val_acc: 0.6279
+    # 90% Training, 10% Test
+    # 25-0.75 T0.1  ->  56,36%      263982/263982 [==============================] - 108s 408us/sample - loss: 1.3001 - acc: 0.5636 - val_loss: 1.1108 - val_acc: 0.6279
 
+    # -----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------#
 
+    # 2 Variante
+    # train_cnn(25, 0.75)
 
     #
     # if user_cross_val:
@@ -127,7 +138,7 @@ def load_raw_data_for_nn():
                 'Step6': [],
                 'Step6_1': [],
                 'Rest': []}
-    for user in USERS:
+    for user in USERS_cross:
         path = collections_default_path + user
         directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
         for i in range(len(directories)):
@@ -154,9 +165,31 @@ def window_raw_data_for_nn(window, overlap, imu_dict, emg_dict):
 
 
 def train_cnn(window, overlap):
+    # Load training and eval data
+    # ((train_data, train_labels),
+    #  (eval_data, eval_labels)) = tf.keras.datasets.mnist.load_data()
+    #
+    # train_data = train_data / np.float32(255)
+    # train_labels = train_labels.astype(np.int32)  # not required
+    #
+    # eval_data = eval_data / np.float32(255)
+    # eval_labels = eval_labels.astype(np.int32)  # not required
+
     imu_dict, emg_dict = load_raw_data_for_nn()
     imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu_dict, emg_dict)
+    labels = [int(i) for i in labels]
     cnn(numpy.asarray(imu_windows), numpy.asarray(labels))
+
+    # x_train, x_test, y_train, y_test = train_test_split(numpy.asarray(imu_windows), numpy.asarray(labels),
+    #                                                     random_state=42, test_size=Classification.TEST_SIZE)
+
+    # x_train = x_train / np.float32(255)
+    # x_test = x_test / np.float32(255)
+
+
+
+
+    # Set up logging for predictions
 
 
 def train_user_dependent():
