@@ -1,5 +1,6 @@
 from __future__ import print_function
 import os
+from multiprocessing import Process
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -44,6 +45,7 @@ emg_dict = {'Step0': [],
                 'Step6': [],
                 'Step6_1': [],
                 'Rest': []}
+path_add = [SEPARATE_PATH, CONTINUES_PATH]
 
 
 def main():
@@ -69,38 +71,17 @@ def main():
     # 2 Variante
     # train_cnn(25, 0.75)
 
-    #
-    # if user_cross_val:
-    #     process_number = 1
-    #     # process_number = 3
-    #     split = numpy.array_split(numpy.asarray(user_cross_val_feature_selection), process_number)
-    # else:
-    #     process_number = 1
-    #     # process_number = multiprocessing.cpu_count()
-    #     split = numpy.array_split(numpy.asarray(USERS), process_number)
-    # start = timeit.default_timer()
-    #
+
     # for j in range(process_number):
     #     s = j * process_number
     #     t = (j + "-" + 1) * process_number
-    #     if classifier:
-    #         process = Process(name="Classify", target=train_classifier, args=(split[j], deep_learning))
-    #     elif featureExtraction:
-    #         process = Process(name="Feature extraction", target=feature_extraction, args=(split[j],))
-    #     elif user_cross_val:
-    #         process = Process(name="user_cross_val", target=prepare_data_for_cross_validation_over_user,
-    #                           args=(split[j],))
-    #
+    #     process = Process(name="Feature extraction", target=feature_extraction, args=(split[j],))
     #     processes.append(process)
     #     process.start()
-    #
     # for p in processes:
     #     p.join()
-    #
-    # stop = timeit.default_timer()
-    # print('Time: ', datetime.timedelta(seconds=(stop - start)))
-    # print("Finish")
-    # return True
+
+    return True
 
 
 def train_user_independent(config):
@@ -127,7 +108,7 @@ def train_user_independent(config):
 def load_raw_data_for_nn():
     global imu_dict
     global emg_dict
-    path_add = [SEPARATE_PATH, CONTINUES_PATH]
+    global path_add
     for user in USERS_cross:
         path = collections_default_path + user
         directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
@@ -145,6 +126,7 @@ def load_raw_data_for_nn():
 def window_raw_data_for_nn(window, overlap, imu_dict, emg_dict):
     labels, imu_data, emg_data = [], [], []
     for key in save_label:
+
         # implementation for IMU
         # imu, label = window_only_one_sensor(imu_dict[key], window=window, degree_of_overlap=overlap)
         # imu_data.extend(imu)
