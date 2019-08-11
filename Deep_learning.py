@@ -172,7 +172,7 @@ def cnn(x, y):
     # sgd = optimizers.SGD(lr=0.01, clipnorm=1.)
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer='adam', metrics=['accuracy'])
 
-    checkpoint_path = "G:/Masterarbeit/deep_learning/training_3/model.h5"
+    checkpoint_path = "G:/Masterarbeit/deep_learning/training_4/model.h5"
     checkpoint_dir = os.path.dirname(checkpoint_path)
     cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path,
                                                      verbose=2,

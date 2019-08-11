@@ -1,7 +1,4 @@
 from __future__ import print_function
-
-from copy import copy
-
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -12,31 +9,50 @@ from sklearn.model_selection import train_test_split
 
 import numpy as np
 import Classification
+import Deep_learning
 from Constant import *
-# from Deep_learning import dnn_default
-from Deep_learning import cnn
 
-from Process_data import process_raw_data, window_data, window_data_matrix, window_only_imu
+from Process_data import process_raw_data, window_data, window_data_matrix, window_only_one_sensor
 from Save_Load import *
 import tensorflow as tf
 
+imu_dict = {
+        'Step0': [],
+        'Step1': [],
+        'Step1_1': [],
+        'Step1_2': [],
+        'Step2': [],
+        'Step2_1': [],
+        'Step3': [],
+        'Step4': [],
+        'Step5': [],
+        'Step5_1': [],
+        'Step6': [],
+        'Step6_1': [],
+        'Rest': []
+    }
+emg_dict = {'Step0': [],
+                'Step1': [],
+                'Step1_1': [],
+                'Step1_2': [],
+                'Step2': [],
+                'Step2_1': [],
+                'Step3': [],
+                'Step4': [],
+                'Step5': [],
+                'Step5_1': [],
+                'Step6': [],
+                'Step6_1': [],
+                'Rest': []}
+
 
 def main():
-    # train_dep = train_user_dependent()
-    # if train_dep:
-    #     return True
+    # train_user_dependent()
     # calculation_config_statistics()
-    # deep_learning = False
-    # classifier = False
-    # featureExtraction = False
-    # user_cross_val = True
-    # processes = []
-    #
-
-    path = os.getcwd()
+    # path = os.getcwd()
     # train_user_independent(best_config_rf)
 
-    train_cnn(25, 0.75)
+    train_cnn(100, 0.75)
     ### Used all User Data,separate & continuous, 80% Training, 20% Test !IMU ONLY! ###
     # 12-0.5 T0.2   ->  46,64%      244417/244417 [==============================] - 50s 205us/sample - loss: 1.5746 - acc: 0.4664 - val_loss: 1.4192 - val_acc: 0.5255
     # 12-0.75 T.02  ->  49,87%      488831/488831 [==============================] - 98s 201us/sample - loss: 1.4751 - acc: 0.4987 - val_loss: 1.3235 - val_acc: 0.5478
@@ -109,35 +125,9 @@ def train_user_independent(config):
 #     return True
 
 def load_raw_data_for_nn():
+    global imu_dict
+    global emg_dict
     path_add = [SEPARATE_PATH, CONTINUES_PATH]
-    imu_dict = {
-        'Step0': [],
-        'Step1': [],
-        'Step1_1': [],
-        'Step1_2': [],
-        'Step2': [],
-        'Step2_1': [],
-        'Step3': [],
-        'Step4': [],
-        'Step5': [],
-        'Step5_1': [],
-        'Step6': [],
-        'Step6_1': [],
-        'Rest': []
-    }
-    emg_dict = {'Step0': [],
-                'Step1': [],
-                'Step1_1': [],
-                'Step1_2': [],
-                'Step2': [],
-                'Step2_1': [],
-                'Step3': [],
-                'Step4': [],
-                'Step5': [],
-                'Step5_1': [],
-                'Step6': [],
-                'Step6_1': [],
-                'Rest': []}
     for user in USERS_cross:
         path = collections_default_path + user
         directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
@@ -145,8 +135,9 @@ def load_raw_data_for_nn():
             for steps in directories[i]:
                 index = steps[2:]
                 path_data = path + path_add[i] + "/" + steps
-                imu_dict[index].extend(load_raw_2(path_data + "/imu.csv"))
-                # emg_data[index].extend(load_raw_2(path_data + "/emg.csv"))
+                # imu_dict[index].extend(load_raw_2(path_data + "/imu.csv"))
+                emg_dict[index].extend(load_raw_2(path_data + "/emg.csv"))
+                # print(index,len(emg_dict[index]))
         print(user, "done")
     return imu_dict, emg_dict
 
@@ -154,51 +145,37 @@ def load_raw_data_for_nn():
 def window_raw_data_for_nn(window, overlap, imu_dict, emg_dict):
     labels, imu_data, emg_data = [], [], []
     for key in save_label:
-        imu, label = window_only_imu(imu_dict[key], window=window, degree_of_overlap=overlap)
-        # emg, imu, label = window_data_matrix(emg_dict[key], imu_data[n], window, overlap)
-        imu_data.extend(imu)
+        # implementation for IMU
+        # imu, label = window_only_one_sensor(imu_dict[key], window=window, degree_of_overlap=overlap)
+        # imu_data.extend(imu)
+        # s = numpy.vstack((imu_data, imu))
 
-        s = numpy.vstack((imu_data, imu))
-        # emg_col.extend(numpy.asarray(emg))
+        # implementation for EMG
+        emg, label = window_only_one_sensor(emg_dict[key], window=window, degree_of_overlap=overlap)
+        emg_data.extend(emg)
+        s = numpy.vstack((emg_data, emg))
+
         labels.extend(numpy.asarray(label))
     return imu_data, emg_data, labels
 
 
 def train_cnn(window, overlap):
-    # Load training and eval data
-    # ((train_data, train_labels),
-    #  (eval_data, eval_labels)) = tf.keras.datasets.mnist.load_data()
-    #
-    # train_data = train_data / np.float32(255)
-    # train_labels = train_labels.astype(np.int32)  # not required
-    #
-    # eval_data = eval_data / np.float32(255)
-    # eval_labels = eval_labels.astype(np.int32)  # not required
-
-    imu_dict, emg_dict = load_raw_data_for_nn()
-    imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu_dict, emg_dict)
+    imu, emg = load_raw_data_for_nn()
+    imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu, emg)
     labels = [int(i) for i in labels]
-    cnn(numpy.asarray(imu_windows), numpy.asarray(labels))
 
-    # x_train, x_test, y_train, y_test = train_test_split(numpy.asarray(imu_windows), numpy.asarray(labels),
-    #                                                     random_state=42, test_size=Classification.TEST_SIZE)
-
-    # x_train = x_train / np.float32(255)
-    # x_test = x_test / np.float32(255)
-
-
-
-
-    # Set up logging for predictions
+    # cnn(numpy.asarray(imu_windows), numpy.asarray(labels))
+    print(len(emg_windows), len(labels))
+    Deep_learning.cnn(numpy.asarray(emg_windows), numpy.asarray(labels))
 
 
 def train_user_dependent():
-    for dataset in level_1:
+    for data_set in level_1:
         for sensor in level_2:
             for window in level_3:
                 for overlap in level_4:
                     for feature in level_5:
-                        config = dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
+                        config = data_set + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
                         users_data = load_feature_csv_all_user(config)
                         if not users_data:
                             continue
@@ -208,12 +185,12 @@ def train_user_dependent():
 
 def feature_extraction(users):
     for user in users:
-        for dataset in level_1:
+        for data_set in level_1:
             for sensor in level_2:
                 for window in level_3:
                     for overlap in level_4:
                         for feature in level_5:
-                            process_raw_data(user, dataset=dataset, overlap=overlap,
+                            process_raw_data(user, dataset=data_set, overlap=overlap,
                                              sensor=sensor, window=window, feature=feature)
     return True
 
@@ -221,12 +198,12 @@ def feature_extraction(users):
 def calculation_config_statistics():
     config_mean = []
     overview = load_overview()
-    for dataset in level_1:
+    for data_set in level_1:
         for sensor in level_2:
             for window in level_3:
                 for overlap in level_4:
                     for feature in level_5:
-                        config = dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
+                        config = data_set + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
                         config_items = []
 
                         for item in overview:
