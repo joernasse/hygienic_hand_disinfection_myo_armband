@@ -54,7 +54,7 @@ def main():
     # path = os.getcwd()
     # train_user_independent(best_config_rf)
 
-    train_cnn(100, 0.75)
+    train_cnn(50, 0.75)
     ### Used all User Data,separate & continuous, 80% Training, 20% Test !IMU ONLY! ###
     # 12-0.5 T0.2   ->  46,64%      244417/244417 [==============================] - 50s 205us/sample - loss: 1.5746 - acc: 0.4664 - val_loss: 1.4192 - val_acc: 0.5255
     # 12-0.75 T.02  ->  49,87%      488831/488831 [==============================] - 98s 201us/sample - loss: 1.4751 - acc: 0.4987 - val_loss: 1.3235 - val_acc: 0.5478

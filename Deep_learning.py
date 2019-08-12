@@ -172,7 +172,7 @@ def cnn(x, y):
     # sgd = optimizers.SGD(lr=0.01, clipnorm=1.)
     model.compile(loss=keras.losses.categorical_crossentropy, optimizer='adam', metrics=['accuracy'])
 
-    checkpoint_path = "G:/Masterarbeit/deep_learning/training_4/model.h5"
+    checkpoint_path = "G:/Masterarbeit/deep_learning/training_emg_3/model.h5"
     checkpoint_dir = os.path.dirname(checkpoint_path)
     cp_callback = tf.keras.callbacks.ModelCheckpoint(checkpoint_path,
                                                      verbose=2,
@@ -181,8 +181,8 @@ def cnn(x, y):
                                                      mode='max')
 
     model.fit(x_train, y_train,
-              batch_size=2000,
-              epochs=40,
+              batch_size=4000,
+              epochs=60,
               validation_data=(x_test, y_test),
               callbacks=[cp_callback],
               verbose=2)
