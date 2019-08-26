@@ -5,7 +5,7 @@ from pyentrp import entropy as ent
 from UliEngineering.SignalProcessing.Utils import zero_crossings
 from sampen import sampen2
 
-from Constant import MAX_EMG_VALUE, threshold, F1, F2, EMG, IMU, F3, F4
+from Constant import MAX_EMG_VALUE, threshold, F1, F2, EMG, IMU, georgi, F4
 import numpy as np
 
 
@@ -120,7 +120,7 @@ def cc(x):  # cepstral coeffcients
     except RuntimeWarning:
         print(RuntimeWarning)
 
-# amino acids’ composition
+# amino acids composition
 def aac(array):
     n = len(array)
     sum = 0
@@ -181,7 +181,7 @@ def feature_extraction(windows, mode, sensor):
                 feature.extend(phinyomark(data=data))
             elif mode == F2:
                 feature.extend(rehman(data=data))
-            elif mode == F3:
+            elif mode == georgi:
                 feature.extend(georgi(data, sensor))
             elif mode == F4:
                 feature.extend(robinson(data))

@@ -12,6 +12,8 @@ from PIL import Image, ImageTk
 
 from myo import init, Hub, StreamEmg
 import myo as libmyo
+
+import Live_Prediction_Prototype
 from Constant import *
 from Helper_functions import countdown, wait
 from Save_Load import save_raw_csv, create_directories
@@ -69,6 +71,8 @@ class CollectDataWindow(Frame):
         self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
         self.proband_input = Entry(self, textvariable=self.proband_val, width=17)
 
+        # --------------------------------------------Button-----------------------------------------------------------#
+
         self.collect_separate_btn = Button(master=self, text="Collect Separate",
                                            command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=False))
         self.collect_continues_btn = Button(master=self, text="Collect Continues",
@@ -77,9 +81,11 @@ class CollectDataWindow(Frame):
                                          command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=True))
         self.trial_continues_btn = Button(master=self, text="Trial Continues",
                                           command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=True))
+        self.live_prototype_btn = Button(master=self, text="Live Prototype",
+                                         command=lambda: Live_Prediction_Prototype.main())
         self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
 
-        # Style
+        # --------------------------------------------Style------------------------------------------------------------#
         self.sessions_label.grid(row=0, column=0, pady=4, padx=4, sticky=W)
         self.sessions_input.grid(row=0, column=1, padx=2, sticky=W)
 
@@ -97,8 +103,12 @@ class CollectDataWindow(Frame):
 
         self.sep1.grid(row=6, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
 
-        self.error_label.grid(row=7, column=0, pady=8, padx=4)
-        self.close_btn.grid(row=7, column=1, pady=8, padx=4)
+        self.live_prototype_btn.grid(row=7, column=0, columnspan=2, pady=4, padx=4)
+
+        self.sep2.grid(row=8, column=0, sticky="ew", columnspan=3, padx=4, pady=8)
+
+        self.error_label.grid(row=9, column=0, pady=8, padx=4)
+        self.close_btn.grid(row=9, column=1, pady=8, padx=4)
 
     def introduction_screen_ui(self, mode, trial):
         global g_introduction_screen

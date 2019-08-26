@@ -1,27 +1,23 @@
 import multiprocessing
 import os
 import pickle
-
+import matplotlib.pyplot as plt
 import numpy
 from sklearn import metrics, clone
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
-# from sklearn.impute import SimpleImputer
-from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, KFold
 from sklearn.multiclass import OneVsRestClassifier
-
 from sklearn.svm import SVC
 import sklearn
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
 from sklearn.naive_bayes import GaussianNB as GAUSS
 from sklearn.metrics import accuracy_score
-# from sklearn.multiclass import OneVsRestClassifier
-# from hmmlearn import hmm
-
-from Constant import USERS, USERS_cross
+from Constant import USERS, USERS_cross, TEST_SIZE
+import Helper_functions
+from sklearn.neighbors import KNeighborsClassifier
 
 counter = 0
-TEST_SIZE = 0.1
 rfc_list, results = [], []
 min_forest = 32
 times = 4
@@ -55,36 +51,45 @@ def eval_best_cross(cross_val_results, config):
     save_classifier(best_clf, path)
 
 
-def train_user_independent(users_data, config, name):
+def train_user_independent(users_data, config, mixed_user_data=False, clf_name="", cv=False, clf=None, user_name=""):
     sc_tr = sklearn.preprocessing.StandardScaler(copy=True, with_mean=True, with_std=True)
     sc_test = sklearn.preprocessing.StandardScaler(copy=True, with_mean=True, with_std=True)
 
-    classifier = RandomForestClassifier(n_jobs=-1, criterion='gini', n_estimators=1000, min_samples_split=2,
-                                        bootstrap=True, max_depth=16, max_features=3)
-    # classifier = GAUSS()
-    # classifier = SVC(C=2,gamma='scale', kernel='rbf',shrinking=True)
-    # classifier = OneVsRestClassifier(svc,n_jobs=-1)
-    # classifier = sklearn.neighbors.KNeighborsClassifier(n_jobs=-1)
-
-    rf_p = {'criterion': ['gini'],
-            'max_depth': [16, 64],
-            'min_samples_split': [2, 3],
-            'min_samples_leaf': [3, 4],
-            "max_features": [3, 10],
-            'bootstrap': [True, False]}
-    # lda_best = LDA(solver='lsqr',shrinkage='auto')
-    # params = LDA().get_params()
-    # lda_p = {'solver': ['lsqr', 'eigen'],
-    #           'n_components': [1, 2, 5, 10, 20],
-    #           'shrinkage': ['auto', 0.1, 0.5, 0.9]}
-    # classifier = LDA(n_components=1)
-    # classifier = QDA()
-
     accuracy = []
-    print("not_norm-" + name + "-" + config)
-    print(classifier.get_params())
+    # print("not_norm-" + clf_name + "-" + config)
+    # print(random_forest.get_params())
 
-    # grid_search = GridSearchCV(classifier, rf_p,  cv=5, iid=False)
+    if mixed_user_data:
+        # clf = lda
+        save = 'G:/Masterarbeit/user_dependent_detail/' + user_name + clf_name + config + '.joblib'
+        x, y = flat_data_user_cross_val(users_data)
+        x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=TEST_SIZE)
+
+        # Norm
+        print("Normiert, sklearn.preprocessing.StandardScaler")
+        sc_tr.fit(x_train)
+        sc_test.fit(x_test)
+        x_train = sc_tr.transform(x_train)
+        x_test = sc_test.transform(x_test)
+        # if cv:
+        #     save = 'G:/Masterarbeit/classic_clf/CV_' + clf_name + config + '.joblib'
+        #     scores = cross_val_score(clf, x_train, y_train, cv=10, n_jobs=-1)  # 10 fold-CV
+        #     print(scores)
+        #     print("Accuracy: %0.2f (+/- %0.2f)" % (scores.mean(), scores.std() * 2))
+        # else:
+        print("Train data", len(x_train))
+        print("Test data", len(x_test))
+        clf.fit(x_train, y_train)
+
+        y_predict = clf.predict(x_test)
+        print(clf)
+        print(save)
+        save_classifier(clf, save)
+        Helper_functions.visualization(0, y_test, y_predict, skip_confusion=True)
+        plt.show()
+        return
+
+    # grid_search = GridSearchCV(random_forest, rf_p,  cv=5, iid=False)
     for n in range(len(USERS_cross)):
         test_user = users_data[n].copy()
         train_users = users_data.copy()
@@ -101,7 +106,7 @@ def train_user_independent(users_data, config, name):
         X = x_train
         X_test = x_test
 
-        clf = clone(classifier)
+        clf = clone(clf)
         clf.fit(X, y_train)
 
         # grid search
@@ -117,10 +122,10 @@ def train_user_independent(users_data, config, name):
     print("Mean Accuracy", mean_acc)
 
     path = os.getcwd()
-    save_classifier(classifier, path + "\\user_independent" + name + str(mean_acc) + config + ".joblib")
+    save_classifier(clf, path + "\\user_independent" + name + str(mean_acc) + config + ".joblib")
 
     # classifier_cross_val["predict"].append(accuracy_score(y_test, clf.predict(x_test)))
-    # classifier_cross_val["classifier"].append(clone(clf))
+    # classifier_cross_val["random_forest"].append(clone(clf))
 
     # classifier_cross_val["mean"] = numpy.mean(classifier_cross_val["predict"])
     # print(classifier_cross_val["classifier_name"], "mean", classifier_cross_val["mean"], "cross val",
@@ -177,10 +182,19 @@ def eval_best_classifier(classifiers, x_test, y_test, config, save_path):
     print(score, best_clf[1], config)
     save_classifier(best_clf, save_path + "/" + best_clf[1] + "-" + config + ".joblib")
 
-    # except :
-    #     print(sys.exc_info()[0],config)
-
 
 def save_classifier(clf, path):
     with open(path, 'wb') as file:
         pickle.dump(clf, file)
+    return
+
+
+def predict_for_unknown(model, data):
+    x, y = flat_data_user_cross_val(data)
+    sc = sklearn.preprocessing.StandardScaler(copy=True, with_mean=True, with_std=True)
+    print("Normiert, sklearn.preprocessing.StandardScaler")
+    sc.fit(x)
+    x = sc.transform(x)
+    y_predict = model.predict(x)
+    Helper_functions.visualization(0, y, y_predict)
+    plt.show()

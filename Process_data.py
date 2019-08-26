@@ -1,9 +1,9 @@
 import os
 
 from Constant import *
-from Feature_extraction import *
+# from Feature_extraction import *
 from Save_Load import load_raw_csv, save_feature_csv
-
+import numpy as np
 np.seterr(divide='ignore')
 
 
@@ -33,8 +33,8 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                                                      skip_timestamp=1)
 
                 if EMG + IMU in sensor:
-                    features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
-                    features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
+                    # features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
+                    # features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
                     tmp = []
                     for j in range(len(features[0])):
                         merged_feature = features[0][j]['fs'] + features[1][j]['fs']
@@ -44,10 +44,10 @@ def process_raw_data(user, overlap=None, window=None, dataset=None, sensor=None,
                             print("ERROR! Should not happen!")
                     tmp_features.append(tmp)
                     continue
-                if EMG in sensor:
-                    tmp_features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
-                if IMU in sensor:
-                    tmp_features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
+                # if EMG in sensor:
+                #     tmp_features.append(feature_extraction(emg_window, mode=feature, sensor=EMG))
+                # if IMU in sensor:
+                #     tmp_features.append(feature_extraction(imu_window, mode=feature, sensor=IMU))
             features = tmp_features
 
         filename = user + "-" + dataset + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature

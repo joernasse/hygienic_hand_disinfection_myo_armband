@@ -2,7 +2,7 @@ import csv
 import os
 import shutil
 import sys
-from tkinter import filedialog
+# from tkinter import filedialog
 import numpy
 import logging as log
 from Constant import *
@@ -57,8 +57,8 @@ def save_feature_csv(data, file_name):
     return f
 
 
-def load_classifier():
-    classifier = filedialog.askopenfile(filetypes=[("Classifier", "*.joblib")])
+# def load_classifier():
+#     classifier = filedialog.askopenfile(filetypes=[("Classifier", "*.joblib")])
 
 
 def load_raw_2(path):
@@ -116,10 +116,28 @@ def load_raw_csv(emg_path, imu_path):
         print(sys.exc_info()[0])
 
 
-def load_feature_csv_all_user(config):
+def load_feature_csv_one_user(config, user):
+    user_data = []
+    sum = 0
+    data, label = [], []
+    try:
+        file = open("G:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
+    except:
+        return []
+    reader = csv.reader(file, delimiter=';')
+    for column in reader:
+        data.append([float(x) for x in column[:-1]])
+        label.append(int(column[-1]))
+    sum += len(data)
+    user_data.append({'data': data, 'label': label})
+    print(sum)
+    return user_data
+
+
+def load_feature_from_many_users(config, users=USERS):
     users_data = []
     sum = 0
-    for user in USERS:
+    for user in users:
         data, label = [], []
         try:
             # E Desktop
@@ -136,6 +154,7 @@ def load_feature_csv_all_user(config):
             label.append(int(column[-1]))
         sum += len(data)
         users_data.append({'data': data, 'label': label})
+        print("Load features from",user,"done")
     print(sum)
     return users_data
 
