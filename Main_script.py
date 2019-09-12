@@ -1,44 +1,18 @@
 from __future__ import print_function
 import os
 import pickle
+import multiprocessing as mp
 
+import sklearn
 from tensorflow.python.keras.models import load_model
 import Classification
 import Constant
 import Deep_learning
-from Process_data import process_raw_data, window_data, window_data_matrix, window_only_one_sensor
+import Process_data
+from Process_data import process_raw_data, window_data_for_both_sensor, window_for_one_sensor
 from Save_Load import *
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-imu_dict = {
-    'Step0': [],
-    'Step1': [],
-    'Step1_1': [],
-    'Step1_2': [],
-    'Step2': [],
-    'Step2_1': [],
-    'Step3': [],
-    'Step4': [],
-    'Step5': [],
-    'Step5_1': [],
-    'Step6': [],
-    'Step6_1': [],
-    'Rest': []
-}
-emg_dict = {'Step0': [],
-            'Step1': [],
-            'Step1_1': [],
-            'Step1_2': [],
-            'Step2': [],
-            'Step2_1': [],
-            'Step3': [],
-            'Step4': [],
-            'Step5': [],
-            'Step5_1': [],
-            'Step6': [],
-            'Step6_1': [],
-            'Rest': []}
 path_add = [SEPARATE_PATH, CONTINUES_PATH]
 
 
@@ -76,25 +50,35 @@ def normalize_data(data, sensor, mode='rest_mean'):
     return data
 
 
-def pre_process_raw_data(window, overlap, users, sensor=IMU, skip_s0_rest=True, normalize=False):
+def pre_process_raw_data(window, overlap, users, data_set, pre_process, sensor=IMU,
+                         ignore_rest_gesture=True, normalize=False):
     print("window", window, "overlap", overlap)
-    raw_data = load_raw_data_for_nn(users, sensor)
+
+    raw_data = load_raw_data_for_nn(users, sensor, data_set)
+    print(len(raw_data['Step1']))
     if normalize:
         print("Start normalization")
-        print(raw_data['Step0'][0])
         raw_data = normalize_data(data=raw_data, sensor=sensor)
-        print(raw_data['Step0'][0])
 
-    if skip_s0_rest:
-        raw_data['Step0'] = []
+    if ignore_rest_gesture:
         raw_data['Rest'] = []
-    window_data, labels = window_raw_data_for_nn(window, overlap, raw_data=raw_data, sensor=sensor,
-                                                 skip_s0_rest=skip_s0_rest)
+
+    w_data, labels = window_raw_data_for_nn(window, overlap, raw_data=raw_data, ignore_rest_gesture=ignore_rest_gesture)
+
+    if sensor == Constant.IMU:
+        if pre_process == Constant.filter_:
+            dummy, w_data = Process_data.filter_emg_data(emg=w_data, imu=w_data, f_type="")
+        elif pre_process == Constant.z_norm:
+            dummy, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
+    elif sensor == Constant.EMG:
+        if pre_process == Constant.filter_:
+            dummy, w_data = Process_data.filter_emg_data(emg=w_data, imu=w_data, f_type="")
+        elif pre_process == Constant.z_norm:
+            dummy, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
+
     labels = [int(i) for i in labels]
-    if skip_s0_rest:
-        labels = [i - 1 for i in labels]
-    print(len(window_data), len(labels))
-    return window_data, labels
+    print("Pre processing done", len(w_data), len(labels))
+    return w_data, labels
 
 
 def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_s0_rest, normalize=False):
@@ -112,9 +96,9 @@ def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_s0_res
         test_data['Rest'] = []
 
     window_data_train, labels_train = window_raw_data_for_nn(window, overlap, raw_data=training_data, sensor=sensor,
-                                                             skip_s0_rest=skip_s0_rest)
+                                                             ignore_rest_gesture=skip_s0_rest)
     window_data_test, labels_test = window_raw_data_for_nn(window, overlap, raw_data=test_data, sensor=sensor,
-                                                           skip_s0_rest=skip_s0_rest)
+                                                           ignore_rest_gesture=skip_s0_rest)
 
     labels_train = [int(x) for x in labels_train]
     labels_test = [int(x) for x in labels_test]
@@ -127,34 +111,94 @@ def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_s0_res
 
 
 def main():
+    # train_user_independent("no_pre_pro-separate-IMU-100-0.9-rehman",trainings_data=Constant.USERS,feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
+    # train_user_dependent(Constant.USERS, skip_rest=True)  # feature_extraction_complete()
+    # calculation_config_statistics()
+    # return True
+
     # train_user_dependent()
     # calculation_config_statistics()
     # path = os.getcwd()
-    # train_user_independent(best_config_rf)
+    # for config in Constant.top_ten_user_dependent_configs[1:]:
+    #     train_user_independent(config=config, ignore_rest_gesture=True,
+    #                            trainings_data=Constant.USERS, feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
+    # return True
+    # load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
 
-    save_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_user_dependent_emg_0_user001"
-    load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
+    # --------------------------------------------Train CNN User dependent for each user by given config---------------#
+    for config in ["no_pre_pro-separate-IMU-25-0.9-NA"]:
+        config_split = config.split('-')
+        for user in USERS:
+            save_path = "G:/Masterarbeit/deep_learning_filter/" + user + "/"
+            if not os.path.isdir(save_path):  # Collection dir
+                os.mkdir(save_path)
+            x, labels = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
+                                             users=[user], pre_process=config_split[0], data_set=config_split[1],
+                                             sensor=config_split[2],
+                                             ignore_rest_gesture=True, normalize=False)
+            for i in range(len(x)):
+                # print(x[i])
+                sc = sklearn.preprocessing.StandardScaler(copy=True, with_std=True)
+                sc.fit(x[i])
+                x[i] = sc.transform(x[i])
+                # print("---", x[i])
 
-    # if not os.path.isdir(save_path):  # Collection dir
-    #     os.mkdir(save_path)
-    sensor = IMU
+            model, name, acc = Deep_learning.cnn_kaggle(x, labels, save_path, batch=32, epochs=100, config=config,
+                                                 early_stopping=5)
 
-    # --------------------------------------------Pre process Data-----------------------------------------------------#
-    # x, labels = pre_process_raw_data(100, 0.75, ["User007"], sensor, skip_s0_rest=False, normalize=False)
+            f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN_1_normStd.csv", 'a', newline='')
+            with f:
+                writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([user, name, str(acc), config])
+            f.close()
+    return True
 
     # x = [t.transpose() for t in x]
 
-    # --------------------------------------------Train CNN 1----------------------------------------------------------#
-    # Deep_learning.cnn(x, labels, save_path, batch=200, epochs=200)
+    # --------------------------------------------Train CNN 1----------------------------------------------#
+    # save_path = save_path + "/CNN_1/"
+    # if not os.path.isdir(save_path):  # Collection dir
+    #     os.mkdir(save_path)
+    # # name, acc = Deep_learning.cnn_1(x, labels, save_path, batch=50, epochs=500, config=config)
+    #
+    # f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
+    # with f:
+    #     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    #     writer.writerow([user, name, str(acc), config])
+    # f.close()
+    # del x
+    # del labels
 
     # --------------------------------------------Train CNN kaggle-----------------------------------------------------#
-    # # For all Users, can be changed
-    # for user in USERS:
-    #     save_path = "G:/Masterarbeit/deep_learning/CNN_final_results/kaggle_dependent/dependent_"+user
-    #     if not os.path.isdir(save_path):  # Collection dir
-    #         os.mkdir(save_path)
-    #     x, labels = pre_process_raw_data(100, 0.75, [user], sensor, skip_s0_rest=False, normalize=False)
-    # Deep_learning.cnn_kaggle(x, labels, save_path, batch=200, epochs=10)
+    save_path = "G:/Masterarbeit/deep_learning_filter/" + "User007_Unknown"
+    if not os.path.isdir(save_path):  # Collection dir
+        os.mkdir(save_path)
+    save_path = save_path + "/CNN_Kaggle"
+    if not os.path.isdir(save_path):  # Collection dir
+        os.mkdir(save_path)
+    # For all Users, can be changed
+    x_train, y_train = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
+                                            users=USERS_cross, pre_process=config_split[0],
+                                            data_set=config_split[1],
+                                            sensor=config_split[2], ignore_rest_gesture=True, normalize=False)
+
+    x_test, y_test = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
+                                          users=["User007"], pre_process=config_split[0], data_set=config_split[1],
+                                          sensor=config_split[2], ignore_rest_gesture=True, normalize=False)
+
+    Deep_learning.predict_for_load_model(x_test, y_test, load_model(
+        "G:/Masterarbeit/deep_learning_filter/User007_Unknown/CNN_Kaggle/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"),
+                                         batch_size=32)
+    return True
+
+    name, acc = Deep_learning.cnn_kaggle(x_train, y_train, save_path, batch=32, epochs=10, config=config,
+                                         x_test_in=x_test, y_test_in=y_test, early_stopping=3)
+
+    f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
+    with f:
+        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["User007_unknown", name, str(acc), config])
+    f.close()
 
     # --------------------------------------------Predict from loaded model for unknown user---------------------------#
     # Deep_learning.predict_for_load_model(x, labels, load_model(load_model_from + "/cnn_kaggle_model.h5"),
@@ -192,15 +236,15 @@ def main():
     #                                       cv=False)
     # return True
 
-    # ----------------------------------Train user dependent classic-------------------------------------------------#
-    config = best_config_rf
-    print("Config",config)
+    # ----------------------------------Train user dependent classic--------------------------------------------------#
+    config_split = best_config_rf
+    print("Config", config_split)
     # Predict for all Users
     for user in USERS:
         print(user)
-        users_data = load_feature_csv_one_user(config, user)
-        Classification.train_user_independent(users_data=users_data,
-                                              config=config,
+        users_data = load_feature_for_user(config_split, user)
+        Classification.train_user_independent(training_data=users_data,
+                                              config=config_split,
                                               mixed_user_data=True,
                                               clf_name="Random_Forest_User_dependent",
                                               clf=Constant.random_forest,
@@ -221,9 +265,18 @@ def main():
     # return True
 
 
-def train_user_independent(config):
-    users_data = load_feature_from_many_users(config, USERS_cross)
-    Classification.train_user_independent(users_data, config, "RandomForest", mixed_user_data=True)
+def train_user_independent(config, ignore_rest_gesture=True, feature_sets_path="", trainings_data=Constant.USERS_cross):
+    print("Current config", config)
+    training_data = load_feature_from_users(config, trainings_data, path=feature_sets_path)
+    # test_data = load_feature_from_users(config, ["User007"], path=feature_sets_path)
+
+    if ignore_rest_gesture:
+        for i in range(len(training_data)):
+            training_data[i] = remove_rest_gesture_data(user_data=training_data[i])
+        # test_data[0] = remove_rest_gesture_data(user_data=test_data[0])
+
+    Classification.train_user_independent(training_data=training_data, config=config,
+                                          norm=True, cv=True, save_model=False)
     return True
 
 
@@ -242,27 +295,62 @@ def train_user_independent(config):
 #             # dnn_default(x, y)
 #     return True
 
-def load_raw_data_for_nn(users, sensor):
-    global imu_dict
-    global emg_dict
+def load_raw_data_for_nn(users, sensor, data_set):
+    imu_dict = {
+        'Step0': [],
+        'Step1': [],
+        'Step1_1': [],
+        'Step1_2': [],
+        'Step2': [],
+        'Step2_1': [],
+        'Step3': [],
+        'Step4': [],
+        'Step5': [],
+        'Step5_1': [],
+        'Step6': [],
+        'Step6_1': [],
+        'Rest': []
+    }
+    emg_dict = {'Step0': [],
+                'Step1': [],
+                'Step1_1': [],
+                'Step1_2': [],
+                'Step2': [],
+                'Step2_1': [],
+                'Step3': [],
+                'Step4': [],
+                'Step5': [],
+                'Step5_1': [],
+                'Step6': [],
+                'Step6_1': [],
+                'Rest': []}
     global path_add
+
     for user in users:
-        path = collections_default_path + user
-        directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
+        directories = []
+        path = collections_path_default + user
+
+        if Constant.SEPARATE in data_set:
+            directories.append(os.listdir(path + SEPARATE_PATH))
+
+        if Constant.CONTINUES in data_set:
+            directories.append(os.listdir(path + CONTINUES_PATH))
+
         for i in range(len(directories)):
             for steps in directories[i]:
                 index = steps[2:]
-                path_data = path + path_add[i] + "/" + steps
+
                 if sensor == IMU:
-                    imu_dict[index].extend(load_raw_2(path_data + "/imu.csv"))
+                    imu_dict[index].extend(load_raw_2(path + path_add[i] + "/" + steps + "/imu.csv"))
                 else:
-                    emg_dict[index].extend(load_raw_2(path_data + "/emg.csv"))
-        print("Load raw data", user, "done")
+                    emg_dict[index].extend(load_raw_2(path + path_add[i] + "/" + steps + "/emg.csv"))
+        print("imu_dict['Step1']", len(imu_dict['Step1']))
+        print("Load raw data for", user, "done")
+
     if sensor == IMU:
         return imu_dict
     else:
         return emg_dict
-    # return imu_dict, emg_dict
 
 
 def load_raw_data_for_adapt_model(users, sensor):
@@ -298,7 +386,7 @@ def load_raw_data_for_adapt_model(users, sensor):
         'Rest': []}
 
     for user in users:
-        path = collections_default_path + user
+        path = collections_path_default + user
         directories = [os.listdir(path + SEPARATE_PATH), os.listdir(path + CONTINUES_PATH)]
         for i in range(len(directories)):
             for steps in directories[i]:
@@ -319,28 +407,18 @@ def load_raw_data_for_adapt_model(users, sensor):
     return training_dict, test_dict
 
 
-def window_raw_data_for_nn(window, overlap, raw_data, sensor, skip_s0_rest):
+def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     labels, window_data, emg_data = [], [], []
-    if skip_s0_rest:
-        label = sub_label
+    if ignore_rest_gesture:
+        label = Constant.labels_without_rest
     else:
-        label = save_label
+        label = Constant.label
     for key in label:
-        window_tmp, label = window_only_one_sensor(input_data=raw_data[key], window=window, degree_of_overlap=overlap)
+        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window, degree_of_overlap=overlap)
         window_data.extend(window_tmp)
         s = numpy.vstack((window_data, window_tmp))
-
-        # if sensor == IMU:
-        #     # implementation for IMU
-        # elif sensor == EMG:
-        #     # implementation for EMG
-        #     emg, label = window_only_one_sensor(emg_dict[key], window=window, degree_of_overlap=overlap)
-        #     emg_data.extend(emg)
-        #     s = numpy.vstack((emg_data, emg))
-
         labels.extend(numpy.asarray(label))
     return window_data, labels
-    # return window_data, emg_data, labels
 
 
 def train_cnn(window, overlap, save_path, load_model_path="", sensor=IMU):
@@ -362,60 +440,139 @@ def train_cnn(window, overlap, save_path, load_model_path="", sensor=IMU):
         labels = [int(i) for i in labels]
         print(len(emg_windows), len(labels))
         if sensor == IMU:
-            Deep_learning.cnn(numpy.asarray(imu_windows), numpy.asarray(labels), save_path)
+            Deep_learning.cnn_1(numpy.asarray(imu_windows), numpy.asarray(labels), save_path)
         else:
-            Deep_learning.cnn(numpy.asarray(emg_windows), numpy.asarray(labels), save_path)
+            Deep_learning.cnn_1(numpy.asarray(emg_windows), numpy.asarray(labels), save_path)
 
         # Deep_learning.cnn_1(numpy.asarray(emg_windows), numpy.asarray(labels), save_path)
         # Deep_learning.cnn_rehman(numpy.asarray(emg_windows), numpy.asarray(labels), save_path)
 
 
-def train_user_dependent():
-    for data_set in level_1:
-        for sensor in level_2:
-            for window in level_3:
-                for overlap in level_4:
-                    for feature in level_5:
-                        config = data_set + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
-                        users_data = load_feature_from_many_users(config)
-                        if not users_data:
-                            continue
-                        Classification.train_user_dependent(users_data, config)
+def train_user_dependent(users, skip_rest=True, predefine_config=None):
+    print("SKIP REST GESTURE")
+    for user in users:
+        print(user)
+        for pre in level_0:
+            for data_set in level_1:
+                for sensor in level_2:
+                    for window in level_3:
+                        for overlap in level_4:
+                            for feature in level_5:
+                                config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
+                                    overlap) + "-" + feature
+
+                                if predefine_config:
+                                    config = predefine_config
+
+                                users_data = load_feature_for_user(
+                                    path="G:/Masterarbeit/feature_sets_filter/" + user + "-" + config + ".csv")
+                                if not users_data:
+                                    continue
+                                if skip_rest:
+                                    users_data = remove_rest_gesture_data(users_data)
+
+                                Classification.train_user_dependent(users_data, config, user_name=user,
+                                                                    cv=False, save_model=False)
     return True
 
 
+def feature_extraction_complete():
+    process_count = 4
+    tmp = numpy.array_split(Constant.USERS, process_count)
+    processes = [mp.Process(target=feature_extraction, args=([tmp[i]])) for i in range(process_count)]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+
+
+def user_dependent_complete():
+    """
+    Train all classifier SVM, KNN, LDA, QDA, Random Forest Bayers
+    for all Users 001 to 015
+    use all configurations
+    :return: True
+    """
+
+    process_count = 1
+    f = open("G:/Masterarbeit/user_dependent_detail/Overview_all_users.csv", 'a', newline='')
+    tmp = numpy.array_split(Constant.USERS, process_count)
+    processes = [
+        mp.Process(target=train_user_dependent, args=([tmp[i]], True, "z-normalization-continues-EMG-100-0.5-mantena"))
+        for i in range(process_count)]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
+    return True
+
+    # # Evaluate all of the top user dependent configurations over all classifier for user independent classification
+    # for config in Constant.top_ten_user_dependent_configs:
+    #     train_user_independent(config=config, ignore_rest_gesture=True,
+    #                            feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
+
+
+def remove_rest_gesture_data(user_data):
+    data, label = [], []
+    for i in range(len(user_data['label'])):
+        if user_data['label'][i] == 12:
+            continue
+        data.append(user_data['data'][i])
+        label.append(user_data['label'][i])
+    user_data['data'] = data
+    user_data['label'] = label
+    return user_data
+
+
 def feature_extraction(users):
+    """
+    Extract the features from a given set of users
+    :param users:  array, shape = [n_users] The array of users for feature extraction
+    :return: True
+    """
     for user in users:
-        for data_set in level_1:
-            for sensor in level_2:
-                for window in level_3:
-                    for overlap in level_4:
-                        for feature in level_5:
-                            process_raw_data(user, dataset=data_set, overlap=overlap,
-                                             sensor=sensor, window=window, feature=feature)
+        for pre in level_0:
+            for data_set in level_1:
+                for sensor in level_2:
+                    for window in level_3:
+                        for overlap in level_4:
+                            for feature in level_5:
+                                process_raw_data(user, data_set=data_set, overlap=overlap,
+                                                 sensor=sensor, window=window, feature=feature, pre=pre)
     return True
 
 
 def calculation_config_statistics():
     config_mean = []
-    overview = load_overview()
-    for data_set in level_1:
-        for sensor in level_2:
-            for window in level_3:
-                for overlap in level_4:
-                    for feature in level_5:
-                        config = data_set + "-" + sensor + "-" + str(window) + "-" + str(overlap) + "-" + feature
-                        config_items = []
+    overview = load_prediction_summary(path="G:Masterarbeit/user_dependent_detail/Overview_all_users - Kopie.csv")
+    for pre in level_0:
+        for data_set in level_1:
+            for sensor in level_2:
+                for window in level_3:
+                    for overlap in level_4:
+                        for feature in level_5:
+                            config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
+                                overlap) + "-" + feature
+                            config_items = []
 
-                        for item in overview:
-                            if config == item[17]:
-                                config_items.append(item)
-                        if config_items:
-                            tmp = [config]
-                            tmp.extend([numpy.mean([float(x[0]) for x in config_items])])
-                            config_mean.append(tmp)
+                            for item in overview:
+                                if config == item[4]:
+                                    # print("1")
+                                    config_items.append(item)
+                            if not config_items:
+                                # print(config)
+                                continue
+                            # print(len(config_items))
+                            if len(config_items) == 90:  # Für jeden Nutzer ein Eintrag
+                                print(config_items[0][2])
+                                config_mean.append([config,
+                                                    # [x[1] for x in config_items],
+                                                    numpy.mean([float(x[2]) for x in config_items]),
+                                                    [x[2] for x in config_items]])
+                            else:
+                                print("")
 
-    f = open("G:/Masterarbeit/config_mean.csv", 'w', newline='')
+    f = open("G:Masterarbeit/user_dependent_detail/Overview_by_config.csv", 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in config_mean:

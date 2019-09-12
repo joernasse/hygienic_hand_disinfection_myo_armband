@@ -8,37 +8,34 @@ from sklearn.metrics import confusion_matrix
 
 
 def cls():
+    """
+
+    :return:
+    """
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def countdown(introduction_screen, t=5, ):
+def countdown(introduction_screen, t=5):
+    """
+    
+    :param introduction_screen: 
+    :param t: 
+    :return: 
+    """
     while t:
-        mins, secs = divmod(t, 60)
-        timeformat = '{:02d}:{:02d}'.format(mins, secs)
-        introduction_screen.set_status_text("Pause! " + timeformat)
+        min, secs = divmod(t, 60)
+        time_format = '{:02d}:{:02d}'.format(min, secs)
+        introduction_screen.set_status_text("Pause! " + time_format)
         time.sleep(1)
         t -= 1
 
 
-# UNUSED!
-# def list_list_to_matrix(list_list):
-#     array_list = []
-#     for i in range(len(list_list)):
-#         tmp = numpy.asarray(list_list[i])
-#         array_list.append(numpy.asarray(list_list[i]))
-#     m = numpy.asmatrix(array_list)
-#     return numpy.asmatrix(numpy.asarray(item) for item in list_list[:-1])
-#
-#     matrix1 = numpy.asmatrix(tmp)
-#     tmp2 = numpy.array(tmp1)
-#     tmp3 = tmp2.shape(50, 8)
-#     for item in list_list[:-1]:
-#         tmp.extend(item)
-#
-#     print("")
-
-
 def wait(time_in_sec):
+    """
+
+    :param time_in_sec:
+    :return:
+    """
     dif = 0
     start = time.time()
     while dif <= time_in_sec:
@@ -46,18 +43,16 @@ def wait(time_in_sec):
         dif = end - start
 
 
-def divide_chunks(l, n):
-    tmp = []
-    for i in range(0, len(l), n):
-        tmp.append(l[i:i + n])
-    return tmp
+# def divide_chunks(l, n):
+#     tmp = []
+#     for i in range(0, len(l), n):
+#         tmp.append(l[i:i + n])
+#     return tmp
 
 
-def plot_confusion_matrix(y_true, y_pred, classes,
-                          normalize=False,
-                          title=None,
-                          cmap=plt.cm.Blues):
+def plot_confusion_matrix(y_true, y_pred, classes, normalize=False, title=None, cmap=plt.cm.Blues):
     """
+    From https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
     """
@@ -104,42 +99,73 @@ def plot_confusion_matrix(y_true, y_pred, classes,
                     ha="center", va="center",
                     color="white" if cm[i, j] > thresh else "black")
     fig.tight_layout()
-    return ax
+    return fig
 
 
-def visualization(history, y_test, y_predict, skip_confusion=False):
+def visualization(history, y_true, y_predict, show_figures=False,
+                  labels=Constant.label_display_without_rest, config="", save_path=""):
+    """
+
+    :param history:
+    :param y_true:
+    :param y_predict:
+    :param show_figures:
+    :param labels:
+    :param config:
+    :param save_path:
+    :return:
+    """
     if not history == 0:
-        visualization_history(history)
+        visualization_history(history, save_path=save_path, config=config, show=show_figures)
 
     np.set_printoptions(precision=2)
+    # Plot non-normalized confusion matrix
+    matrix = plot_confusion_matrix(y_true, y_predict, classes=labels,
+                                   title='Confusion matrix, without normalization')
+    matrix.savefig(save_path + config + "_confusion_matrix.svg")
 
-    if not skip_confusion:
-        # Plot non-normalized confusion matrix
-        matrix = plot_confusion_matrix(y_test, y_predict, classes=Constant.save_label,
-                                       title='Confusion matrix, without normalization')
+    # Plot normalized confusion matrix
+    norm_matrix = plot_confusion_matrix(y_true, y_predict, classes=labels, normalize=True,
+                                        title='Normalized confusion matrix')
+    norm_matrix.savefig(save_path + config + "_norm_confusion_matrix.svg")
 
-        # Plot normalized confusion matrix
-        norm_matrix = plot_confusion_matrix(y_test, y_predict, classes=Constant.save_label, normalize=True,
-                                            title='Normalized confusion matrix')
+    if show_figures:
         plt.show()
 
-    print("Accuracy score", sklearn.metrics.accuracy_score(y_test, y_predict),
-          "\nClassification report", sklearn.metrics.classification_report(y_test, y_predict),
-          "\nMean absolute error", sklearn.metrics.mean_absolute_error(y_test, y_predict))
+    print("Accuracy score", sklearn.metrics.accuracy_score(y_true, y_predict),
+          "\nClassification report", sklearn.metrics.classification_report(y_true, y_predict),
+          "\nMean absolute error", sklearn.metrics.mean_absolute_error(y_true, y_predict))
 
-
+    f = open(save_path + config + "Overview" + config + ".txt", 'a', newline='')
+    with f:
+        for txt in ["Accuracy score " + str(sklearn.metrics.accuracy_score(y_true, y_predict)),
+                    "Classification report " + str(sklearn.metrics.classification_report(y_true, y_predict)),
+                    "Mean absolute error " + str(sklearn.metrics.mean_absolute_error(y_true, y_predict))]:
+            f.writelines(str(txt))
+    f.close()
     print("Visualization finish")
+    return sklearn.metrics.accuracy_score(y_true, y_predict)
 
 
-def visualization_history(history):
+def visualization_history(history, save_path="", config="", show=False):
+    """
+
+    :param history:
+    :param save_path:
+    :param config:
+    :param show:
+    :return:
+    """
     # Plot training & validation accuracy values
     plt.plot(history.history['acc'])
     plt.plot(history.history['val_acc'])
     plt.title('Model accuracy')
     plt.ylabel('Accuracy')
     plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.savefig(save_path + config + "_accuracy.svg")
+    if show:
+        plt.show()
 
     # Plot training & validation loss values
     plt.plot(history.history['loss'])
@@ -147,5 +173,21 @@ def visualization_history(history):
     plt.title('Model loss')
     plt.ylabel('Loss')
     plt.xlabel('Epoch')
-    plt.legend(['Train', 'Test'], loc='upper left')
-    plt.show()
+    plt.legend(['Train', 'Validation'], loc='upper left')
+    plt.savefig(save_path + config + "_loss.svg")
+    if show:
+        plt.show()
+
+
+def flat_users_data(dict_data):
+    """
+
+    :param dict_data:
+    :return:
+    """
+    x, y = [], []
+    for user in dict_data:
+        for n in range(len(user['data'])):
+            x.append(user['data'][n])
+            y.append(user['label'][n])
+    return x, y

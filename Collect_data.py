@@ -13,10 +13,11 @@ from PIL import Image, ImageTk
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 
+import Constant
 import Live_Prediction_Prototype
 from Constant import *
 from Helper_functions import countdown, wait
-from Save_Load import save_raw_csv, create_directories
+from Save_Load import save_raw_data, create_directories_for_data_collection
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
@@ -111,13 +112,19 @@ class CollectDataWindow(Frame):
         self.close_btn.grid(row=9, column=1, pady=8, padx=4)
 
     def introduction_screen_ui(self, mode, trial):
+        """
+
+        :param mode:
+        :param trial:
+        :return:
+        """
         global g_introduction_screen
 
         user_path = "Collections/" + self.proband_val.get()
         raw_path = user_path + "/raw"
-        create_directories(proband=self.proband_val.get(), delete_old=False, raw_path=raw_path,
-                           raw_sep=user_path + "/raw_separate",
-                           raw_con=user_path + "/raw_continues")
+        create_directories_for_data_collection(proband=self.proband_val.get(), delete_old=False, raw_path=raw_path,
+                                               raw_sep=user_path + "/raw_separate",
+                                               raw_con=user_path + "/raw_continues")
 
         sessions = self.session_val.get()
         record_time = self.record_time_val.get()
@@ -182,7 +189,7 @@ class IntroductionScreen(Frame):
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
-        self.progress_total["maximum"] = self.sessions * len(label_display)
+        self.progress_total["maximum"] = self.sessions * len(Constant.label_display_with_rest)
         self.progress_gesture["maximum"] = self.record_time
 
         self.session_text = StringVar()
@@ -206,7 +213,7 @@ class IntroductionScreen(Frame):
         self.deviating_time_input.grid(row=4, column=2, pady=8, padx=4)
 
         self.session_label.grid(row=5, column=0, pady=4, sticky=W)
-        self.progress_session.grigd(row=5, column=1, padx=4, sticky=W)
+        self.progress_session.grid(row=5, column=1, padx=4, sticky=W)
         self.start_session_btn.grid(row=5, column=2, padx=4)
 
         self.total_label.grid(row=6, column=0, pady=4, sticky=W)
@@ -214,11 +221,15 @@ class IntroductionScreen(Frame):
         self.close_btn.grid(row=6, column=2, padx=4, pady=8)
 
     def start_session(self):
+        """
+
+        :return:
+        """
         global g_break
         if self.current_session < self.sessions:
             g_break = self.deviating_time_val.get()
             self.session_total.set(str(self.current_session + 1) + "/" + str(self.sessions) + " Sessions")
-            self.init_sessionbar()
+            self.init_session_bar()
 
             self.deviating_time_input['state'] = DISABLED
             self.start_session_btn['state'] = DISABLED
@@ -235,10 +246,19 @@ class IntroductionScreen(Frame):
         return
 
     def close(self):
+        """
+
+        :return:
+        """
         self.destroy()
         introduction_window.withdraw()
 
     def change_img(self, path):
+        """
+
+        :param path:
+        :return:
+        """
         load = Image.open(path)
         load = load.resize((img_w, img_h), Image.ANTIALIAS)
         render = ImageTk.PhotoImage(load)
@@ -247,33 +267,67 @@ class IntroductionScreen(Frame):
         self.img.grid(row=0, column=0, padx=8, pady=8, columnspan=3)
         introduction_window.update()
 
-    def init_sessionbar(self):
-        self.progressbar_session_val = 0
-        self.progress_session["value"] = self.progressbar_session_val
-        self.progress_session["maximum"] = len(label_display)
+    def init_session_bar(self):
+        """
+
+        :return:
+        """
+        self.progress_bar_session_val = 0
+        self.progress_session["value"] = self.progress_bar_session_val
+        self.progress_session["maximum"] = len(Constant.label_display_with_rest)
 
     def set_status_text(self, text):
+        """
+
+        :param text:
+        :return:
+        """
         self.status_text.set(text)
         introduction_window.update()
 
     def set_gesture_description(self, text):
+        """
+
+        :param text:
+        :return:
+        """
         self.gesture_text.set(text)
         introduction_window.update()
 
     def set_countdown_text(self, text):
+        """
+
+        :param text:
+        :return:
+        """
         self.countdown_value.set(text)
         introduction_window.update()
 
     def set_session_text(self, text):
+        """
+
+        :param text:
+        :return:
+        """
         self.session_text.set(text)
         introduction_window.update()
 
     def update_progressbars(self, value):
+        """
+
+        :param value:
+        :return:
+        """
         self.progress_session["value"] += value
         self.progress_total["value"] += value
         introduction_window.update()
 
     def update_gesture_bar(self, value):
+        """
+
+        :param value:
+        :return:
+        """
         if value > self.record_time:
             value = self.record_time
         self.progress_gesture["value"] = value
@@ -318,6 +372,10 @@ gesture_listener = GestureListener()
 
 
 def pair_devices():
+    """
+
+    :return:
+    """
     global DEVICE_L
     global DEVICE_R
     with hub.run_in_background(device_listener):
@@ -342,6 +400,10 @@ def pair_devices():
 
 
 def collect_raw_data():
+    """
+
+    :return:
+    """
     global EMG
     global ORI
     global ACC
@@ -381,18 +443,14 @@ def collect_data(current_session):
 
     with hub.run_in_background(gesture_listener.on_event):
         countdown(g_introduction_screen, 3)
-        for i in range(len(save_label)):
-            path = g_raw_path + "/" + "s" + str(current_session) + save_label[i]
+        for i in range(len(label)):
+            path = g_raw_path + "/" + "s" + str(current_session) + label[i]
             emg_l, emg_r = [], []
 
             g_introduction_screen.set_gesture_description(hand_disinfection_description[i])
             g_introduction_screen.change_img(g_img_path + g_files[i])
 
             g_introduction_screen.set_countdown_text("")
-            # Test ob ohne Ready besser
-            # if g_mode == INDIVIDUAL:
-            #     g_introduction_screen.set_status_text("Ready!")
-            #     wait(1)
 
             DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_status_text("Start!")
@@ -403,24 +461,24 @@ def collect_data(current_session):
 
             g_introduction_screen.set_status_text("Pause")
             g_introduction_screen.update_gesture_bar(0)
-            g_introduction_screen.update_progressbars(1)
+            g_introduction_screen.update_progress_bars(1)
 
-            if i < len(save_label) - 1:
+            if i < len(label) - 1:
                 g_introduction_screen.set_gesture_description("Next: " + hand_disinfection_description[i + 1])
                 g_introduction_screen.change_img(g_img_path + g_files[i + 1])
 
             if not g_trial:
                 if not os.path.isdir(path):
                     os.mkdir(path)
-                save_raw_csv({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
-                             path + "/emg.csv",
-                             path + "/imu.csv")
+                save_raw_data({"EMG": EMG, "ACC": ACC, "GYR": GYR, "ORI": ORI}, i,
+                              path + "/emg.csv",
+                              path + "/imu.csv")
                 log.info("Collected emg data: " + str(len(EMG)))
                 log.info("Collected imu data:" + str(len(ORI)))
 
             if g_mode == INDIVIDUAL:
                 wait(.5)
-                if i < len(save_label) - 1:
+                if i < len(label) - 1:
                     countdown(g_introduction_screen, g_break)
 
     g_introduction_screen.set_countdown_text("")
@@ -432,6 +490,14 @@ def collect_data(current_session):
 
 
 def init_data_collection(raw_path, trial, mode, training_time=5):
+    """
+
+    :param raw_path:
+    :param trial:
+    :param mode:
+    :param training_time:
+    :return:
+    """
     global g_files
     global g_training_time
     global g_raw_path

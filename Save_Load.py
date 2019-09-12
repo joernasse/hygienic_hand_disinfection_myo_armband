@@ -2,13 +2,20 @@ import csv
 import os
 import shutil
 import sys
-# from tkinter import filedialog
 import numpy
 import logging as log
 from Constant import *
 
 
-def save_raw_csv(data, label, file_emg, file_imu):
+def save_raw_data(data, label, file_emg, file_imu):
+    """
+    TODO:
+    :param data:
+    :param label:
+    :param file_emg:
+    :param file_imu:
+    :return:
+    """
     file_exist = os.path.isfile(file_emg)
     f = open(file_emg, 'a', newline='')
     with f:
@@ -45,11 +52,17 @@ def save_raw_csv(data, label, file_emg, file_imu):
     return
 
 
-def save_feature_csv(data, file_name):
+def save_features(features, file_name):
+    """
+    TODO:
+    :param features:
+    :param file_name:
+    :return:
+    """
     f = open(file_name, 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        for entry in data:
+        for entry in features:
             for dict in entry:
                 tmp = dict['fs']
                 tmp.extend([dict['label']])
@@ -57,13 +70,14 @@ def save_feature_csv(data, file_name):
     return f
 
 
-# def load_classifier():
-#     classifier = filedialog.askopenfile(filetypes=[("Classifier", "*.joblib")])
 
 
 def load_raw_2(path):
     data = []
-    file = open(path)
+    try:
+        file = open(path)
+    except:
+        return []
     reader = csv.reader(file, delimiter=';')
     next(reader, None)
     for column in reader:
@@ -71,7 +85,13 @@ def load_raw_2(path):
     return numpy.asarray(data)
 
 
-def load_raw_csv(emg_path, imu_path):
+def load_raw_data(emg_path, imu_path):
+    """
+
+    :param emg_path:
+    :param imu_path:
+    :return:
+    """
     try:
         imu_file, emg_file = open(imu_path), open(emg_path)
         load_data, identifier = [], []
@@ -84,7 +104,6 @@ def load_raw_csv(emg_path, imu_path):
                          "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
                          "label": []}
 
-        array = []
         for file in [emg_file, imu_file]:
             if file.name.__contains__('emg'):
                 load_data = emg_load_data
@@ -97,15 +116,6 @@ def load_raw_csv(emg_path, imu_path):
                     first_line = False
                     identifier = column
                     continue
-
-                # try:
-                #     for i in column[1:len(identifier)]:
-                #         t=float(i)
-                # except:
-                #     # print("Error! Cannot convert str->float")
-                #     cannotConvert = cannotConvert+1
-                #     continue
-
                 for i in range(1, len(identifier)):
                     load_data[identifier[i]].append(float(column[i]))
 
@@ -116,68 +126,72 @@ def load_raw_csv(emg_path, imu_path):
         print(sys.exc_info()[0])
 
 
-def load_feature_csv_one_user(config, user):
-    user_data = []
-    sum = 0
-    data, label = [], []
+def load_feature_for_user(path=None):
+    #TODO ist evtl überflüssig
+    user_data, data, label = [], [], []
     try:
-        file = open("G:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
+        file = open(path)
     except:
         return []
     reader = csv.reader(file, delimiter=';')
     for column in reader:
         data.append([float(x) for x in column[:-1]])
         label.append(int(column[-1]))
-    sum += len(data)
-    user_data.append({'data': data, 'label': label})
-    print(sum)
-    return user_data
+    return {'data': data, 'label': label}
 
 
-def load_feature_from_many_users(config, users=USERS):
+def load_feature_from_users(config, users=USERS, path=None):
+    """
+
+    :param config:
+    :param users:
+    :param path:
+    :return:
+    """
     users_data = []
-    sum = 0
     for user in users:
         data, label = [], []
         try:
-            # E Desktop
-            # G laptop
-            # path = os.getcwd()
-            # file = open(path + "\\best_mean_sets\\" + user + "-" + config + ".csv")
-            file = open("G:/Masterarbeit/feature_sets/" + user + "-" + config + ".csv")
-
+            file = open(path + user + "-" + config + ".csv")
         except:
             return []
         reader = csv.reader(file, delimiter=';')
         for column in reader:
             data.append([float(x) for x in column[:-1]])
             label.append(int(column[-1]))
-        sum += len(data)
         users_data.append({'data': data, 'label': label})
-        print("Load features from",user,"done")
-    print(sum)
+        print("Load raw data for", user, "done")
     return users_data
 
 
-def load_feature_csv(file):
-    label, data = [], []
-    reader = csv.reader(file, delimiter=';')
-    for column in reader:
-        tmp = []
-        for x in column[:-1]:
-            if x == "inf":
-                tmp.append(sys.float_info.max)
-            try:
-                tmp.append(numpy.float64(x))
-            except:
-                tmp.append(numpy.abs(complex(x)))
-        data.append(tmp)
-        label.append(int(column[-1]))
+# def load_feature_csv(file):
+#     label, data = [], []
+#     reader = csv.reader(file, delimiter=';')
+#     for column in reader:
+#         tmp = []
+#         for x in column[:-1]:
+#             if x == "inf":
+#                 tmp.append(sys.float_info.max)
+#             try:
+#                 tmp.append(numpy.float64(x))
+#             except:
+#                 tmp.append(numpy.abs(complex(x)))
+#         data.append(tmp)
+#         label.append(int(column[-1]))
+#
+#     return data, label
 
-    return data, label
 
+def create_directories_for_data_collection(proband, delete_old, raw_path, raw_con, raw_sep):
+    """
 
-def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
+    :param proband:
+    :param delete_old:
+    :param raw_path:
+    :param raw_con:
+    :param raw_sep:
+    :return:
+    """
     user_path = COLLECTION_DIR + "/" + proband
     if not os.path.isdir(COLLECTION_DIR):  # Collection dir
         os.mkdir(COLLECTION_DIR)
@@ -199,10 +213,15 @@ def create_directories(proband, delete_old, raw_path, raw_con, raw_sep):
         log.info("Create directory" + raw_path)
 
 
-def load_overview():
-    overview = []
-    file = open("E:/Masterarbeit/classification_config_mean_result_edit.csv")
+def load_prediction_summary(path):
+    """
+
+    :param path:
+    :return:
+    """
+    summary = []
+    file = open(path)
     reader = csv.reader(file, delimiter=';')
     for column in reader:
-        overview.append(column)
-    return overview
+        summary.append(column)
+    return summary

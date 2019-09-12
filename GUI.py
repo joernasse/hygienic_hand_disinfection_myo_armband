@@ -3,71 +3,12 @@ from tkinter.ttk import Progressbar, Separator, Frame
 
 from PIL import Image, ImageTk
 
+import Constant
 from Collect_data import collect_data, init_data_collection
 from Constant import *
-from Process_data import process_raw_data
-from Save_Load import load_feature_csv, create_directories
 
 introduction_window = Tk()
 collect_window = Tk()
-
-
-class MainWindow(Frame):
-    def __init__(self, master=None):
-        Frame.__init__(self, master)
-        self.master = master
-        self.pack(fill=BOTH, expand=1)
-
-        self.p_val = StringVar(self, value="defaultUser")
-
-        # main_window.title("EMG Recognition")
-        self.collect_label = Label(self, text="Data Collection")
-        self.proband_label = Label(self, text="Proband Name:")
-
-        self.p_val = StringVar(self, value="defaultUser")
-        self.proband_input = Entry(self, textvariable=self.p_val)
-
-        self.sep1 = Separator(self, orient=HORIZONTAL)
-
-        self.label3 = Label(self, text="Process data")
-
-        self.sep3 = Separator(self, orient=HORIZONTAL)
-
-        self.close_val = StringVar(self, value="close")
-        self.close_btn = self.close = Button(self, textvariable=self.close_val, command=self.destroy)
-
-        self.collect_data_btn = Button(self, text="Collect data",
-                                       command=lambda: self.collect_data_ui(delete_old=True,
-                                                                            proband=self.proband_input.get()))
-
-        self.process_data_btn = Button(self, text="Process data", command=process_raw_data)
-        self.load_feature_btn = Button(self, text="Load feature file", command=load_feature_csv)
-
-        self.collect_label.grid(row=0, column=0, pady=4, columnspan=2)
-
-        self.proband_label.grid(row=1, column=0, pady=4)
-        self.proband_input.grid(row=1, column=1, padx=8)
-
-        self.collect_data_btn.grid(row=2, column=0, pady=8, padx=4, sticky=W)
-
-        self.sep1.grid(row=3, column=0, sticky="ew", columnspan=5, padx=4, pady=8)
-        self.label3.grid(row=4, pady=4, columnspan=2)
-
-        self.process_data_btn.grid(row=5, column=0, pady=8, padx=4)
-        self.load_feature_btn.grid(row=5, column=1, pady=8, padx=4)
-
-        self.sep3.grid(row=6, column=0, sticky="ew", columnspan=5, padx=4)
-
-        self.close_btn.grid(row=7, column=1, pady=8, padx=4)
-
-    def collect_data_ui(self, delete_old=True, proband="defaultUser"):
-        collect_window.deiconify()
-        data_collect.user_path = "Collections/" + proband
-        user_path = "Collections/" + proband
-        raw_path = user_path + "/raw"
-        create_directories(proband=proband, delete_old=delete_old, raw_path=raw_path,
-                           raw_sep=user_path + "/raw_separate",
-                           raw_con=user_path + "/raw_continues")
 
 
 class CollectDataWindow(Frame):
@@ -164,7 +105,7 @@ class IntroductionScreen(Frame):
         self.close_btn = Button(self, text="Close", command=self.quit)
 
         self.progress_total = Progressbar(self, orient="horizontal", length=200, mode='determinate')
-        self.progress_total["maximum"] = self.sessions * len(label_display)
+        self.progress_total["maximum"] = self.sessions * len(Constant.label_display_with_rest)
         self.progress_session = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_gesture = Progressbar(self, orient="horizontal", length=200, mode='determinate')
         self.progress_gesture["maximum"] = self.record_time
@@ -201,7 +142,7 @@ class IntroductionScreen(Frame):
             self.init_sessionbar()
             collect_data(self.current_session)
             self.current_session += 1
-            self.update_progressbars(1)
+            self.update_progress_bars(1)
             return
         else:
             self.set_countdown_text("Data collection complete!")
@@ -218,7 +159,7 @@ class IntroductionScreen(Frame):
     def init_sessionbar(self):
         self.progressbar_session_val = 0
         self.progress_session["value"] = self.progressbar_session_val
-        self.progress_session["maximum"] = len(label_display)
+        self.progress_session["maximum"] = len(Constant.label_display_with_rest)
 
     def set_status_text(self, text):
         self.status_text.set(text)
@@ -236,7 +177,7 @@ class IntroductionScreen(Frame):
         self.session_text.set(text)
         introduction_window.update()
 
-    def update_progressbars(self, value):
+    def update_progress_bars(self, value):
         self.progress_session["value"] += value
         self.progress_total["value"] += value
         introduction_window.update()

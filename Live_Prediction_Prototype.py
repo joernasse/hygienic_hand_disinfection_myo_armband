@@ -109,12 +109,12 @@ def feature_extraction_live(w_emg, w_imu, mode='default'):
     feature_emg, feature_imu = [], []
     for x in w_emg:
         if mode == 'default':
-            feature_emg.append(Feature_extraction.default(x))
+            feature_emg.append(Feature_extraction.mantena(x))
         if mode == Constant.georgi:
             feature_emg.append(Feature_extraction.georgi(x, sensor='EMG'))
     for x in w_imu:
         if mode == 'default':
-            feature_imu.append(Feature_extraction.default(x))
+            feature_imu.append(Feature_extraction.mantena(x))
         if mode == 'geogri':
             feature_imu.append(Feature_extraction.georgi(x, sensor='IMU'))
     return feature_emg, feature_imu
