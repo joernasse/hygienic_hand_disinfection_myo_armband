@@ -559,7 +559,7 @@ def train_user_independent_cnn(train_user_list, config_list, user, norm=False, s
         overlap = float(config_list[4])
 
         x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=train_user_list,
-                                        preprocess=preprocess, data_set=dcata_set, sensor=sensor,
+                                        preprocess=preprocess, data_set=data_set, sensor=sensor,
                                         ignore_rest_gesture=ignore_rest_gesture, norm_by_rest=False)
         if norm:
             for i in range(len(x)):
