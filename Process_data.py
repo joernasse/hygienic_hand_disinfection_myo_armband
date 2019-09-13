@@ -4,7 +4,7 @@ import signal
 from scipy.stats import zscore
 import Constant
 import Feature_extraction as fe
-from Save_Load import load_raw_data_for_emg_imu, save_features
+from Save_Load import load_raw_data_for_both_sensors, save_features
 import numpy as np
 
 np.seterr(divide='ignore')
@@ -52,7 +52,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                 features = []
                 # s_path = load_path + path_add[i] + "/" + steps
 
-                raw_emg, raw_imu = load_raw_data_for_emg_imu(
+                raw_emg, raw_imu = load_raw_data_for_both_sensors(
                     emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
                     imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
 
@@ -122,7 +122,7 @@ def window_for_one_sensor(input_data, window, degree_of_overlap=0):
                 first += int(window - offset)
                 break
             w_data.append(np.asarray(data))
-            labels.append(label)
+            labels.append(int(label))
             first += int(window - offset)
         return np.asarray(w_data), labels
     except:
