@@ -1,15 +1,18 @@
 import os
+import signal
+
 from scipy.stats import zscore
-from Constant import *
-from Feature_extraction import *
-from Save_Load import load_raw_data, save_features
+import Constant
+import Feature_extraction as fe
+from Save_Load import load_raw_data_for_emg_imu, save_features
 import numpy as np
 
 np.seterr(divide='ignore')
 
 
 # Select user directory --  load all emg and imu data, window it, extract features
-def process_raw_data(user, overlap, window, data_set, sensor, feature, pre):
+def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
+                     save_path_for_featureset="./", load_path=Constant.collections_path_default):
     """
     Load raw data for user, window the data, pre process the data,
     extract  features from data, save extracted features to file
@@ -27,39 +30,46 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre):
         The set of features  to extract
     :param pre: string
         The pre processing setting: filter, z-normalization, no pre processing
+    :param save_path_for_featureset: string, default Constant.collection_path_default('G:/Masterarbeit/Collections/')
+            Describes the save path for features. If empty the default path "./" will be used
     """
     features = []
-    save_path = collections_path_default + user + "/features"
+    save_path_for_featureset += user + "/features"
     try:
-        load_path = collections_path_default + user
+        load_path += user
         directories, path_add = [], []
 
-        if SEPARATE in data_set:
-            directories.append(os.listdir(load_path + SEPARATE_PATH))
-            path_add.append(SEPARATE_PATH)
-        if CONTINUES in data_set:
-            directories.append(os.listdir(load_path + CONTINUES_PATH))
-            path_add.append(CONTINUES_PATH)
+        if Constant.SEPARATE in data_set:
+            directories.append(os.listdir(load_path + Constant.SEPARATE_PATH))
+            path_add.append(Constant.SEPARATE_PATH)
+        if Constant.CONTINUES in data_set:
+            directories.append(os.listdir(load_path + Constant.CONTINUES_PATH))
+            path_add.append(Constant.CONTINUES_PATH)
 
-        for i in range(len(directories)):
+        for i in range(len(directories)):  # go through all directories
             tmp_features = []
-            for steps in directories[i]:
+            for steps in directories[i]:  # go through all Steps
                 features = []
-                s_path = load_path + path_add[i] + "/" + steps
+                # s_path = load_path + path_add[i] + "/" + steps
 
-                raw_emg, raw_imu = load_raw_data(emg_path=s_path + "/emg.csv", imu_path=s_path + "/imu.csv")
-                w_emg, w_imu = window_data_for_both_sensor(raw_emg, raw_imu, window=window, degree_of_overlap=overlap,
+                raw_emg, raw_imu = load_raw_data_for_emg_imu(
+                    emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
+                    imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
+
+                w_emg, w_imu = window_data_for_both_sensor(raw_emg, raw_imu,
+                                                           window=window,
+                                                           degree_of_overlap=overlap,
                                                            skip_timestamp=1)
 
-                # Pre process each window
+                # Preprocess each window
                 if pre == Constant.filter_:
-                    w_emg = filter_emg_data(emg=w_emg, f_type=feature)
+                    w_emg = filter_emg_data(emg=w_emg, filter_type=feature)
                 elif pre == Constant.z_norm:
                     w_emg, w_imu = z_norm(w_emg, w_imu)
 
-                if EMG + IMU in sensor:
-                    features.append(feature_extraction(w_emg, mode=feature, sensor=EMG))
-                    features.append(feature_extraction(w_imu, mode=feature, sensor=IMU))
+                if Constant.EMG + Constant.IMU in sensor:
+                    features.append(fe.feature_extraction(w_emg, mode=feature, sensor=Constant.EMG))
+                    features.append(fe.feature_extraction(w_imu, mode=feature, sensor=Constant.IMU))
                     tmp = []
                     for j in range(len(features[0])):
                         merged_feature = features[0][j]['fs'] + features[1][j]['fs']
@@ -69,18 +79,18 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre):
                             print("ERROR! Should not happen!")
                     tmp_features.append(tmp)
                     continue
-                if EMG in sensor:
-                    tmp_features.append(feature_extraction(w_emg, mode=feature, sensor=EMG))
-                if IMU in sensor:
-                    tmp_features.append(feature_extraction(w_imu, mode=feature, sensor=IMU))
+                if Constant.EMG in sensor:
+                    tmp_features.append(fe.feature_extraction(w_emg, mode=feature, sensor=Constant.EMG))
+                if Constant.IMU in sensor:
+                    tmp_features.append(fe.feature_extraction(w_imu, mode=feature, sensor=Constant.IMU))
             features = tmp_features
         if pre:
-            save_path = save_path + "_filter"
-        if not os.path.isdir(save_path):
-            os.mkdir(save_path)
+            save_path_for_featureset = save_path_for_featureset + "_filter"
+        if not os.path.isdir(save_path_for_featureset):
+            os.mkdir(save_path_for_featureset)
         filename = user + "-" + pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
             overlap) + "-" + feature
-        save_features(features, save_path + "/" + filename + ".csv")
+        save_features(features, save_path_for_featureset + "/" + filename + ".csv")
         print(filename + " done")
         return True
     except:
@@ -121,13 +131,23 @@ def window_for_one_sensor(input_data, window, degree_of_overlap=0):
 
 def window_data_for_both_sensor(emg_data, imu_data, window, degree_of_overlap, skip_timestamp):
     """
-
-    :param emg_data:
-    :param imu_data:
-    :param window:
-    :param degree_of_overlap:
-    :param skip_timestamp:
-    :return:
+    Window the EMG and IMU data, that the time interval is equal
+    Window size will be different for IMU and EMG data
+    :param emg_data: dict{}
+    TODO:
+    :param imu_data: dict{}
+    TODO
+    :param window: int
+            Descibes the windows size
+    :param degree_of_overlap: float
+            Describes the degree of overlap. Example 0.5 means 50% of overlapping windows
+    :param skip_timestamp: int 0 or 1
+            Describes if the timestamp shoul be skipped by generating the window.
+            1 skip
+            0 don´t skip
+    :return: array, array
+            array of windows for EMG data
+            array of windows for IMU data
     """
     emg_window, imu_window = [], []
     emg_length, imu_length = len(emg_data['label']), len(imu_data['label'])
@@ -146,20 +166,19 @@ def window_data_for_both_sensor(emg_data, imu_data, window, degree_of_overlap, s
         last_imu = int(first_imu + window_imu)
         emg, imu = [], []
 
-        if not len(emg_data['label'][first_emg:last_emg]) == window or not len(imu_data['label'][first_imu:last_imu]) == window_imu:
+        if not len(emg_data['label'][first_emg:last_emg]) == window \
+                or not len(imu_data['label'][first_imu:last_imu]) == window_imu:
             first_emg += int(window - offset_emg)
             first_imu += int(window_imu - offset_imu)
             continue
 
-        # if len(emg_data['label'][first_emg:last_emg]) == window:
-        for n in identifier_emg[skip_timestamp:]:
+        for n in Constant.identifier_emg[skip_timestamp:]:
             emg.append([j for j in emg_data[n][first_emg:last_emg]])
         emg.append(label)
         emg_window.append(emg)
         first_emg += int(window - offset_emg)
 
-        # if len(imu_data['label'][first_imu:last_imu]) == window_imu:
-        for k in identifier_imu[skip_timestamp:]:
+        for k in Constant.identifier_imu[skip_timestamp:]:
             imu.append([j for j in imu_data[k][first_imu:last_imu]])
         imu.append(label)
         imu_window.append(imu)
@@ -172,16 +191,20 @@ def window_data_for_both_sensor(emg_data, imu_data, window, degree_of_overlap, s
     return emg_window, imu_window
 
 
-def filter_emg_data(emg, f_type):
+def filter_emg_data(emg, filter_type):
     """
-
-    :param emg:
-    :param f_type:
-    :return:
+    Filters the EMG date with the with the filter, which is given by the filter type
+    Two diffrent filters can be found in Constant.py
+    :param emg: array
+            The EMG data which should be filtered
+    :param filter_type: string
+            The filter type. Basically described in Constand.py
+    :return: array
+            The filtered EMG data
     """
     try:
         f_emg = []
-        if f_type == Constant.rehman:
+        if filter_type == Constant.rehman:
             b_emg, a_emg = Constant.rehman_b_emg, Constant.rehman_a_emg
         else:
             b_emg, a_emg = Constant.benalcazar_b_emg, Constant.benalcazar_a_emg
@@ -191,11 +214,23 @@ def filter_emg_data(emg, f_type):
             f_emg.append(tmp)
         return f_emg
     except:
-        print("ERROR! filter_data")
+        print("ERROR! Problem in filter data")
+        raise
 
 
 def z_norm(emg, imu):
-    """"""
+    """
+    Performs the Z-Normalization for EMG and IMU data
+    :param emg: array
+            Array of EMG data
+    :param imu: array
+            Array of IMU data
+    :return: array,array
+            Z-normalized EMG data
+            z-normalized IMU data
+
+    """
+
     try:
         z_emg, z_imu = [], []
         for item in emg:
@@ -208,4 +243,5 @@ def z_norm(emg, imu):
             z_imu.append(tmp)
         return z_emg, z_imu
     except:
-        print("Error! z_norm")
+        print("Error! Problem in Z normalization")
+        raise

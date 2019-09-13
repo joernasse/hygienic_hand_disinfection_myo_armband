@@ -70,8 +70,6 @@ def save_features(features, file_name):
     return f
 
 
-
-
 def load_raw_2(path):
     data = []
     try:
@@ -85,25 +83,34 @@ def load_raw_2(path):
     return numpy.asarray(data)
 
 
-def load_raw_data(emg_path, imu_path):
+def load_raw_data_for_emg_imu(emg_path, imu_path):
     """
 
-    :param emg_path:
-    :param imu_path:
-    :return:
-    """
-    try:
-        imu_file, emg_file = open(imu_path), open(emg_path)
-        load_data, identifier = [], []
-        imu_load_data = {"timestamp": [],
+    :param emg_path: string
+            The path to the emg.csv to open the file
+    :param imu_path: string
+            The path to the imu.csv to open the file
+    :return:dict{"timestamp": [],
                          "x_ori": [], "y_ori": [], "z_ori": [],
                          "x_gyr": [], "y_gyr": [], "z_gyr": [],
                          "x_acc": [], "y_acc": [], "z_acc": [],
                          "label": []}
-        emg_load_data = {"timestamp": [],
+           ,dict{"timestamp": [],
                          "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
                          "label": []}
+    """
+    imu_load_data = {"timestamp": [],
+                     "x_ori": [], "y_ori": [], "z_ori": [],
+                     "x_gyr": [], "y_gyr": [], "z_gyr": [],
+                     "x_acc": [], "y_acc": [], "z_acc": [],
+                     "label": []}
 
+    emg_load_data = {"timestamp": [],
+                     "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
+                     "label": []}
+    load_data, identifier = [], []
+    try:
+        imu_file, emg_file = open(imu_path), open(emg_path)
         for file in [emg_file, imu_file]:
             if file.name.__contains__('emg'):
                 load_data = emg_load_data
@@ -122,44 +129,36 @@ def load_raw_data(emg_path, imu_path):
         imu_file.close()
         emg_file.close()
         return emg_load_data, imu_load_data
+
     except:
         print(sys.exc_info()[0])
+        raise
 
 
-def load_feature_for_user(path=None):
-    #TODO ist evtl überflüssig
-    user_data, data, label = [], [], []
-    try:
-        file = open(path)
-    except:
-        return []
-    reader = csv.reader(file, delimiter=';')
-    for column in reader:
-        data.append([float(x) for x in column[:-1]])
-        label.append(int(column[-1]))
-    return {'data': data, 'label': label}
-
-
-def load_feature_from_users(config, users=USERS, path=None):
+def load_features(config, path, users=USERS):
     """
 
-    :param config:
-    :param users:
-    :param path:
+    :param config: string
+            Describes the configuration for the features
+    :param users: array
+            Describes the array of users for which the features should be load
+    :param path: sting
+            Describe the path to the directory where the features saved
     :return:
     """
     users_data = []
     for user in users:
-        data, label = [], []
+        data, label_ = [], []
         try:
             file = open(path + user + "-" + config + ".csv")
         except:
+            print("Open file is not possible")
             return []
         reader = csv.reader(file, delimiter=';')
         for column in reader:
             data.append([float(x) for x in column[:-1]])
-            label.append(int(column[-1]))
-        users_data.append({'data': data, 'label': label})
+            label_.append(int(column[-1]))
+        users_data.append({'data': data, 'label': label_})
         print("Load raw data for", user, "done")
     return users_data
 

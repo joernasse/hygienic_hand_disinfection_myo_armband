@@ -55,14 +55,10 @@ hand_disinfection_description = ['Step 0    - Take disinfectant',
                                  'Rest      - Do nothing']
 
 # Collect_data
-PREDICT_TIME = 2.5
-DATA_POINT_WINDOW_SIZE = 20
-EMG_INTERVAL = 0.01
-POSITION_INTERVAL = 0.04
 COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
-INDIVIDUAL = "individual"
+SEPARATE = "individual"
 
 # Process_data
 MAX_EMG_VALUE = 127
@@ -71,11 +67,11 @@ threshold = 0.30 * MAX_EMG_VALUE
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 collections_path_default = 'G:/Masterarbeit/Collections/'
-TEST_SIZE = 0.1
+TEST_SIZE = 0.2
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
 
-SEPARATE = "separate"
+# SEPARATE = "separate"
 CONTINUES = "continues"
 
 # Save_Load_CSV
@@ -102,7 +98,6 @@ O_50 = 0.5
 O_0 = 0
 O_75 = 0.75
 
-# phinyomark = "phinyomark"
 rehman = "rehman"
 georgi = "georgi"
 robinson = "robinson"
@@ -156,8 +151,8 @@ USERS = ["User001", "User002", "User003", "User004",
          "User013", "User014", "User015"]
 
 # Without user007
-USERS_cross = ["User001", "User002", "User003", "User004",
-               "User005", "User006", "User008",
+USERS_cross = ["User002", "User003", "User004",
+               "User005", "User006", "User007", "User008",
                "User009", "User010", "User011", "User012",
                "User013", "User014", "User015"]
 
@@ -192,6 +187,8 @@ lda_parameter = {'solver': ['lsqr', 'eigen'],
                  'n_components': [1, 2, 5, 10, 20],
                  'shrinkage': ['auto', 0.1, 0.5, 0.9]}
 qda = QDA()
+classifiers = [random_forest, lda, qda, gauss, knn, svc]
+classifiers_name = ["Random Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
 
 # ----------------------------------Pre processing with Filter and normalization----------------------------------------#
 count_devices = 2

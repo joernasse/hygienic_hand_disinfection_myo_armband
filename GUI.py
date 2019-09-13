@@ -4,7 +4,7 @@ from tkinter.ttk import Progressbar, Separator, Frame
 from PIL import Image, ImageTk
 
 import Constant
-from Collect_data import collect_data, init_data_collection
+from Collect_data import collect_data, initialize_data_collection
 from Constant import *
 
 introduction_window = Tk()
@@ -33,11 +33,11 @@ class CollectDataWindow(Frame):
         self.record_time_input = Entry(self, textvariable=self.record_time_val, width=3)
 
         self.collect_separate_btn = Button(master=self, text="Collect Separate",
-                                           command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=False))
+                                           command=lambda: self.introduction_screen_ui(mode=SEPARATE, trial=False))
         self.collect_continues_btn = Button(master=self, text="Collect Continues",
                                             command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=False))
         self.trial_separate_btn = Button(master=self, text="Trial Separate",
-                                         command=lambda: self.introduction_screen_ui(mode=INDIVIDUAL, trial=True))
+                                         command=lambda: self.introduction_screen_ui(mode=SEPARATE, trial=True))
         self.trial_continues_btn = Button(master=self, text="Trial Continues",
                                           command=lambda: self.introduction_screen_ui(mode=CONTINUES, trial=True))
         self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
@@ -61,7 +61,7 @@ class CollectDataWindow(Frame):
         introduction_screen = IntroductionScreen(introduction_window, record_time=self.record_time_val.get(),
                                                  sessions=self.session_val.get())
         introduction_window.deiconify()
-        if mode == INDIVIDUAL:
+        if mode == SEPARATE:
             title = "Collect separate data"
             raw_path = self.user_path + "/raw_separate"
         else:
@@ -72,11 +72,11 @@ class CollectDataWindow(Frame):
         introduction_window.title(title)
 
         introduction_screen.init_sessionbar()
-        init_data_collection(raw_path=raw_path,
-                             trial=trial,
-                             mode=mode,
-                             introduction_screen=introduction_screen,
-                             training_time=self.record_time_val.get())
+        initialize_data_collection(raw_path=raw_path,
+                                   trial=trial,
+                                   mode=mode,
+                                   introduction_screen=introduction_screen,
+                                   record_time=self.record_time_val.get())
         introduction_window.mainloop()
 
 
