@@ -17,7 +17,15 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 path_add = [Constant.SEPARATE_PATH, Constant.CONTINUES_PATH]
 
 
-def normalize_data(data, sensor, mode='rest_mean'):
+def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
+    """
+
+    :param data:
+    :param sensor:
+    :param mode:
+    :return:
+    """
+    print("Normalization by Rest gesture - Start")
     if sensor == Constant.IMU:
         element = 10
     else:
@@ -38,7 +46,8 @@ def normalize_data(data, sensor, mode='rest_mean'):
                     for i in range(len(data[d])):  # Elements
                         data[d][i][ch] = data[d][i][ch] / mean[ch - 1]
         except:
-            print("Not expected exception")
+            print("Not expected exception in normalization by rest function")
+            raise
 
     if mode == 'max_value_channel':
         for d in data:
@@ -48,18 +57,32 @@ def normalize_data(data, sensor, mode='rest_mean'):
                     items.append(data[d][i][ch])
                 max_val = max(items)
                 items = items / max_val
+    print("Normalization by Rest gesture - Done")
     return data
 
 
-def pre_process_raw_data(window, overlap, users, data_set, pre_process, sensor=Constant.IMU,
-                         ignore_rest_gesture=True, normalize=False):
-    print("window", window, "overlap", overlap)
+def pre_process_raw_data(window, overlap, user_list, data_set, preprocess, sensor=Constant.IMU,
+                         ignore_rest_gesture=True, norm_by_rest=False):
+    """
 
-    raw_data = load_raw_data_for_nn(users, sensor, data_set)
+    :param window:
+    :param overlap:
+    :param user_list:
+    :param data_set:
+    :param preprocess:
+    :param sensor:
+    :param ignore_rest_gesture:
+    :param norm_by_rest:
+    :return:
+    """
+    print("Preprocessing raw data - Start")
+    print("Window", window, "Overlap", overlap)
+
+    raw_data = load_data_for_single_sensor(user_list, sensor, data_set)
     print(len(raw_data['Step1']))
-    if normalize:
+    if norm_by_rest:
         print("Start normalization")
-        raw_data = normalize_data(data=raw_data, sensor=sensor)
+        raw_data = normalize_by_rest_gesture(data=raw_data, sensor=sensor)
 
     if ignore_rest_gesture:
         raw_data['Rest'] = []
@@ -67,47 +90,65 @@ def pre_process_raw_data(window, overlap, users, data_set, pre_process, sensor=C
     w_data, labels = window_raw_data_for_nn(window, overlap, raw_data=raw_data, ignore_rest_gesture=ignore_rest_gesture)
 
     if sensor == Constant.IMU:
-        if pre_process == Constant.filter_:
-            dummy, w_data = Process_data.filter_emg_data(emg=w_data, imu=w_data, filter_type="")
-        elif pre_process == Constant.z_norm:
-            dummy, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
+        if preprocess == Constant.z_norm:
+            ignore_return, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
     elif sensor == Constant.EMG:
-        if pre_process == Constant.filter_:
-            dummy, w_data = Process_data.filter_emg_data(emg=w_data, imu=w_data, filter_type="")
-        elif pre_process == Constant.z_norm:
-            dummy, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
+        if preprocess == Constant.filter_:
+            w_data = Process_data.filter_emg_data(emg=w_data, filter_type="")
+        elif preprocess == Constant.z_norm:
+            w_data, ignore_return = Process_data.z_norm(emg=w_data, imu=w_data)
 
-    labels = [int(i) for i in labels]
-    print("Pre processing done", len(w_data), len(labels))
+    # TODO check if working in windowing function above
+    # labels = [int(i) for i in labels]
+
+    print("Window length", len(w_data),
+          "\nLabel length", len(labels),
+          "\nPreprocessing raw data - Done")
     return w_data, labels
 
+#TODO überdenken
+def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_steps_list=None,
+                                     ignore_rest_gesture=True, normalize_by_rest=False):
+    """
 
-def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_s0_rest, normalize=False):
-    print("window", window, "overlap", overlap)
+    :param window:
+    :param overlap:
+    :param users:
+    :param sensor:
+    :param skip_steps_list:
+    :param ignore_rest_gesture:
+    :param normalize_by_rest:
+    :return:
+    """
+    print("Preprocessing raw data for adapt model - Start")
+    print("Window", window, "Overlap", overlap)
     training_data, test_data = load_raw_data_for_adapt_model(users, sensor)
-    if normalize:
-        print("Start normalization")
-        training_data = normalize_data(data=training_data, sensor=sensor)
-        test_data = normalize_data(data=test_data, sensor=sensor)
 
-    if skip_s0_rest:
-        training_data['Step0'] = []
-        training_data['Rest'] = []
-        test_data['Step0'] = []
-        test_data['Rest'] = []
+    if normalize_by_rest:
+        training_data = normalize_by_rest_gesture(data=training_data, sensor=sensor)
+        test_data = normalize_by_rest_gesture(data=test_data, sensor=sensor)
 
-    window_data_train, labels_train = window_raw_data_for_nn(window, overlap, raw_data=training_data, sensor=sensor,
-                                                             ignore_rest_gesture=skip_s0_rest)
-    window_data_test, labels_test = window_raw_data_for_nn(window, overlap, raw_data=test_data, sensor=sensor,
-                                                           ignore_rest_gesture=skip_s0_rest)
+    if skip_steps_list is not None:
+        for step in skip_steps_list:
+            training_data[step] = []
+            test_data[step] = []
 
-    labels_train = [int(x) for x in labels_train]
-    labels_test = [int(x) for x in labels_test]
+    window_data_train, labels_train = window_raw_data_for_nn(window=window, overlap=overlap, raw_data=training_data,
+                                                             ignore_rest_gesture=ignore_rest_gesture)
+    window_data_test, labels_test = window_raw_data_for_nn(window, overlap, raw_data=test_data,
+                                                           ignore_rest_gesture=ignore_rest_gesture)
+    # TODO chekc if is done yet in function windowing above...
+    # labels_train = [int(x) for x in labels_train]
+    # labels_test = [int(x) for x in labels_test]
 
-    if skip_s0_rest:
+    # correct the order and indices
+    if skip_steps_list:
         labels_train = [i - 1 for i in labels_train]
         labels_test = [i - 1 for i in labels_test]
-    print(len(window_data_train), len(window_data_test))
+
+    print("Data length", len(window_data_train),
+          "\nTraining length", len(window_data_test),
+          "\nPreprocessing raw data for adapt model - Done")
     return window_data_train, labels_train, window_data_test, labels_test
 
 
@@ -133,9 +174,10 @@ def main():
         if not os.path.isdir(save_path):  # Collection dir
             os.mkdir(save_path)
         x, labels = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                         users=Constant.USERS_cross, pre_process=config_split[0], data_set=config_split[1],
+                                         user_list=Constant.USERS_cross, preprocess=config_split[0],
+                                         data_set=config_split[1],
                                          sensor=config_split[2],
-                                         ignore_rest_gesture=True, normalize=False)
+                                         ignore_rest_gesture=True, norm_by_rest=False)
         for i in range(len(x)):
             sc = sklearn.preprocessing.StandardScaler(copy=True, with_std=True)
             sc.fit(x[i])
@@ -176,13 +218,13 @@ def main():
         os.mkdir(save_path)
     # For all Users, can be changed
     x_train, y_train = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                            users=USERS_cross, pre_process=config_split[0],
+                                            user_list=USERS_cross, preprocess=config_split[0],
                                             data_set=config_split[1],
-                                            sensor=config_split[2], ignore_rest_gesture=True, normalize=False)
+                                            sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
 
     x_test, y_test = pre_process_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                          users=["User007"], pre_process=config_split[0], data_set=config_split[1],
-                                          sensor=config_split[2], ignore_rest_gesture=True, normalize=False)
+                                          user_list=["User007"], preprocess=config_split[0], data_set=config_split[1],
+                                          sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
 
     Deep_learning.predict_for_load_model(x_test, y_test, load_model(
         "G:/Masterarbeit/deep_learning_filter/User007_Unknown/CNN_Kaggle/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"),
@@ -263,53 +305,51 @@ def main():
     # return True
 
 
-def train_user_independent(config, ignore_rest_gesture=True, feature_sets_path="", trainings_data=Constant.USERS_cross):
+def train_user_independent(config, ignore_rest_gesture=True, feature_sets_path="",
+                           training_users=Constant.USERS_cross, test_user="User007", save_path="./",
+                           classifier=Constant.classifiers, classifier_names=Constant.classifier_names):
+    """
+
+    :param config:
+    :param ignore_rest_gesture:
+    :param feature_sets_path:
+    :param training_users:
+    :param test_user:
+    :param save_path:
+    :param classifier:
+    :param classifier_names:
+    :return:
+    """
     print("Current config", config)
-    training_data = Save_Load.load_features(config, trainings_data, path=feature_sets_path)
-    # test_data = load_feature_from_users(config, ["User007"], path=feature_sets_path)
+    training_data = Save_Load.load_features(config=config, user_list=training_users, path=feature_sets_path)
+    test_data = Save_Load.load_features(config=config, user_list=[test_user], path=feature_sets_path)
 
     if ignore_rest_gesture:
+        test_data[0] = remove_rest_gesture_data(user_data=test_data[0])
         for i in range(len(training_data)):
             training_data[i] = remove_rest_gesture_data(user_data=training_data[i])
-        # test_data[0] = remove_rest_gesture_data(user_data=test_data[0])
 
-    Classification.train_user_independent(training_data=training_data, config=config,
-                                          norm=True, cv=True, save_model=False)
-    return True
+    Classification.train_user_independent(training_data=training_data,
+                                          test_data=test_data,
+                                          classifiers=classifier,
+                                          classifiers_name=classifier_names,
+                                          save_path=save_path,
+                                          config=config,
+                                          norm=True,
+                                          save_model=False)
 
 
-# def train_classifier(users, deep_learning):
-#     for user in users:
-#         if not os.path.isdir(collections_default_path + "-" + user + "-" + "/classifier"):
-#             os.mkdir(collections_default_path + "-" + user + "-" + "/classifier")
-#         files = os.listdir(collections_default_path + "-" + user + "-" + "/features")
-#         for file in files:
-#             if deep_learning:
-#                 train_dnn(user, 50, 0)
-#             else:
-#                 x, y = load_feature_csv(open(collections_default_path + "-" + user + "-" + "/features/" + "-" + file))
-#                 train_classifier(x, y, collections_default_path + "-" + user + "-" + "/classifier", file)
-#
-#             # dnn_default(x, y)
-#     return True
+def load_data_for_single_sensor(user_list, sensor, data_set, collection_path=Constant.collections_path_default):
+    """
 
-def load_raw_data_for_nn(users, sensor, data_set):
-    imu_dict = {
-        'Step0': [],
-        'Step1': [],
-        'Step1_1': [],
-        'Step1_2': [],
-        'Step2': [],
-        'Step2_1': [],
-        'Step3': [],
-        'Step4': [],
-        'Step5': [],
-        'Step5_1': [],
-        'Step6': [],
-        'Step6_1': [],
-        'Rest': []
-    }
-    emg_dict = {'Step0': [],
+    :param user_list:
+    :param sensor:
+    :param data_set:
+    :param collection_path:
+    :return:
+    """
+    global path_add
+    raw_data = {'Step0': [],
                 'Step1': [],
                 'Step1_1': [],
                 'Step1_2': [],
@@ -322,11 +362,10 @@ def load_raw_data_for_nn(users, sensor, data_set):
                 'Step6': [],
                 'Step6_1': [],
                 'Rest': []}
-    global path_add
 
-    for user in users:
+    for user in user_list:
         directories = []
-        path = Constant.collections_path_default + user
+        path = collection_path + user
 
         if Constant.SEPARATE in data_set:
             directories.append(os.listdir(path + Constant.SEPARATE_PATH))
@@ -337,18 +376,12 @@ def load_raw_data_for_nn(users, sensor, data_set):
         for i in range(len(directories)):
             for steps in directories[i]:
                 index = steps[2:]
+                raw_data[index].extend(Save_Load.load_raw_for_single_sensor(path + path_add[i] + "/" + steps + "/"
+                                                                            + sensor + ".csv"))
 
-                if sensor == Constant.IMU:
-                    imu_dict[index].extend(Save_Load.load_raw_2(path + path_add[i] + "/" + steps + "/imu.csv"))
-                else:
-                    emg_dict[index].extend(Save_Load.load_raw_2(path + path_add[i] + "/" + steps + "/emg.csv"))
-        print("imu_dict['Step1']", len(imu_dict['Step1']))
-        print("Load raw data for", user, "done")
-
-    if sensor == Constant.IMU:
-        return imu_dict
-    else:
-        return emg_dict
+        print("Load raw data for", user, " - Done")
+    print("Raw data length", len(raw_data['Step0']))
+    return raw_data
 
 
 def load_raw_data_for_adapt_model(users, sensor):
@@ -392,20 +425,28 @@ def load_raw_data_for_adapt_model(users, sensor):
                 path_data = path + path_add[i] + "/" + steps
                 if sensor == Constant.IMU:
                     if steps.__contains__('s0'):
-                        training_dict[index].extend(Save_Load.load_raw_2(path_data + "/imu.csv"))
+                        training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
                     else:
-                        test_dict[index].extend(Save_Load.load_raw_2(path_data + "/imu.csv"))
+                        test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
                 else:
                     if steps.__contains__('s0'):
-                        training_dict[index].extend(Save_Load.load_raw_2(path_data + "/emg.csv"))
+                        training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
                     else:
-                        test_dict[index].extend(Save_Load.load_raw_2(path_data + "/emg.csv"))
+                        test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
 
         print(user, "done")
     return training_dict, test_dict
 
 
 def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
+    """
+
+    :param window:
+    :param overlap:
+    :param raw_data:
+    :param ignore_rest_gesture:
+    :return:
+    """
     labels, window_data, emg_data = [], [], []
     if ignore_rest_gesture:
         label = Constant.labels_without_rest
@@ -414,15 +455,15 @@ def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     for key in label:
         window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window, degree_of_overlap=overlap)
         window_data.extend(window_tmp)
-        s = np.vstack((window_data, window_tmp))
+        np.vstack((window_data, window_tmp))
         labels.extend(np.asarray(label))
     return window_data, labels
 
 
-def train_cnn(window, overlap, save_path, load_model_path="", sensor=Constant.IMU):
+def train_cnn(window, overlap, save_path="./", load_model_path="", sensor=Constant.IMU,cnn_model_name="CNN_1"):
     print("window", window, "overlap", overlap)
     if not load_model_path == "":
-        imu, emg = load_raw_data_for_nn(["User007"], sensor)
+        imu, emg = load_data_for_single_sensor(["User007"], sensor)
         imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu, emg, sensor)
         labels = [int(i) for i in labels]
         print(len(imu_windows), len(labels))
@@ -433,7 +474,7 @@ def train_cnn(window, overlap, save_path, load_model_path="", sensor=Constant.IM
             Deep_learning.predict_for_load_model(np.asarray(emg_windows), np.asarray(labels),
                                                  load_model(load_model_path + "/cnn_imu_model.h5"))
     else:
-        imu, emg = load_raw_data_for_nn(["User001"], sensor)
+        imu, emg = load_data_for_single_sensor(["User001"], sensor)
         imu_windows, emg_windows, labels = window_raw_data_for_nn(window, overlap, imu, emg, sensor)
         labels = [int(i) for i in labels]
         print(len(emg_windows), len(labels))
@@ -446,7 +487,8 @@ def train_cnn(window, overlap, save_path, load_model_path="", sensor=Constant.IM
         # Deep_learning.cnn_rehman(np.asarray(emg_windows), np.asarray(labels), save_path)
 
 
-def train_user_dependent(users, feature_set_path, ignore_rest_gesture=True, predefine_config=None, model_save_path=""):
+def train_user_dependent(users, feature_set_path, ignore_rest_gesture=True, predefine_config=None,
+                         model_save_path="./"):
     """
     Go over all config steps and prepare data for each combination of configuration.
     Each level in Config. can be changed in the Constant.py
@@ -478,7 +520,8 @@ def train_user_dependent(users, feature_set_path, ignore_rest_gesture=True, pred
                                 if predefine_config:
                                     config = predefine_config
 
-                                users_data = Save_Load.load_features(config=config, path=feature_set_path, users=[user])
+                                users_data = Save_Load.load_features(config=config, path=feature_set_path,
+                                                                     user_list=[user])
 
                                 if not users_data:
                                     continue
@@ -490,7 +533,7 @@ def train_user_dependent(users, feature_set_path, ignore_rest_gesture=True, pred
                                                                     config=config,
                                                                     user_name=user,
                                                                     classifiers=Constant.classifiers,
-                                                                    classifiers_name=Constant.classifiers_name,
+                                                                    classifiers_name=Constant.classifier_names,
                                                                     save_path=model_save_path,
                                                                     save_model=False,
                                                                     visualization=False)
@@ -510,7 +553,7 @@ def feature_extraction_complete(n_jobs=4):
         p.join()
 
 
-def user_dependent_complete(feature_set_path, save_path, n_jobs=4):
+def user_dependent_complete(feature_set_path, save_path="./", n_jobs=4):
     """
     Train the classifier SVM, KNN, LDA, QDA, Random Forest Bayers
     for all Users (User001 to User015)
@@ -525,8 +568,9 @@ def user_dependent_complete(feature_set_path, save_path, n_jobs=4):
     :return: No returns
     """
     partitioned_users = np.array_split(Constant.USERS, n_jobs)
-    processes = [mp.Process(target=train_user_dependent, args=([partitioned_users[i], feature_set_path, True, save_path]))
-                 for i in range(n_jobs)]
+    processes = [
+        mp.Process(target=train_user_dependent, args=([partitioned_users[i], feature_set_path, True, save_path]))
+        for i in range(n_jobs)]
     for p in processes:
         p.start()
     for p in processes:
@@ -567,7 +611,8 @@ def feature_extraction(users):
                                 process_raw_data(user, data_set=data_set, overlap=overlap,
                                                  sensor=sensor, window=window, feature=feature, pre=preprocessing)
 
-#TODO: Löschen?!
+
+# TODO: Löschen?!
 def calculation_config_statistics(load_path):
     """
 

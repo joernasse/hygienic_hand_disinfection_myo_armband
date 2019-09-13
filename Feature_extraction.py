@@ -1,20 +1,6 @@
-# import math
-#
-# import python_speech_features
-# from pyentrp import entropy as ent
 from UliEngineering.SignalProcessing.Utils import zero_crossings
-# from sampen import sampen2
-
 import Constant
 import numpy as np
-
-
-# def normalization(channel):
-#     channel_norm = []
-#     x_max = np.max(channel)
-#     for xi in channel:
-#         channel_norm.append((MAX_EMG_VALUE / x_max) * xi)
-#     return channel_norm
 
 
 def rms(array):  # root mean square
@@ -33,30 +19,12 @@ def mav(array):  # Mean Absolute Value
     return 1 / n * sum
 
 
-# def energy(array):  # Energy Ratio
-#     sum = 0
-#     for i in array:
-#         sum += i * i
-#     return sum
-
-
 def var(array):  # Variance
     n = len(array)
     sum = 0
     for i in array:
         sum += np.abs(i)
     return 1 / (n - 1) * sum
-
-
-# def wamp(array):  # Willison Amplitude
-#     n = len(array)
-#     sum = 0
-#     for i in range(n - 1):
-#         if np.abs(array[i] - array[i + 1]) >= threshold:
-#             sum += 1
-#         else:
-#             sum += 0
-#     return sum
 
 
 # Zero Crossing
@@ -92,15 +60,6 @@ def ssi(array):
     return sum
 
 
-# def tm3(array):
-#     n = len(array)
-#     print('n : ', n)
-#     sum = 0
-#     for i in array:
-#         sum += i * i * i
-#     return np.power((1 / float(n)) * sum, 1 / float(3))
-
-
 def wl(array):  # Waveform length
     sum = 0
     for i in range(0, len(array) - 1):
@@ -108,7 +67,12 @@ def wl(array):  # Waveform length
     return sum
 
 
-def cc(x):  # cepstral coeffcients
+def cc(x):
+    """
+    cepstral coeffcients
+    :param x:
+    :return:
+    """
     try:
         fft = np.fft.fft(x)
         ab = np.abs(fft)
@@ -121,8 +85,14 @@ def cc(x):  # cepstral coeffcients
         print(RuntimeWarning)
 
 
-# Average amplitude change
 def aac(array):
+    """
+    Average amplitude change
+    :param array:
+            data for which the Average amplitude change should be calculated
+    :return: float
+            flo
+    """
     n = len(array)
     sum = 0
     for i in range(0, n - 1):
@@ -130,43 +100,29 @@ def aac(array):
     return sum / float(n)
 
 
-# def to_euler(quat):
-#     magnitude = math.sqrt(quat.x ** 2 + quat.y ** 2 + quat.z ** 2 + quat.w ** 2)
-#     quat.x = quat.x / magnitude
-#     quat.y = quat.y / magnitude
-#     quat.z = quat.z / magnitude
-#     quat.w = quat.w / magnitude
-#
-#     # Roll
-#     roll = math.atan2(2.0 * (quat.w * quat.x + quat.y * quat.z),
-#                       1.0 - 2.0 * (quat.x * quat.x + quat.y * quat.y))
-#
-#     # Pitch
-#     pitch = math.asin(max(-1.0, min(1.0, 2.0 * quat.w * quat.y - quat.z * quat.x)))
-#
-#     # Yaw
-#     yaw = math.atan2(2.0 * (quat.w * quat.z + quat.x * quat.y),
-#                      1.0 - 2.0 * (quat.y * quat.y + quat.z * quat.z))
-#     return [pitch, roll, yaw]
-
-
-# # frequency domain
-# def amp_spec(array):  # Amplitude Spectrum
-#     freq_array = np.fft.fft(array)
-#     n = len(freq_array)
-#     sum = 0
-#     for a in freq_array:
-#         sum += np.abs(a)
-#     return sum
-
-
-# Rehman-EMGHandDeepLearning-2018.pdf
 def rehman(data):
+    """
+    Feature set from Rehman
+    Paper: Multiday EMG-Based Classification of Hand Motions with Deep Learning Techniques
+    :param data:array
+           Data from which features are to be extracted
+    :return: list
+            Feature vector
+    """
     return [mav(data), wl(data), ssc(data), zero_crossings(data).size]
 
 
-# Georgi-HandFingerGesturesIMUEMG-2015.pdf
 def georgi(data, sensor):
+    """
+    Feature set from geori
+    Paper: Recognizing Hand and Finger Gestures with IMU based Motion and EMG based Muscle Activity Sensing
+    :param data:array
+           Data from which features are to be extracted
+    :param sensor: string
+            The sensor type (EMG or IMU)
+    :return: list
+            Feature vector
+    """
     if sensor == Constant.EMG:
         return [np.std(data)]
     if sensor == Constant.IMU:
@@ -174,12 +130,21 @@ def georgi(data, sensor):
 
 
 def feature_extraction(windows, mode, sensor):
+    """
+
+    :param windows: list
+            The list of windows for which a feature extraction should be performed
+    :param mode: string
+            The feature extraction mode, describes the feature set which should be used
+    :param sensor: string
+            Describes the sensor (EMG or IMU, from Constrant.py) Only necessary for Georgi
+    :return: list
+        Returns a list of feature vectors
+    """
     features = []
     for window in windows:
         feature = []
         for data in window[:- 1]:
-            # if mode == Constant.phinyomark:
-            #     feature.extend(phinyomark(data=data))
             if mode == Constant.rehman:
                 feature.extend(rehman(data=data))
             elif mode == Constant.georgi:
@@ -193,32 +158,27 @@ def feature_extraction(windows, mode, sensor):
     return features
 
 
-# Default feature extraction from Rajiv_Mantena (GitHub)
 def mantena(data):
+    """
+    Feature Set from Rajiv_Mantena (GitHub)
+    https://github.com/rmantena/Myo_gestureArmBand_experiments
+    :param data:array
+           Data from which features are to be extracted
+    :return: list
+            Feature vector
+    """
     return [rms(data), iemg(data), ssi(data), var(data), wl(data), aac(data)]
 
 
-# # Paper [5] Feature choice
-# def phinyomark(data):
-#     # a=sampen2(data,2,0.2)
-#     b = ent.sample_entropy(data, 2, 0.2)
-#     # mfcc=python_speech_features.mfcc(data,len(data))
-#     cc1 = cc(data)
-#     return [ent.sample_entropy(data, 2, 0.2)[1], cc(data), rms(data), wl(data)]
-#
-#     # result = sampen2(window[1])  # SampEn test # ch0, result index 0 Epoch
-#     # # 1 is SampEn
-#     # # 2 is Std deviation
-
-
-# mean abs Value Slope
-def mavs(ch):
-    pass
-
-
-# Slope Sign Changes
-# https://pdfs.semanticscholar.org/3d85/7e8fa4bc59b614e6d220f2af644c3e886ba9.pdf
 def ssc(x):
+    """
+    # Slope Sign Changes
+    # https://pdfs.semanticscholar.org/3d85/7e8fa4bc59b614e6d220f2af644c3e886ba9.pdf
+    :param x: array
+           Data for which the slope sign changes should be calculated
+    :return: float
+            result of calculation (slope sign changes)
+    """
     f = 0
     for n in range(1, len(x) - 1):
         res = (x[n] - x[n - 1]) * x[n] - x[n + 1]
@@ -229,4 +189,12 @@ def ssc(x):
 
 # Robinson-PatternClassificationHand-2017.pdf
 def robinson(data):
-    return [rms(data), wl(data), ssc(data)]  # C6 RMS,WL,Scc 90,53%
+    """
+    Feature set from Robinson
+    Paper: Pattern Classification of Hand Movements using Time Domain Features of Electromyography
+    :param data:
+            Data from which features are to be extracted
+    :return: list
+            Feature vector
+    """
+    return [rms(data), wl(data), ssc(data)]

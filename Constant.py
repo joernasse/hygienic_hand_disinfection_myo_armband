@@ -58,7 +58,7 @@ hand_disinfection_description = ['Step 0    - Take disinfectant',
 COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
-SEPARATE = "individual"
+SEPARATE = "separate"
 
 # Process_data
 MAX_EMG_VALUE = 127
@@ -188,7 +188,7 @@ lda_parameter = {'solver': ['lsqr', 'eigen'],
                  'shrinkage': ['auto', 0.1, 0.5, 0.9]}
 qda = QDA()
 classifiers = [random_forest, lda, qda, gauss, knn, svc]
-classifiers_name = ["Random Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
+classifier_names = ["Random Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
 
 # ----------------------------------Pre processing with Filter and normalization----------------------------------------#
 count_devices = 2

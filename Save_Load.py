@@ -70,11 +70,18 @@ def save_features(features, file_name):
     return f
 
 
-def load_raw_2(path):
+# TODO: besserer Name
+def load_raw_for_single_sensor(path):
+    """
+
+    :param path:
+    :return:
+    """
     data = []
     try:
         file = open(path)
     except:
+        print("ERROR!")
         return []
     reader = csv.reader(file, delimiter=';')
     next(reader, None)
@@ -83,7 +90,7 @@ def load_raw_2(path):
     return numpy.asarray(data)
 
 
-def load_raw_data_for_emg_imu(emg_path, imu_path):
+def load_raw_data_for_both_sensors(emg_path, imu_path):
     """
 
     :param emg_path: string
@@ -135,19 +142,19 @@ def load_raw_data_for_emg_imu(emg_path, imu_path):
         raise
 
 
-def load_features(config, path, users=USERS):
+def load_features(config, path, user_list=USERS):
     """
 
     :param config: string
             Describes the configuration for the features
-    :param users: array
+    :param user_list: array
             Describes the array of users for which the features should be load
     :param path: sting
             Describe the path to the directory where the features saved
     :return:
     """
     users_data = []
-    for user in users:
+    for user in user_list:
         data, label_ = [], []
         try:
             file = open(path + user + "-" + config + ".csv")
