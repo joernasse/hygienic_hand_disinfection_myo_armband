@@ -142,7 +142,7 @@ def load_raw_data_for_both_sensors(emg_path, imu_path):
         raise
 
 
-def load_features(config, path, user_list=USERS):
+def load_raw_data(config, path, user_list=USERS):
     """
 
     :param config: string

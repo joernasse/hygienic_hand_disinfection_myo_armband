@@ -9,32 +9,18 @@ from sklearn.metrics import confusion_matrix
 
 def cls():
     """
-
-    :return:
+    Clear commandline window
+    :return: No returns
     """
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def countdown(introduction_screen, t=5):
-    """
-    
-    :param introduction_screen: 
-    :param t: 
-    :return: 
-    """
-    while t:
-        min, secs = divmod(t, 60)
-        time_format = '{:02d}:{:02d}'.format(min, secs)
-        introduction_screen.set_status_text("Pause! " + time_format)
-        time.sleep(1)
-        t -= 1
-
-
 def wait(time_in_sec):
     """
-
-    :param time_in_sec:
-    :return:
+    Wait a specific time, like busy waiting
+    :param time_in_sec: int
+            The time to wait
+    :return: No returns
     """
     dif = 0
     start = time.time()
@@ -43,30 +29,36 @@ def wait(time_in_sec):
         dif = end - start
 
 
-# def divide_chunks(l, n):
-#     tmp = []
-#     for i in range(0, len(l), n):
-#         tmp.append(l[i:i + n])
-#     return tmp
-
-
-def plot_confusion_matrix(y_true, y_pred, classes, normalize=False, title=None, cmap=plt.cm.Blues):
+def plot_confusion_matrix(y_true, y_predict, classes, norm=False, title=None, cmap=plt.cm.Blues):
     """
     From https://scikit-learn.org/stable/auto_examples/model_selection/plot_confusion_matrix.html
     This function prints and plots the confusion matrix.
     Normalization can be applied by setting `normalize=True`.
+    :param y_true: list
+            The correct labels for a set of data(samples)
+    :param y_predict: list
+            The predicted list for the same set of data, where the y_true came from
+    :param classes: list
+            List with classes(categories)
+    :param norm: boolean
+            If True, confusion matrix will normalizized
+            If False, confusion matrix will not normalizised
+    :param title: string, default=None
+            Describes the titel of the plot
+    :param cmap:
+    :return:
     """
     if not title:
-        if normalize:
+        if norm:
             title = 'Normalized confusion matrix'
         else:
             title = 'Confusion matrix, without normalization'
 
     # Compute confusion matrix
-    cm = confusion_matrix(y_true, y_pred)
+    cm = confusion_matrix(y_true, y_predict)
     # Only use the labels that appear in the data
     # classes = classes[unique_labels(y_true, y_pred)]
-    if normalize:
+    if norm:
         cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
         print("Normalized confusion matrix")
     else:
@@ -91,7 +83,7 @@ def plot_confusion_matrix(y_true, y_pred, classes, normalize=False, title=None, 
              rotation_mode="anchor")
 
     # Loop over data dimensions and create text annotations.
-    fmt = '.2f' if normalize else 'd'
+    fmt = '.2f' if norm else 'd'
     thresh = cm.max() / 2.
     for i in range(cm.shape[0]):
         for j in range(cm.shape[1]):
@@ -102,58 +94,64 @@ def plot_confusion_matrix(y_true, y_pred, classes, normalize=False, title=None, 
     return fig
 
 
-def visualization(history, y_true, y_predict, show_figures=False,
-                  labels=Constant.label_display_without_rest, config="", save_path=""):
+def result_visualization(y_true, y_predict, show_figures=False,
+                         labels=Constant.label_display_without_rest, config="", save_path=""):
     """
 
     :param history:
-    :param y_true:
-    :param y_predict:
+    :param y_true: list
+            The correct labels for a set of data(samples)
+    :param y_predict: list
+            The predicted list for the same set of data, where the y_true came from
     :param show_figures:
     :param labels:
     :param config:
     :param save_path:
     :return:
     """
-    if not history == 0:
-        visualization_history(history, save_path=save_path, config=config, show=show_figures)
-
     np.set_printoptions(precision=2)
+
     # Plot non-normalized confusion matrix
     matrix = plot_confusion_matrix(y_true, y_predict, classes=labels,
                                    title='Confusion matrix, without normalization')
-    matrix.savefig(save_path + config + "_confusion_matrix.svg")
 
     # Plot normalized confusion matrix
-    norm_matrix = plot_confusion_matrix(y_true, y_predict, classes=labels, normalize=True,
+    norm_matrix = plot_confusion_matrix(y_true, y_predict, classes=labels, norm=True,
                                         title='Normalized confusion matrix')
+
     norm_matrix.savefig(save_path + config + "_norm_confusion_matrix.svg")
+    matrix.savefig(save_path + config + "_confusion_matrix.svg")
 
     if show_figures:
         plt.show()
 
+    acc_score=sklearn.metrics.accuracy_score(y_true, y_predict)
     print("Accuracy score", sklearn.metrics.accuracy_score(y_true, y_predict),
           "\nClassification report", sklearn.metrics.classification_report(y_true, y_predict),
           "\nMean absolute error", sklearn.metrics.mean_absolute_error(y_true, y_predict))
 
-    f = open(save_path + config + "Overview" + config + ".txt", 'a', newline='')
+    f = open(save_path + config + "Results" + config + ".txt", 'a', newline='')
     with f:
-        for txt in ["Accuracy score " + str(sklearn.metrics.accuracy_score(y_true, y_predict)),
+        for txt in ["Accuracy score " + str(acc_score),
                     "Classification report " + str(sklearn.metrics.classification_report(y_true, y_predict)),
                     "Mean absolute error " + str(sklearn.metrics.mean_absolute_error(y_true, y_predict))]:
             f.writelines(str(txt))
     f.close()
     print("Visualization finish")
-    return sklearn.metrics.accuracy_score(y_true, y_predict)
+    return acc_score
 
 
-def visualization_history(history, save_path="", config="", show=False):
+def process_history(history, save_path="", config="", show_results=False):
     """
 
     :param history:
-    :param save_path:
-    :param config:
-    :param show:
+    :param save_path: sting
+            Path for saving the file (folder)
+    :param config: string 
+            The configuration of data processing
+    :param show_results: boolean, default False
+            If True, visualization will show
+            If False, visualization will not show
     :return:
     """
     # Plot training & validation accuracy values
@@ -164,7 +162,7 @@ def visualization_history(history, save_path="", config="", show=False):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.savefig(save_path + config + "_accuracy.svg")
-    if show:
+    if show_results:
         plt.show()
 
     # Plot training & validation loss values
@@ -175,15 +173,18 @@ def visualization_history(history, save_path="", config="", show=False):
     plt.xlabel('Epoch')
     plt.legend(['Train', 'Validation'], loc='upper left')
     plt.savefig(save_path + config + "_loss.svg")
-    if show:
+    if show_results:
         plt.show()
 
 
 def flat_users_data(dict_data):
     """
 
-    :param dict_data:
-    :return:
+    :param dict_data:dict{'data':list,'label':list}
+            Represent the data structure as directory. Contains data and labels
+    :return: array,array
+            x: The flatted array for data
+            y: The flatted array for labels
     """
     x, y = [], []
     for user in dict_data:
@@ -191,3 +192,48 @@ def flat_users_data(dict_data):
             x.append(user['data'][n])
             y.append(user['label'][n])
     return x, y
+
+
+def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
+    """
+
+    :param data:
+    :param sensor:
+    :param mode:
+    :return:
+    """
+    print("Normalization by Rest gesture - Start")
+    if sensor == Constant.IMU:
+        element = 10
+    else:
+        element = 9
+    rest_data = data['Rest']
+    channel, mean = [], []
+    if mode == 'rest_mean':
+        for ch in range(1, element):
+            for i in range(len(rest_data)):
+                channel.append(rest_data[i][ch])
+            mean.append(np.mean(channel))  # Mean of base REST over all channels (1-8)
+
+        try:
+            for d in data:
+                if d == 'Rest':
+                    continue
+                for ch in range(1, element):  # Channel/ IMU entries
+                    for i in range(len(data[d])):  # Elements
+                        data[d][i][ch] = data[d][i][ch] / mean[ch - 1]
+        except:
+            print("Not expected exception in normalization by rest function")
+            raise
+
+    if mode == 'max_value_channel':
+        for d in data:
+            items = []
+            for ch in range(1, element):
+                for i in range(len(data[d])):
+                    items.append(data[d][i][ch])
+                max_val = max(items)
+                items = items / max_val
+    print("Normalization by Rest gesture - Done")
+    return data
+

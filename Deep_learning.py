@@ -1,25 +1,85 @@
-# CNN
-import gc
-import os
-import random
 from collections import Counter
 from time import time
 
 import numpy as np
-import sklearn
-import Constant
 import keras
-import tensorflow
+from keras import layers
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from tensorflow.python import keras
 from tensorflow.python.keras import Sequential, optimizers
 from tensorflow.python.keras.layers import Conv2D, Flatten, Dense, MaxPooling2D, Dropout, BatchNormalization, Activation
 import tensorflow as tf
-from tensorflow.keras import layers
-from Helper_functions import flat_users_data
-
+# from tensorflow.keras import layers
+import Constant
 import Helper_functions
+
+
+def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_stopping=20, cnn_pattern=Constant.CNN_1,
+                  validation_size=Constant.validation_set_size, test_size=Constant.test_set_size, perform_test=False,
+                  visualization=False):
+    """
+
+    :param x:
+    :param y:
+    :param save_path:
+    :param batch:
+    :param epochs:
+    :param config:
+    :param early_stopping:
+    :param cnn_pattern:
+    :param test_size:
+    :param validation_size:
+    :param perform_test:
+    :param visualization:
+    :return:
+    """
+
+    x_train, x_test, x_val, y_train, y_test, y_val_one_hot, classes = prepare_data_for_cnn(x, y,
+                                                                                           validation_size=validation_size,
+                                                                                           test_size=test_size,
+                                                                                           calc_test_set=perform_test)
+    acc = 0
+    print("Training", len(x_train),
+          "\nValidation", len(x_val),
+          "\nTest", len(x_test),
+          "\nBatch size", batch,
+          "\nEpochs", epochs)
+    print("Training for", cnn_pattern, " - Start")
+    if cnn_pattern == Constant.CNN_KAGGLE:
+        model = create_kaggle_model(x_train.shape[1], x_train.shape[2], classes)
+    else:
+        model = create_cnn_1_model(x_train.shape[1], x_train.shape[2], classes)
+
+    cp_callback = [
+        keras.callbacks.EarlyStopping(
+            monitor='val_acc', patience=early_stopping,
+            mode='max', verbose=1),
+        keras.callbacks.ModelCheckpoint(
+            save_path + "/" + config + "_cnn_" + cnn_pattern + ".h5", verbose=1,
+            monitor='val_acc', save_best_only=True, mode='max')]
+
+    history = model.fit(x_train, y_train,
+                        batch_size=batch,
+                        epochs=epochs,
+                        validation_data=(x_val, y_val_one_hot),
+                        callbacks=cp_callback,
+                        verbose=1,
+                        shuffle=True,
+                        use_multiprocessing=True)
+    print("Training for", cnn_pattern, " - Done")
+    if visualization:
+        Helper_functions.process_history(history, save_path=save_path, config=config, show_results=visualization)
+
+    if perform_test:
+        print("Prediction for", cnn_pattern, " - Start")
+        y_predict = model.predict_classes(x_test, batch_size=batch)
+        print("Prediction for", cnn_pattern, " - Done")
+        acc = Helper_functions.result_visualization(y_test, y_predict, save_path=save_path, config=config)
+
+    print("Train for " + cnn_pattern + " done")
+    del x_train, y_train, x_val, x_test, x_val, y_val_one_hot
+    return model, cnn_pattern, acc
 
 
 def dnn(save_path, users_data, batch, epochs):
@@ -36,8 +96,8 @@ def dnn(save_path, users_data, batch, epochs):
     train_users = users_data.copy()
     train_users.pop(0)
 
-    x_train, y_train = flat_users_data(train_users)
-    x_test, y_test = flat_users_data([test_user])
+    x_train, y_train = Helper_functions.flat_users_data(train_users)
+    x_test, y_test = Helper_functions.flat_users_data([test_user])
 
     classes = 13
 
@@ -73,152 +133,108 @@ def dnn(save_path, users_data, batch, epochs):
     print("finish")
 
 
-def cnn_kaggle(x, y, save_path, batch, epochs, config, early_stopping=20):
+def prepare_data_for_cnn(x, y, validation_size=0.1, test_size=Constant.test_set_size, calc_test_set=False):
     """
 
     :param x:
     :param y:
-    :param save_path:
-    :param batch:
-    :param epochs:
-    :param config:
-    :param x_test_in:
-    :param y_test_in:
-    :param early_stopping:
+    :param adapt_model:
+    :param validation_size:
+    :param calc_test_set:
+    :param test_size:
     :return:
     """
-    x_train, x_test, y_train, classes, y_test, x_val, y_val_one_hot = pre_process_cnn(x, y, validation_size=0.1)
-    print("Training", len(x_train),
-          "\nValidation", len(x_val),
-          "\nTest", len(x_test))
-    model = kaggle_model(x_train.shape[1], x_train.shape[2])
-
-    cp_callback = [
-        keras.callbacks.EarlyStopping(
-            monitor='val_acc',
-            patience=early_stopping,
-            mode='max',
-            verbose=1),
-        keras.callbacks.ModelCheckpoint(
-            save_path + "/" + config + "_cnn_kaggle.h5",
-            verbose=1,
-            monitor='val_acc',
-            save_best_only=True,
-            mode='max')]
-
-    history = model.fit(x_train, y_train,
-                        batch_size=batch,
-                        epochs=epochs,
-                        validation_data=(x_val, y_val_one_hot),
-                        callbacks=cp_callback,
-                        verbose=1,
-                        shuffle=True,
-                        use_multiprocessing=True)
-
-    print("CNN pattern kaggle", "batch_size", batch, "epochs", epochs)
-
-    y_predict = model.predict_classes(x_test,batch_size=batch)
-    acc = Helper_functions.visualization(history, y_test, y_predict, save_path=save_path, config=config)
-
-    print("Train for CNN_Kaggle done")
-    del x_train, y_train, x_val, x_test
-    return model, "CNN_Kaggle", acc
-
-
-def pre_process_cnn(x, y, adapt_model=False, validation_size=0.1, calc_test_set=True):
     classes = len(Counter(y).keys())
-    if adapt_model:
-        x = np.array(x)[:, :, :, np.newaxis]
-        y = to_categorical(y)
-        return x, y, classes
+    if test_size > 0 and calc_test_set:
+        x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=test_size)
+        x_test = np.array(x_test)[:, :, :, np.newaxis]
+    else:
+        x_train = x
+        y_train = y
+        x_test, y_test = [], []
 
-    samples_number_val_size = int(len(x) * validation_size)
-    x, x_val, y, y_val = train_test_split(x, y, random_state=42, test_size=validation_size)
+    validation_size = (int(len(x) * validation_size)) / len(x)
+    x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, random_state=42, test_size=validation_size)
+
     y_val_one_hot = to_categorical(y_val)
     x_val = np.array(x_val)[:, :, :, np.newaxis]
-    if not calc_test_set:
-        x_train = np.array(x)[:, :, :, np.newaxis]
-        y_train = to_categorical(y)
-        return x_train, [], y_train, classes, [], x_val, y_val_one_hot
 
-    test_size = samples_number_val_size / len(x)
-    x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=test_size)
     x_train = np.asarray(x_train)
     x_train = np.array(x_train)[:, :, :, np.newaxis]
-    x_test = np.array(x_test)[:, :, :, np.newaxis]
+
     y_train = to_categorical(y_train)
-    return x_train, x_test, y_train, classes, y_test, x_val, y_val_one_hot
+    return x_train, x_test, x_val, y_train, y_test, y_val_one_hot, classes
 
 
-def cnn_1(x, y, save_path, batch, epochs, config=""):
-    """
-
-    :param x:
-    :param y:
-    :param save_path:
-    :param batch:
-    :param epochs:
-    :param config:
-    :return:
-    """
-    print("batch_size", batch, "epochs", epochs)
-    x_train, x_test, y_train, y_test_one_hot, classes, y_test, x_val, y_val_one_hot = pre_process_cnn(x, y,
-                                                                                                      validation_size=0.1)
-
-    model = Sequential()
-
-    # layer 1
-    model.add(Conv2D(32, kernel_size=3,
-                     activation='relu',
-                     input_shape=(x_train.shape[1],
-                                  x_train.shape[2], 1)))
-    model.add(MaxPooling2D(pool_size=(2, 2)))
-
-    # Layer 2
-    model.add(Conv2D(32, kernel_size=3,
-                     activation='relu'))
-    # model.add(MaxPooling2D(pool_size=(2, 2)))
-    #
-    # Layer 3
-    model.add(Flatten())
-    model.add(Dense(512, activation='elu'))
-    model.add(Dense(classes, activation='softmax'))
-
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer='adam',
-                  metrics=['accuracy'])
-
-    cp_callback = [
-        keras.callbacks.EarlyStopping(
-            monitor='val_acc',
-            patience=20,
-            mode='max',
-            verbose=1),
-        keras.callbacks.ModelCheckpoint(
-            save_path + "/" + config + "_cnn_1.h5",
-            verbose=1,
-            monitor='val_acc',
-            save_best_only=True,
-            mode='max')]
-
-    history = model.fit(x_train, y_train,
-                        batch_size=batch,
-                        epochs=epochs,
-                        validation_data=(x_val, y_val_one_hot),
-                        callbacks=cp_callback,
-                        verbose=1, shuffle=True)
-
-    y_predict = model.predict_classes(x_test, batch)
-
-    model.summary()
-
-    acc = Helper_functions.visualization(history, y_test, y_predict, save_path=save_path, config=config)
-    print("Train and predict CNN1 done")
-    del model
-    keras.backend.clear_session()
-    gc.collect()
-    del x_train, y_train, x_val, x_test
-    return "CNN_1", acc
+# def cnn_1(x, y, save_path, batch, epochs, config=""):
+#     """
+#
+#     :param x:
+#     :param y:
+#     :param save_path:
+#     :param batch:
+#     :param epochs:
+#     :param config:
+#     :return:
+#     """
+#     print("batch_size", batch, "epochs", epochs)
+#     x_train, x_test, y_train, y_test_one_hot, classes, y_test, x_val, y_val_one_hot = pre_process_cnn(x, y,
+#                                                                                                       validation_size=0.1)
+#
+#     # model = Sequential()
+#     #
+#     # # layer 1
+#     # model.add(Conv2D(32, kernel_size=3,
+#     #                  activation='relu',
+#     #                  input_shape=(x_train.shape[1],
+#     #                               x_train.shape[2], 1)))
+#     # model.add(MaxPooling2D(pool_size=(2, 2)))
+#     #
+#     # # Layer 2
+#     # model.add(Conv2D(32, kernel_size=3,
+#     #                  activation='relu'))
+#     # # model.add(MaxPooling2D(pool_size=(2, 2)))
+#     # #
+#     # # Layer 3
+#     # model.add(Flatten())
+#     # model.add(Dense(512, activation='elu'))
+#     # model.add(Dense(classes, activation='softmax'))
+#
+#     model.compile(loss=keras.losses.categorical_crossentropy,
+#                   optimizer='adam',
+#                   metrics=['accuracy'])
+#
+#     cp_callback = [
+#         keras.callbacks.EarlyStopping(
+#             monitor='val_acc',
+#             patience=20,
+#             mode='max',
+#             verbose=1),
+#         keras.callbacks.ModelCheckpoint(
+#             save_path + "/" + config + "_cnn_1.h5",
+#             verbose=1,
+#             monitor='val_acc',
+#             save_best_only=True,
+#             mode='max')]
+#
+#     history = model.fit(x_train, y_train,
+#                         batch_size=batch,
+#                         epochs=epochs,
+#                         validation_data=(x_val, y_val_one_hot),
+#                         callbacks=cp_callback,
+#                         verbose=1, shuffle=True)
+#
+#     y_predict = model.predict_classes(x_test, batch)
+#
+#     model.summary()
+#
+#     acc = Helper_functions.result_visualization(history, y_test, y_predict, save_path=save_path, config=config)
+#     print("Train and predict CNN1 done")
+#     del model
+#     keras.backend.clear_session()
+#     gc.collect()
+#     del x_train, y_train, x_val, x_test
+#     return "CNN_1", acc
 
 
 def adapt_model_for_user(x_train, y_train, save_path, batch, epochs,
@@ -237,11 +253,11 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs,
     :param model:
     :return:
     """
-    x_train, y_train, classes, = pre_process_cnn(x_train, y_train, adapt_model=True)
+    x_train, y_train, classes, = prepare_data_for_cnn(x_train, y_train, adapt_model=True)
     save_path_1 = save_path + "/cnn_kaggle_adapt_model.h5"
     if model is None:
         print("No model loaded, use new model")
-        model = kaggle_model(x_train.shape[1], x_train.shape[2])
+        model = create_kaggle_model(x_train.shape[1], x_train.shape[2])
         save_path_1 = save_path + "/cnn_kaggle_only_user_short_train_model.h5"
         epochs = epochs * 5  # Da untrainiertes Netz
     cp_callback = [
@@ -268,34 +284,57 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs,
     print("--- %s seconds ---" % (time() - start))
     model.summary()
 
-    x_test, tmp_y, tmp = pre_process_cnn(x_test, y_test, adapt_model=True)
+    x_test, tmp_y, tmp = prepare_data_for_cnn(x_test, y_test, adapt_model=True)
     y_predict = model.predict_classes(x_test, batch)
 
-    Helper_functions.visualization(history, y_test, y_predict)
+    Helper_functions.result_visualization(history, y_test, y_predict)
     # plt.show()
     print("finish")
 
 
-def predict_for_load_model(x, y, model, batch_size):
+def predict_for_load_model(x_test, y_test, model, batch_size):
     """
 
-    :param x:
-    :param y:
+    :param x_test:
+    :param y_test:
     :param model:
     :param batch_size:
     :return:
     """
-    x = np.array(x)[:, :, :, np.newaxis]
-    y_predict = model.predict_classes(x, batch_size)
-    eval = model.evaluate(x, to_categorical(y))
+    x_test = np.array(x_test)[:, :, :, np.newaxis]
+    y_predict = model.predict_classes(x_test, batch_size)
+    eval = model.evaluate(x_test, to_categorical(y_test))
     print("EVAL", eval)
-    Helper_functions.visualization(0, y, y_predict, show_figures=True)
+    Helper_functions.result_visualization(y_test, y_predict, show_figures=True)
 
 
-def kaggle_model(shape_x, shape_y):
+def create_cnn_1_model(shape_x, shape_y, output):
+    model = Sequential()
+
+    # layer 1
+    model.add(Conv2D(32, kernel_size=3,
+                     activation='relu',
+                     input_shape=(shape_x,
+                                  shape_y, 1)))
+    model.add(MaxPooling2D(pool_size=(2, 2)))
+
+    # Layer 2
+    model.add(Conv2D(32, kernel_size=3,
+                     activation='relu'))
+    # model.add(MaxPooling2D(pool_size=(2, 2)))
+    #
+    # Layer 3
+    model.add(Flatten())
+    model.add(Dense(512, activation='elu'))
+    model.add(Dense(output, activation='softmax'))
+    return model
+
+
+def create_kaggle_model(shape_x, shape_y, output):
     """
     :param shape_x:
     :param shape_y:
+    :param output:
     :return:
     """
     model = keras.Sequential()
@@ -329,7 +368,7 @@ def kaggle_model(shape_x, shape_y):
     model.add(keras.layers.BatchNormalization())
 
     # Output Layer
-    model.add(keras.layers.Dense(12, activation='softmax'))
+    model.add(keras.layers.Dense(output, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=keras.optimizers.RMSprop(),

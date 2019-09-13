@@ -114,8 +114,8 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
         name = classifiers_name[i]
 
         if visualization:
-            Helper_functions.visualization(history=0, y_true=y_test, y_predict=y_predict, show_figures=False,
-                                           labels=Constant.labels_without_rest, config=config)
+            Helper_functions.result_visualization(y_true=y_test, y_predict=y_predict, show_figures=False,
+                                                  labels=Constant.labels_without_rest, config=config)
             plt.show()
         if save_model:
             save = save_path + "/" + name + config + '.joblib'
@@ -147,7 +147,7 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
     print("User dependent - Start ")
     best, best_clf, name = 0, None, "no_name"
     x_train, x_test, y_train, y_test = train_test_split(user_data['data'], user_data['label'],
-                                                        test_size=Constant.TEST_SIZE, random_state=42, shuffle=True)
+                                                        test_size=Constant.test_set_size, random_state=42, shuffle=True)
     for i in range(len(classifiers)):
         classifiers[i].fit(x_train, y_train)
         y_predict = classifiers[i].predict(x_test)
@@ -168,8 +168,8 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
         f.close()
 
         if visualization:
-            Helper_functions.visualization(0, y_test, y_predict, True, Constant.label_display_with_rest, config,
-                                           save_path)
+            Helper_functions.result_visualization(y_test, y_predict, True, Constant.label_display_with_rest, config,
+                                                  save_path)
 
     if save_model:
         save_classifier(best_clf, save_path + name + user_name + "-" + config + ".joblib")
@@ -203,7 +203,7 @@ def predict_for_unknown_user(model, unknown_user_data, norm=False):
     if norm:
         x = norm_data(x)
     y_predict = model.predict(x)
-    Helper_functions.visualization(0, y, y_predict)
+    Helper_functions.result_visualization(y, y_predict)
     plt.show()
 
 

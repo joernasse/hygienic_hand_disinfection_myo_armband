@@ -11,8 +11,9 @@ from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W
 from tkinter.ttk import Progressbar, Separator, Frame
 from PIL import Image, ImageTk
 from myo import init, Hub, StreamEmg
-from Helper_functions import countdown, wait
+from Helper_functions import wait
 from Save_Load import save_raw_data, create_directories_for_data_collection
+
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # Emg
@@ -284,6 +285,19 @@ class IntroductionScreen(Frame):
             wait(3)
             self.close()
 
+    def countdown(self, time=5):
+        """
+
+        :param introduction_screen:
+        :param time:
+        :return:
+        """
+        while time:
+            min, secs = divmod(time, 60)
+            time_format = '{:02d}:{:02d}'.format(min, secs)
+            self.set_status_text("Pause! " + time_format)
+            time.sleep(1)
+            time -= 1
     def close(self):
         """
         Close the current window

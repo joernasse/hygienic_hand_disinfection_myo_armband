@@ -8,7 +8,7 @@ from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
 from sklearn.naive_bayes import GaussianNB as GAUSS
 
 label_display_with_rest = ['Step 0',
-                           'Step 1', 'Step 1.1', 'Step 1.2',
+                           'Step 1', 'St    ep 1.1', 'Step 1.2',
                            'Step 2', 'Step 2.1',
                            'Step 3',
                            'Step 4',
@@ -67,7 +67,8 @@ threshold = 0.30 * MAX_EMG_VALUE
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 collections_path_default = 'G:/Masterarbeit/Collections/'
-TEST_SIZE = 0.2
+test_set_size = 0.1
+validation_set_size = 0.2
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
 
@@ -209,3 +210,6 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 
 # Georgi Normalization
 # Used no Filter only Z-normalization
+
+CNN_1 = "CNN_1"
+CNN_KAGGLE = "CNN_Kaggle"

@@ -1,10 +1,9 @@
 import os
 import signal
-
 from scipy.stats import zscore
 import Constant
 import Feature_extraction as fe
-from Save_Load import load_raw_data_for_both_sensors, save_features
+import Save_Load
 import numpy as np
 
 np.seterr(divide='ignore')
@@ -52,7 +51,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                 features = []
                 # s_path = load_path + path_add[i] + "/" + steps
 
-                raw_emg, raw_imu = load_raw_data_for_both_sensors(
+                raw_emg, raw_imu = Save_Load.load_raw_data_for_both_sensors(
                     emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
                     imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
 
@@ -90,7 +89,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
             os.mkdir(save_path_for_featureset)
         filename = user + "-" + pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
             overlap) + "-" + feature
-        save_features(features, save_path_for_featureset + "/" + filename + ".csv")
+        Save_Load.save_features(features, save_path_for_featureset + "/" + filename + ".csv")
         print(filename + " done")
         return True
     except:
@@ -245,3 +244,89 @@ def z_norm(emg, imu):
     except:
         print("Error! Problem in Z normalization")
         raise
+
+
+def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=Constant.collections_path_default):
+    """
+
+    :param user_list:
+    :param sensor:
+    :param data_set:
+    :param collection_path:
+    :return:
+    """
+    global path_add
+    raw_data = {'Step0': [],
+                'Step1': [],
+                'Step1_1': [],
+                'Step1_2': [],
+                'Step2': [],
+                'Step2_1': [],
+                'Step3': [],
+                'Step4': [],
+                'Step5': [],
+                'Step5_1': [],
+                'Step6': [],
+                'Step6_1': [],
+                'Rest': []}
+
+    for user in user_list:
+        directories = []
+        path = collection_path + user
+
+        if Constant.SEPARATE in data_set:
+            directories.append(os.listdir(path + Constant.SEPARATE_PATH))
+
+        if Constant.CONTINUES in data_set:
+            directories.append(os.listdir(path + Constant.CONTINUES_PATH))
+
+        for i in range(len(directories)):
+            for steps in directories[i]:
+                index = steps[2:]
+                raw_data[index].extend(Save_Load.load_raw_for_single_sensor(path + path_add[i] + "/" + steps + "/"
+                                                                            + sensor + ".csv"))
+
+        print("Load raw data for", user, " - Done")
+    print("Raw data length", len(raw_data['Step0']))
+    return raw_data
+
+
+def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
+    """
+
+    :param window:
+    :param overlap:
+    :param raw_data:
+    :param ignore_rest_gesture:
+    :return:
+    """
+    labels, window_data, emg_data = [], [], []
+    if ignore_rest_gesture:
+        label = Constant.labels_without_rest
+    else:
+        label = Constant.label
+    for key in label:
+        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window,
+                                                  degree_of_overlap=overlap)
+        window_data.extend(window_tmp)
+        np.vstack((window_data, window_tmp))
+        labels.extend(np.asarray(label))
+    return window_data, labels
+
+
+def remove_rest_gesture_data(user_data):
+    """
+    Remove the "Rest" Gessture data from a given data set
+    :param user_data: list<dict{'data':array,'label':array}>
+            The data set from which the date of "Rest" gesture shoul be removed
+    :return: list<dict{'data':array,'label':array}>
+    """
+    data, label_ = [], []
+    for i in range(len(user_data['label'])):
+        if user_data['label'][i] == 12:
+            continue
+        data.append(user_data['data'][i])
+        label_.append(user_data['label'][i])
+    user_data['data'] = data
+    user_data['label'] = label_
+    return user_data
