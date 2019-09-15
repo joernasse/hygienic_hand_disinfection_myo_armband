@@ -31,6 +31,8 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
         The pre processing setting: filter, z-normalization, no pre processing
     :param save_path_for_featureset: string, default Constant.collection_path_default('G:/Masterarbeit/Collections/')
             Describes the save path for features. If empty the default path "./" will be used
+    :param load_path: string
+            Path to the Collection folder which contains the raw data
     """
     features = []
     save_path_for_featureset += user + "/features"
@@ -49,8 +51,6 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
             tmp_features = []
             for steps in directories[i]:  # go through all Steps
                 features = []
-                # s_path = load_path + path_add[i] + "/" + steps
-
                 raw_emg, raw_imu = Save_Load.load_raw_data_for_both_sensors(
                     emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
                     imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
@@ -255,7 +255,7 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
     :param collection_path:
     :return:
     """
-    global path_add
+    path_add=[]
     raw_data = {'Step0': [],
                 'Step1': [],
                 'Step1_1': [],
@@ -276,9 +276,11 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
 
         if Constant.SEPARATE in data_set:
             directories.append(os.listdir(path + Constant.SEPARATE_PATH))
+            path_add.append(Constant.SEPARATE_PATH)
 
         if Constant.CONTINUES in data_set:
             directories.append(os.listdir(path + Constant.CONTINUES_PATH))
+            path_add.append(Constant.SEPARATE_PATH)
 
         for i in range(len(directories)):
             for steps in directories[i]:

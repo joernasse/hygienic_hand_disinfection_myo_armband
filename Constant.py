@@ -150,6 +150,9 @@ USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
+USERS_SUB = ["User007", "User008",
+             "User009", "User010", "User011", "User012",
+             "User013", "User014", "User015"]
 
 # Without user007
 USERS_cross = ["User002", "User003", "User004",

@@ -5,7 +5,7 @@ import time
 import Constant
 import logging as log
 import Live_Prediction_Prototype
-import myo as lib_myo
+import myo as libmyo
 from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL, \
     DISABLED, NORMAL
 from tkinter.ttk import Progressbar, Separator, Frame
@@ -43,7 +43,7 @@ introduction_window = Tk()
 collect_window = Tk()
 
 
-class GestureListener(lib_myo.DeviceListener):
+class GestureListener(libmyo.DeviceListener):
     def __init__(self, queue_size=1):
         self.lock = threading.Lock()
         self.emg_data_queue = collections.deque(maxlen=queue_size)
@@ -76,7 +76,7 @@ class GestureListener(lib_myo.DeviceListener):
 
 init()
 hub = Hub()
-device_listener = lib_myo.ApiDeviceListener()
+device_listener = libmyo.ApiDeviceListener()
 gesture_listener = GestureListener()
 
 
@@ -416,8 +416,8 @@ def pair_devices():
                     DEVICE_R = d
                     DEVICE_R.stream_emg(True)
             if not (DEVICE_L is None) and not (DEVICE_R is None):
-                DEVICE_R.vibrate(lib_myo.VibrationType.short)
-                DEVICE_L.vibrate(lib_myo.VibrationType.short)
+                DEVICE_R.vibrate(libmyo.VibrationType.short)
+                DEVICE_L.vibrate(libmyo.VibrationType.short)
                 log.info("Devices paired")
                 return True
             wait(2)
@@ -488,12 +488,12 @@ def collect_data(current_session):
 
             g_introduction_screen.set_countdown_text("")
 
-            DEVICE_R.vibrate(type=lib_myo.VibrationType.short)
+            DEVICE_R.vibrate(type=libmyo.VibrationType.short)
             g_introduction_screen.set_status_text("Start!")
 
             collect_raw_data()
 
-            DEVICE_L.vibrate(type=lib_myo.VibrationType.short)
+            DEVICE_L.vibrate(type=libmyo.VibrationType.short)
 
             g_introduction_screen.set_status_text("Pause")
             g_introduction_screen.update_gesture_bar(0)

@@ -34,7 +34,7 @@ def preprocess_raw_data(window, overlap, user_list, data_set, preprocess, sensor
     print("Window", window, "Overlap", overlap)
 
     raw_data = Process_data.collect_data_for_single_sensor(user_list, sensor, data_set)
-    print(len(raw_data['Step1']))
+    # print(len(raw_data['Step1']))
     if norm_by_rest:
         print("Start normalization")
         raw_data = Helper_functions.normalize_by_rest_gesture(data=raw_data, sensor=sensor)
@@ -55,7 +55,6 @@ def preprocess_raw_data(window, overlap, user_list, data_set, preprocess, sensor
             w_data, ignore_return = Process_data.z_norm(emg=w_data, imu=w_data)
 
     # TODO check if working in windowing function above
-    # labels = [int(i) for i in labels]
 
     print("Window length", len(w_data),
           "\nLabel length", len(labels),
@@ -111,6 +110,21 @@ def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_steps_
 
 
 def main():
+    # --------------------------------------------Predict user independent CNN - START---------------------------------#
+    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User001_Unknown/no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
+    # predict_for_unknown_user_cnn(load_model_path, "User001", "no_pre_pro-separate-IMU-25-0.9-NA")
+    # return True
+
+    # --------------------------------------------Predict user independent CNN - END-----------------------------------#
+
+    # --------------------------------------------Train user dependent CNN - START-------------------------------------#
+    save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
+    for user in Constant.USERS:
+        train_user_dependent_cnn(["no_pre_pro-separate-EMG-100-0.9-NA"], user,
+                                 False, save_path, True, Constant.CNN_KAGGLE, True)
+    return True
+    # --------------------------------------------Train user dependent CNN - END---------------------------------------#
+
     # train_user_independent("no_pre_pro-separate-IMU-100-0.9-rehman",trainings_data=Constant.USERS,feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
     # train_user_dependent(Constant.USERS, skip_rest=True)  # feature_extraction_complete()
     # calculation_config_statistics()
@@ -123,35 +137,6 @@ def main():
     #                            trainings_data=Constant.USERS, feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
     # return True
     # load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
-
-    # --------------------------------------------Train CNN User dependent for each user by given config---------------#
-    for config in ["no_pre_pro-separate-EMG-100-0.9-NA"]:
-        config_split = config.split('-')
-        # for user in USERS:
-        save_path = "G:/Masterarbeit/deep_learning_filter/User001_unknown"
-        if not os.path.isdir(save_path):  # Collection dir
-            os.mkdir(save_path)
-        x, labels = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                        user_list=Constant.USERS_cross, preprocess=config_split[0],
-                                        data_set=config_split[1],
-                                        sensor=config_split[2],
-                                        ignore_rest_gesture=True, norm_by_rest=False)
-        for i in range(len(x)):
-            sc = sklearn.preprocessing.StandardScaler(copy=True, with_std=True)
-            sc.fit(x[i])
-            x[i] = sc.transform(x[i])
-
-        model, model_name, acc = Deep_learning.calculate_cnn(x, labels, save_path, batch=32, epochs=100, config=config,
-                                                             early_stopping=5)
-
-        f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN_Kaggle_UI_normStd.csv", 'a', newline='')
-        with f:
-            writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["User001_unknown", model_name, str(acc), config])
-        f.close()
-    return True
-
-    # x = [t.transpose() for t in x]
 
     # --------------------------------------------Train CNN 1----------------------------------------------#
     # save_path = save_path + "/CNN_1/"
@@ -168,99 +153,103 @@ def main():
     # del labels
 
     # --------------------------------------------Train CNN kaggle-----------------------------------------------------#
-    save_path = "G:/Masterarbeit/deep_learning_filter/" + "User007_Unknown"
-    if not os.path.isdir(save_path):  # Collection dir
-        os.mkdir(save_path)
-    save_path = save_path + "/CNN_Kaggle"
-    if not os.path.isdir(save_path):  # Collection dir
-        os.mkdir(save_path)
-    # For all Users, can be changed
-    x_train, y_train = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                           user_list=USERS_cross, preprocess=config_split[0],
-                                           data_set=config_split[1],
-                                           sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
 
-    x_test, y_test = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-                                         user_list=["User007"], preprocess=config_split[0], data_set=config_split[1],
-                                         sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
 
-    Deep_learning.predict_for_load_model(x_test, y_test, load_model(
-        "G:/Masterarbeit/deep_learning_filter/User007_Unknown/CNN_Kaggle/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"),
-                                         batch_size=32)
-    return True
+# save_path = "G:/Masterarbeit/deep_learning_filter/" + "User007_Unknown"
+# if not os.path.isdir(save_path):  # Collection dir
+#     os.mkdir(save_path)
+# save_path = save_path + "/CNN_Kaggle"
+# if not os.path.isdir(save_path):  # Collection dir
+#     os.mkdir(save_path)
+# # For all Users, can be changed
+# x_train, y_train = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
+#                                        user_list=USERS_cross, preprocess=config_split[0],
+#                                        data_set=config_split[1],
+#                                        sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
+#
+# x_test, y_test = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
+#                                      user_list=["User007"], preprocess=config_split[0], data_set=config_split[1],
+#                                      sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
+#
+# Deep_learning.predict_for_load_model(x_test, y_test, load_model(
+#     "G:/Masterarbeit/deep_learning_filter/User007_Unknown/CNN_Kaggle/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"),
+#                                      batch_size=32)
+# return True
+#
+# model_name, acc = Deep_learning.calculate_cnn(x_train, y_train, save_path, batch=32, epochs=10, config=config,
+#                                               x_test_in=x_test, y_test_in=y_test, early_stopping=3)
+#
+# f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
+# with f:
+#     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#     writer.writerow(["User007_unknown", model_name, str(acc), config])
+# f.close()
 
-    model_name, acc = Deep_learning.calculate_cnn(x_train, y_train, save_path, batch=32, epochs=10, config=config,
-                                                  x_test_in=x_test, y_test_in=y_test, early_stopping=3)
+# --------------------------------------------Predict from loaded model for unknown user---------------------------#
+# Deep_learning.predict_for_load_model(x, labels, load_model(load_model_from + "/cnn_kaggle_model.h5"),
+#                                      batch_size=200)
 
-    f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
-    with f:
-        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(["User007_unknown", model_name, str(acc), config])
-    f.close()
+# --------------------------------------------Adapt model for User-------------------------------------------------#
+# skip_s0_rest = False
+# x_train_window, y_train, x_test_window, y_test = pre_process_raw_data_adapt_model(25, 0.75, ["User007"], sensor,
+#                                                                                   skip_s0_rest=skip_s0_rest)
+# if skip_s0_rest:
+#     labels = sub_label
+# else:
+#     labels = save_label
+#
+# # x_test_window= [t.transpose() for t in x_test_window]
+# # x_train_window = [t.transpose() for t in x_train_window]
+#
+# model = load_model(load_model_from + "/cnn_kaggle_model.h5")
+# Deep_learning.adapt_model_for_user(x_train_window, y_train,
+#                                    save_path, 200, 100, "User007",
+#                                    x_test_window, y_test, save_label=labels, model=model)
 
-    # --------------------------------------------Predict from loaded model for unknown user---------------------------#
-    # Deep_learning.predict_for_load_model(x, labels, load_model(load_model_from + "/cnn_kaggle_model.h5"),
-    #                                      batch_size=200)
+# --------------------------------------------Train DNN with feature extraction data-------------------------------#
+# users_data = load_feature_csv_all_user(best_config_rf)
+# Deep_learning.dnn(save_path=save_path, batch=50, epochs=10, users_data=users_data)
 
-    # --------------------------------------------Adapt model for User-------------------------------------------------#
-    # skip_s0_rest = False
-    # x_train_window, y_train, x_test_window, y_test = pre_process_raw_data_adapt_model(25, 0.75, ["User007"], sensor,
-    #                                                                                   skip_s0_rest=skip_s0_rest)
-    # if skip_s0_rest:
-    #     labels = sub_label
-    # else:
-    #     labels = save_label
-    #
-    # # x_test_window= [t.transpose() for t in x_test_window]
-    # # x_train_window = [t.transpose() for t in x_train_window]
-    #
-    # model = load_model(load_model_from + "/cnn_kaggle_model.h5")
-    # Deep_learning.adapt_model_for_user(x_train_window, y_train,
-    #                                    save_path, 200, 100, "User007",
-    #                                    x_test_window, y_test, save_label=labels, model=model)
+# ----------------------------------Train user independent classic-------------------------------------------------#
+# config = best_emg_rf
+# users_data = load_feature_from_many_users(config, USERS_cross)
+# Classification.train_user_independent(users_data=users_data,
+#                                       config=config,
+#                                       mixed_user_data=True,
+#                                       clf_name="OneVsRest",
+#                                       clf=Constant.one_vs_Rest,
+#                                       cv=False)
+# return True
 
-    # --------------------------------------------Train DNN with feature extraction data-------------------------------#
-    # users_data = load_feature_csv_all_user(best_config_rf)
-    # Deep_learning.dnn(save_path=save_path, batch=50, epochs=10, users_data=users_data)
+# ----------------------------------Train user dependent classic--------------------------------------------------#
+# config_split = best_config_rf
+# print("Config", config_split)
+# # Predict for all Users
+# for user in USERS:
+#     print(user)
+#     users_data = load_feature_for_user(config_split, user)
+#     Classification.train_user_independent(training_data=users_data,
+#                                           config=config_split,
+#                                           mixed_user_data=True,
+#                                           classifiers_name="Random_Forest_User_dependent",
+#                                           classifiers=Constant.random_forest,
+#                                           cv=False,
+#                                           user_name=user)
 
-    # ----------------------------------Train user independent classic-------------------------------------------------#
-    # config = best_emg_rf
-    # users_data = load_feature_from_many_users(config, USERS_cross)
-    # Classification.train_user_independent(users_data=users_data,
-    #                                       config=config,
-    #                                       mixed_user_data=True,
-    #                                       clf_name="OneVsRest",
-    #                                       clf=Constant.one_vs_Rest,
-    #                                       cv=False)
-    # return True
 
-    # ----------------------------------Train user dependent classic--------------------------------------------------#
-    config_split = best_config_rf
-    print("Config", config_split)
-    # Predict for all Users
-    for user in USERS:
-        print(user)
-        users_data = load_feature_for_user(config_split, user)
-        Classification.train_user_independent(training_data=users_data,
-                                              config=config_split,
-                                              mixed_user_data=True,
-                                              classifiers_name="Random_Forest_User_dependent",
-                                              classifiers=Constant.random_forest,
-                                              cv=False,
-                                              user_name=user)
-    # print("All done")
-    # return True
+# print("All done")
+# return True
 
-    # ----------------------------------Predict classic ML against User007-------------------------------------------#
-    # config = "separate-EMG-100-0.75-georgi"
-    # classic_clf = "G:/Masterarbeit/classic_clf/"
-    # users_data = load_feature_csv_one_user(config, "User007")
-    # with open(classic_clf + 'SVM_Only_EMGseparate-EMG-100-0.75-georgi.joblib', 'rb') as pickle_file:
-    #     model = pickle.load(pickle_file)
-    # Classification.predict_for_unknown(model=model,
-    #                                    data=users_data)
-    #
-    # return True
+# ----------------------------------Predict classic ML against User007-------------------------------------------#
+# config = "separate-EMG-100-0.75-georgi"
+# classic_clf = "G:/Masterarbeit/classic_clf/"
+# users_data = load_feature_csv_one_user(config, "User007")
+# with open(classic_clf + 'SVM_Only_EMGseparate-EMG-100-0.75-georgi.joblib', 'rb') as pickle_file:
+#     model = pickle.load(pickle_file)
+# Classification.predict_for_unknown(model=model,
+#                                    data=users_data)
+#
+# return True
 
 
 def train_user_independent_classic(config, ignore_rest_gesture=True, feature_sets_path="",
@@ -593,18 +582,19 @@ def train_user_dependent_cnn(config_list, user, norm=False, save_path="./", perf
     :param ignore_rest_gesture:
     :return:
     """
+    overview_path = save_path
+    save_path = save_path + "/" + user
+    if not os.path.isdir(save_path):
+        os.mkdir(save_path)
     for config in config_list:
         config_split = config.split('-')
-        save_path = save_path + "/" + user
-        if not os.path.isdir(save_path):
-            os.mkdir(save_path)
-
         preprocess = config_split[0]
         data_set = config_split[1]
         sensor = config_split[2]
         window = int(config_split[3])
-        overlap = float(config_list[4])
-        x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=user, preprocess=preprocess,
+        overlap = float(config_split[4])
+
+        x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=[user], preprocess=preprocess,
                                         data_set=data_set, sensor=sensor, ignore_rest_gesture=ignore_rest_gesture,
                                         norm_by_rest=False)
         if norm:
@@ -619,11 +609,35 @@ def train_user_dependent_cnn(config_list, user, norm=False, save_path="./", perf
                                                              early_stopping=5, cnn_pattern=cnn_pattern,
                                                              perform_test=perform_test)
 
-        f = open(save_path + "/Results" + cnn_pattern + "_UD.csv", 'a', newline='')
+        f = open(overview_path + "/Results" + cnn_pattern + "_UD.csv", 'a', newline='')
         with f:
             writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow([user, model_name, str(acc), config])
         f.close()
+
+
+def predict_for_unknown_user_cnn(model_path, user, config):
+    model = load_model(model_path)
+
+    config_split = config.split('-')
+    preprocess = config_split[0]
+    data_set = config_split[1]
+    sensor = config_split[2]
+    window = int(config_split[3])
+    overlap = float(config_split[4])
+    norm=bool(config_split[5])
+
+    x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=[user], data_set=data_set,
+                                    preprocess=preprocess,
+                                    sensor=sensor, ignore_rest_gesture=True, norm_by_rest=False)
+    if norm:
+        print("Norm data")
+        for i in range(len(x)):
+            sc = sklearn.preprocessing.StandardScaler(copy=True, with_std=True)
+            sc.fit(x[i])
+            x[i] = sc.transform(x[i])
+            config += "norm"
+    evaluation, accuracy_score = Deep_learning.predict_for_load_model(x, labels, model, batch_size=32)
 
 
 if __name__ == '__main__':

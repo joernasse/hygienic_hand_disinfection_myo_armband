@@ -59,6 +59,10 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
             save_path + "/" + config + "_cnn_" + cnn_pattern + ".h5", verbose=1,
             monitor='val_acc', save_best_only=True, mode='max')]
 
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.RMSprop(),
+                  metrics=['accuracy'])
+
     history = model.fit(x_train, y_train,
                         batch_size=batch,
                         epochs=epochs,
@@ -75,10 +79,11 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
         print("Prediction for", cnn_pattern, " - Start")
         y_predict = model.predict_classes(x_test, batch_size=batch)
         print("Prediction for", cnn_pattern, " - Done")
-        acc = Helper_functions.result_visualization(y_test, y_predict, save_path=save_path, config=config)
+        acc = Helper_functions.result_visualization(y_test, y_predict, save_path=save_path, config=config + cnn_pattern)
+        del x_test, y_test
 
     print("Train for " + cnn_pattern + " done")
-    del x_train, y_train, x_val, x_test, x_val, y_val_one_hot
+    del x_train, y_train, x_val, y_val_one_hot
     return model, cnn_pattern, acc
 
 
@@ -303,9 +308,10 @@ def predict_for_load_model(x_test, y_test, model, batch_size):
     """
     x_test = np.array(x_test)[:, :, :, np.newaxis]
     y_predict = model.predict_classes(x_test, batch_size)
-    eval = model.evaluate(x_test, to_categorical(y_test))
-    print("EVAL", eval)
-    Helper_functions.result_visualization(y_test, y_predict, show_figures=True)
+    evaluation = model.evaluate(x_test, to_categorical(y_test))
+    print("EVAL", evaluation)
+    accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True)
+    return evaluation, accuracy_score
 
 
 def create_cnn_1_model(shape_x, shape_y, output):

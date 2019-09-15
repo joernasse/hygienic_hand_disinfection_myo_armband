@@ -86,8 +86,8 @@ def main(mode='classic'):
     hub.stop()
 
     # Reformat & Windowing
-    w_emg, w_imu = reform_and_and_windowing_live(emg=emg, ori=ori, acc=acc, gyr=gyr, window=50, overlap=0.75,
-                                                 classic=True)
+    w_emg, w_imu = reform_and_windowing_live(emg=emg, ori=ori, acc=acc, gyr=gyr, window=50, overlap=0.75,
+                                             classic=True)
 
     # Feature Extraction
     feature_emg, feature_imu = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=Constant.georgi)
@@ -105,18 +105,18 @@ def main(mode='classic'):
     print(y_predict)
 
 
-def feature_extraction_live(w_emg, w_imu, mode='default'):
+def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
     feature_emg, feature_imu = [], []
     for x in w_emg:
-        if mode == 'default':
-            feature_emg.append(Feature_extraction.mantena(x))
         if mode == Constant.georgi:
             feature_emg.append(Feature_extraction.georgi(x, sensor='EMG'))
+        else:
+            feature_emg.append(Feature_extraction.mantena(x))
     for x in w_imu:
-        if mode == 'default':
-            feature_imu.append(Feature_extraction.mantena(x))
         if mode == 'geogri':
             feature_imu.append(Feature_extraction.georgi(x, sensor='IMU'))
+        else:
+            feature_imu.append(Feature_extraction.mantena(x))
     return feature_emg, feature_imu
 
 
@@ -145,7 +145,7 @@ def pair_devices():
     return None, None
 
 
-def reform_and_and_windowing_live(window, overlap, emg=[], ori=[], acc=[], gyr=[], classic=True):
+def reform_and_windowing_live(window, overlap, emg=[], ori=[], acc=[], gyr=[], classic=True):
     print(len(emg))
     print(len(ori))
     o = [[q.x, q.y, q.z] for q in [y[0] for y in [x[1:] for x in ori]]]
