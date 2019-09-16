@@ -13,6 +13,10 @@ from Helper_functions import wait
 import numpy as np
 from tensorflow.python.keras.models import load_model
 
+classic_clf_path = "G:/Masterarbeit/user_dependent_detail/User001Random_Forest_User_dependentseparate-EMGIMU-100-0.75-georgi.joblib"
+imu_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
+emg_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_emg_0"
+
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
 ORI = []  # orientation
@@ -68,38 +72,51 @@ device_listener = libmyo.ApiDeviceListener()
 gesture_listener = GestureListener()
 
 
+def init():
+    wait(3)
+    dev_l, dev_r = pair_devices()
+    wait(3)
+    return dev_l, dev_r
+
+
 def main(mode='classic'):
+    window = 100
+    overlap = 0.9
+    preprocess = Constant.no_pre_processing
+    dev_l, dev_r = init()
+    record_time = 1
+
     if mode == 'classic':
-        with open(
-                "G:/Masterarbeit/user_dependent_detail/User001Random_Forest_User_dependentseparate-EMGIMU-100-0.75-georgi.joblib",
-                'rb') as pickle_file:
+        classic = True
+        with open(classic_clf_path, 'rb') as pickle_file:
             model = pickle.load(pickle_file)
     else:
-        model = load_model("G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0")
+        classic = False
+        model_imu = load_model(imu_cnn_path)
+        model_emg = load_model(emg_cnn_path)
 
-    record = 1
-    wait(3)
-    pair_devices()
-    wait(3)
     with hub.run_in_background(gesture_listener.on_event):
-        emg, ori, acc, gyr = collect_raw_data(record_time=record)
+        emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
     hub.stop()
 
     # Reformat & Windowing
-    w_emg, w_imu = reform_and_windowing_live(emg=emg, ori=ori, acc=acc, gyr=gyr, window=50, overlap=0.75,
-                                             classic=True)
+    w_emg, w_imu = reformat_and_window_live(emg=emg, ori=ori, acc=acc, gyr=gyr, window=window, overlap=overlap,
+                                            classic=classic)
 
     # Feature Extraction
-    feature_emg, feature_imu = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=Constant.georgi)
+    if classic:
+        feature_emg, feature_imu = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=Constant.georgi)
+        features = []
+        for i in range(len(feature_imu)):
+            tmp = np.asarray([feature_emg[i], feature_imu[i]]).flatten('F')
+            f = []
+            for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
+                f.extend(x)
+            features.append(f)
+    else:
+        x_emg = np.array(w_emg)[:, :, :, np.newaxis]
+        x_imu = np.array(w_imu)[:, :, :, np.newaxis]
 
-    features = []
-    for i in range(len(feature_imu)):
-        tmp = np.asarray([feature_emg[i], feature_imu[i]]).flatten('F')
-        f = []
-        for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
-            f.extend(x)
-        features.append(f)
-    print("x")
 
     y_predict = model.predict(features)
     print(y_predict)
@@ -109,12 +126,12 @@ def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
     feature_emg, feature_imu = [], []
     for x in w_emg:
         if mode == Constant.georgi:
-            feature_emg.append(Feature_extraction.georgi(x, sensor='EMG'))
+            feature_emg.append(Feature_extraction.georgi(x, sensor=Constant.EMG))
         else:
             feature_emg.append(Feature_extraction.mantena(x))
     for x in w_imu:
-        if mode == 'geogri':
-            feature_imu.append(Feature_extraction.georgi(x, sensor='IMU'))
+        if mode == Constant.georgi:
+            feature_imu.append(Feature_extraction.georgi(x, sensor=Constant.IMU))
         else:
             feature_imu.append(Feature_extraction.mantena(x))
     return feature_emg, feature_imu
@@ -145,7 +162,7 @@ def pair_devices():
     return None, None
 
 
-def reform_and_windowing_live(window, overlap, emg=[], ori=[], acc=[], gyr=[], classic=True):
+def reformat_and_window_live(window, overlap, emg=[], ori=[], acc=[], gyr=[], classic=True):
     print(len(emg))
     print(len(ori))
     o = [[q.x, q.y, q.z] for q in [y[0] for y in [x[1:] for x in ori]]]

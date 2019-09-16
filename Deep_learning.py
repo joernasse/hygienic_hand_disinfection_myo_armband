@@ -138,7 +138,8 @@ def dnn(save_path, users_data, batch, epochs):
     print("finish")
 
 
-def prepare_data_for_cnn(x, y, validation_size=0.1, test_size=Constant.test_set_size, calc_test_set=False):
+def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
+                         test_size=Constant.test_set_size, calc_test_set=False):
     """
 
     :param x:

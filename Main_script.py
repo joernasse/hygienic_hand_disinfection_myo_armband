@@ -1,4 +1,7 @@
 from __future__ import print_function
+
+from keras.utils import plot_model
+
 import Classification
 import Constant
 import Deep_learning
@@ -119,7 +122,7 @@ def main():
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
     save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
-    for user in Constant.USERS:
+    for user in Constant.USERS_SUB:
         train_user_dependent_cnn(["no_pre_pro-separate-EMG-100-0.9-NA"], user,
                                  False, save_path, True, Constant.CNN_KAGGLE, True)
     return True
@@ -589,8 +592,8 @@ def train_user_dependent_cnn(config_list, user, norm=False, save_path="./", perf
     for config in config_list:
         config_split = config.split('-')
         preprocess = config_split[0]
-        data_set = config_split[1]
         sensor = config_split[2]
+        data_set = config_split[1]
         window = int(config_split[3])
         overlap = float(config_split[4])
 
@@ -609,7 +612,7 @@ def train_user_dependent_cnn(config_list, user, norm=False, save_path="./", perf
                                                              early_stopping=5, cnn_pattern=cnn_pattern,
                                                              perform_test=perform_test)
 
-        f = open(overview_path + "/Results" + cnn_pattern + "_UD.csv", 'a', newline='')
+        f = open(overview_path + "/Results" + cnn_pattern + config + "_UD.csv", 'a', newline='')
         with f:
             writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
             writer.writerow([user, model_name, str(acc), config])
@@ -625,7 +628,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
     sensor = config_split[2]
     window = int(config_split[3])
     overlap = float(config_split[4])
-    norm=bool(config_split[5])
+    norm = bool(config_split[5])
 
     x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=[user], data_set=data_set,
                                     preprocess=preprocess,
