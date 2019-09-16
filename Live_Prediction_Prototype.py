@@ -1,4 +1,6 @@
 import collections
+import csv
+import os
 import pickle
 import threading
 import time
@@ -72,54 +74,156 @@ device_listener = libmyo.ApiDeviceListener()
 gesture_listener = GestureListener()
 
 
+def check_samples_rate(n=5, record_time=1):
+    print("Check samples rate - Start")
+    sum_emg, sum_imu = 0, 0
+    with hub.run_in_background(gesture_listener.on_event):
+        print("Warm up")
+        wait(2)
+        for i in range(n):
+            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+            sum_emg += len(emg)
+            sum_imu += len(ori)
+            print("EMG length", len(emg),
+                  "\nIMU length", len(ori))
+        hub.stop()
+
+    max_emg = (n * 2 * record_time * 200)
+    max_imu = (n * 2 * record_time * 50)
+    sr_emg = (sum_emg / max_emg) * 100
+    sr_imu = (sum_imu / max_imu) * 100
+    print("DS EMG", sr_emg,
+          "\nDS_IMU", sr_imu)
+    if (n * 2 * 200) * 0.9 > sum_emg:
+        print("EMG sample rate under 90%")
+
+    if (n * 2 * 50) * 0.9 > sum_imu:
+        print("IMU sample rate under 90%")
+
+    print("Check samples rate - Done")
+    return
+
+
 def init():
+    global status
+    status = 1
+    print("Initialization - Start")
     wait(3)
     dev_l, dev_r = pair_devices()
-    wait(3)
+    wait(4)
+    status = 0
+    print("Initialization - Done")
+    check_samples_rate()
+    # load models
+    # if mode == 'classic':
+    #     classic = True
+    #     with open(classic_clf_path, 'rb') as pickle_file:
+    #         model = pickle.load(pickle_file)
+    # else:
+    #     classic = False
+    #     model_imu = load_model(imu_cnn_path)
+    #     model_emg = load_model(emg_cnn_path)
     return dev_l, dev_r
 
 
-def main(mode='classic'):
-    window = 100
-    overlap = 0.9
+def main():
+    cnn_imu_model = load_model("./no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5")
+    cnn_emg_mode = load_model("./no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5")
+    live_prediction_path = "./Live_Prediction"
+    if not os.path.isdir(live_prediction_path):  # Collection dir
+        os.mkdir(live_prediction_path)
+
+    mode = 'cnn'
     preprocess = Constant.no_pre_processing
     dev_l, dev_r = init()
     record_time = 1
-
-    if mode == 'classic':
-        classic = True
-        with open(classic_clf_path, 'rb') as pickle_file:
-            model = pickle.load(pickle_file)
-    else:
-        classic = False
-        model_imu = load_model(imu_cnn_path)
-        model_emg = load_model(emg_cnn_path)
-
+    classic = False
+    classic_model = None
+    wait(2)
     with hub.run_in_background(gesture_listener.on_event):
-        emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+        for label in range(len(Constant.label_display_without_rest)):
+            print(Constant.label_display_without_rest[label], "Start")
+            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+            print("Stop")
+
+            emg, imu = reformat_raw_data(emg=emg, ori=ori, acc=acc, gyr=gyr)
+            if classic:
+                window = 100
+                overlap = 0.9
+                # Classic windowing, emg and imu together
+                w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
+
+                # Feature extraction
+                mode = Constant.georgi
+                features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
+                y_predict = classic_model.predict(features)
+
+            else:
+                # Separate windowing
+                w_emg = 100
+                w_imu = 25
+                overlap = 0.9
+                w_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
+                w_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+
+                x_emg = np.array(w_emg)[:, :, :, np.newaxis]
+                x_imu = np.array(w_imu)[:, :, :, np.newaxis]
+
+                proba_emg = cnn_emg_mode.predict_proba(x_emg)
+                proba_imu = cnn_imu_model.predict_proba(x_imu)
+
+                predict_emg = cnn_emg_mode.predict_classes(x_emg)
+                predict_imu = cnn_imu_model.predict_classes(x_imu)
+
+                evaluate_predictions(proba_emg, predict_emg, proba_imu, predict_imu, label, live_prediction_path)
+                wait(3)
     hub.stop()
 
-    # Reformat & Windowing
-    w_emg, w_imu = reformat_and_window_live(emg=emg, ori=ori, acc=acc, gyr=gyr, window=window, overlap=overlap,
-                                            classic=classic)
 
-    # Feature Extraction
-    if classic:
-        feature_emg, feature_imu = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=Constant.georgi)
-        features = []
-        for i in range(len(feature_imu)):
-            tmp = np.asarray([feature_emg[i], feature_imu[i]]).flatten('F')
-            f = []
-            for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
-                f.extend(x)
-            features.append(f)
+def evaluate_predictions(proba_emg, pred_emg, proba_imu, pred_imu, y_true, live_prediction_path):
+    sum_proba_emg, sum_proba_imu = [], []
+    for i in range(12):
+        sum_proba_emg.append(np.mean([float(x[i]) for x in proba_emg]))
+        sum_proba_imu.append(np.mean([float(x[i]) for x in proba_imu]))
+
+    index_max_emg = np.argmax(sum_proba_emg)
+    index_max_imu = np.argmax(sum_proba_imu)
+    print("EMG prediction:", Constant.label_display_without_rest[index_max_emg],
+          "\nIMU preddiction:", Constant.label_display_without_rest[index_max_imu])
+
+    if not index_max_imu == index_max_emg:
+        if np.abs(sum_proba_emg[index_max_emg] - sum_proba_imu[index_max_imu]) >= 0.1:
+            if sum_proba_emg[index_max_emg] > sum_proba_imu[index_max_imu]:
+                final_choice = index_max_emg
+            else:
+                final_choice = index_max_imu
     else:
-        x_emg = np.array(w_emg)[:, :, :, np.newaxis]
-        x_imu = np.array(w_imu)[:, :, :, np.newaxis]
+        final_choice = index_max_emg
+    print("Final choice:", Constant.label_display_without_rest[final_choice])
+
+    emg_pred_correct, imu_pred_correct = 0, 0
+    timestamp = str(time.time())
+    f_emg = open(live_prediction_path + timestamp + "emg_prediction.csv", 'a', newline='')
+    f_imu = open(live_prediction_path + timestamp + "emg_prediction.csv", 'a', newline='')
+    for p in pred_emg:
+        if p == y_true:
+            emg_pred_correct += 1
+            with f_emg:
+                writer = csv.writer(f_emg, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([p, y_true])
+        f_emg.close()
+
+    for p in pred_imu:
+        if p == y_true:
+            imu_pred_correct += 1
+            with f_imu:
+                writer = csv.writer(f_emg, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([p, y_true])
+    f_imu.close()
 
 
-    y_predict = model.predict(features)
-    print(y_predict)
+def most_common(lst):
+    return max(set(lst), key=lst.count)
 
 
 def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
@@ -134,12 +238,20 @@ def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
             feature_imu.append(Feature_extraction.georgi(x, sensor=Constant.IMU))
         else:
             feature_imu.append(Feature_extraction.mantena(x))
-    return feature_emg, feature_imu
+
+    features = []
+    for i in range(len(feature_imu)):
+        f = []
+        for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
+            f.extend(x)
+        features.append(f)
+    return features
 
 
 def pair_devices():
     global DEVICE_R
     global DEVICE_L
+    print("Pair devices - Start")
     with hub.run_in_background(device_listener):
         wait(.5)
         for i in range(3):  # Three trials to pair
@@ -159,33 +271,26 @@ def pair_devices():
                 return DEVICE_L, DEVICE_R
             wait(2)
     hub.stop()
+    print("Pair devices - Done")
     return None, None
 
 
-def reformat_and_window_live(window, overlap, emg=[], ori=[], acc=[], gyr=[], classic=True):
-    print(len(emg))
-    print(len(ori))
-    o = [[q.x, q.y, q.z] for q in [y[0] for y in [x[1:] for x in ori]]]
-    a = [[q.x, q.y, q.z] for q in [y[0] for y in [x[1:] for x in acc]]]
-    g = [[q.x, q.y, q.z] for q in [y[0] for y in [x[1:] for x in gyr]]]
+def reformat_raw_data(emg=[], ori=[], acc=[], gyr=[]):
+    # print(len(emg))
+    # print(len(ori))
+    o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
+    a = [[f.x, f.y, f.z] for f in [e[0] for e in [d[1:] for d in acc]]]
+    g = [[j.x, j.y, j.z] for j in [h[0] for h in [g[1:] for g in gyr]]]
     imu = []
     for i in range(len(o)):
+        #todo check warum teilweise nicht gleichlang
         tmp = o[i]
         tmp.extend([x for x in a[i]])
         tmp.extend([x for x in g[i]])
         imu.append(tmp)
 
     emg = [y[0] for y in [x[1:] for x in emg]]
-
-    if classic:
-        # Classic windowing, emg and imu together
-        window_emg, window_imu = window_live_classic(emg, imu, window, overlap)
-    else:
-        # Separate windowing
-        window_emg = window_live_separate(emg, window=window, overlap=overlap)
-        window_imu = window_live_separate(imu, window=window, overlap=overlap)
-
-    return window_emg, window_imu
+    return emg, imu
 
 
 def collect_raw_data(record_time):
@@ -203,7 +308,6 @@ def collect_raw_data(record_time):
         end = time.time()
         dif = end - start
     status = 0
-    print(dif)
     log.info("EMG %d", len(EMG))
     log.info("IMU %d", len(ORI))
 
