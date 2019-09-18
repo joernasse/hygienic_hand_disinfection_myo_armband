@@ -81,7 +81,7 @@ def load_raw_for_single_sensor(path):
     try:
         file = open(path)
     except:
-        print("ERROR!")
+        # print("ERROR!")
         return []
     reader = csv.reader(file, delimiter=';')
     next(reader, None)

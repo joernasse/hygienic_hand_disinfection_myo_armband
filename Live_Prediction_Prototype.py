@@ -7,11 +7,10 @@ import time
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
-# import Collect_data
 import Constant
 import Feature_extraction
+import Helper_functions
 import Process_data
-from Helper_functions import wait
 import numpy as np
 from tensorflow.python.keras.models import load_model
 
@@ -35,6 +34,8 @@ imu_load_data = {"timestamp": [],
 emg_dict = {"timestamp": [],
             "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
             "label": []}
+
+sequence_duration = [5, 4, 3, 2]
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -79,7 +80,7 @@ def check_samples_rate(n=5, record_time=1):
     sum_emg, sum_imu = 0, 0
     with hub.run_in_background(gesture_listener.on_event):
         print("Warm up")
-        wait(2)
+        Helper_functions.wait(2)
         for i in range(n):
             emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
             sum_emg += len(emg)
@@ -94,11 +95,11 @@ def check_samples_rate(n=5, record_time=1):
     sr_imu = (sum_imu / max_imu) * 100
     print("DS EMG", sr_emg,
           "\nDS_IMU", sr_imu)
-    if (n * 2 * 200) * 0.9 > sum_emg:
-        print("EMG sample rate under 90%")
+    if (n * 2 * 200) * 0.85 > sum_emg:
+        print("EMG sample rate under 85%")
 
     if (n * 2 * 50) * 0.9 > sum_imu:
-        print("IMU sample rate under 90%")
+        print("IMU sample rate under 85%")
 
     print("Check samples rate - Done")
     return
@@ -108,57 +109,70 @@ def init():
     global status
     status = 1
     print("Initialization - Start")
-    wait(3)
-    dev_l, dev_r = pair_devices()
-    wait(4)
+    Helper_functions.wait(3)
+    pair_devices()
+    cnn_imu_model = load_model("./no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5")
+    cnn_emg_mode = load_model("./no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5")
+    with open(classic_clf_path, 'rb') as pickle_file:
+        classic_model = pickle.load(pickle_file)
+    # wait(4)
     status = 0
     print("Initialization - Done")
     check_samples_rate()
-    # load models
-    # if mode == 'classic':
-    #     classic = True
-    #     with open(classic_clf_path, 'rb') as pickle_file:
-    #         model = pickle.load(pickle_file)
-    # else:
-    #     classic = False
-    #     model_imu = load_model(imu_cnn_path)
-    #     model_emg = load_model(emg_cnn_path)
-    return dev_l, dev_r
+    return cnn_imu_model, cnn_emg_mode, classic_model
+
+
+def preprocess_data(w_emg, w_imu, preprocess):
+    """
+
+    :param w_emg:
+    :param w_imu:
+    :param preprocess:
+    :return:
+    """
+    if preprocess == Constant.filter_:
+        return Process_data.filter_emg_data(w_emg, preprocess)
+    elif preprocess == Constant.z_norm:
+        return Process_data.z_norm(w_emg, w_imu)
+    else:
+        return w_emg, w_imu
 
 
 def main():
-    cnn_imu_model = load_model("./no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5")
-    cnn_emg_mode = load_model("./no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5")
     live_prediction_path = "./Live_Prediction"
     if not os.path.isdir(live_prediction_path):  # Collection dir
         os.mkdir(live_prediction_path)
-
-    mode = 'cnn'
     preprocess = Constant.no_pre_processing
-    dev_l, dev_r = init()
-    record_time = 1
-    classic = False
-    classic_model = None
-    wait(2)
-    with hub.run_in_background(gesture_listener.on_event):
-        for label in range(len(Constant.label_display_without_rest)):
-            print(Constant.label_display_without_rest[label], "Start")
-            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
-            print("Stop")
+    cnn_imu_model, cnn_emg_mode, classic_model = init()
+    Helper_functions.wait(2)
 
-            emg, imu = reformat_raw_data(emg=emg, ori=ori, acc=acc, gyr=gyr)
-            if classic:
+    with hub.run_in_background(gesture_listener.on_event):
+        for seq in sequence_duration:
+            for label in range(len(Constant.label_display_without_rest)):
+                # ----------------------------------Record data--------------------------------------------------------#
+                print("Start with sequence. \nThe recording time of the gesture is " + str(seq) + " seconds.")
+                Helper_functions.countdown(3)
+                print(Constant.label_display_without_rest[label], "Start")
+                emg, ori, acc, gyr = collect_raw_data(record_time=seq)
+                print("Stop")
+
+                emg, imu = reformat_raw_data(emg, ori, acc, gyr)
+                # ----------------------------------Perform classic prediction-----------------------------------------#
                 window = 100
                 overlap = 0.9
-                # Classic windowing, emg and imu together
+                # Classic windowing, EMG and IMU together
                 w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
+
+                # Preprocessing
+                w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
 
                 # Feature extraction
                 mode = Constant.georgi
                 features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
-                y_predict = classic_model.predict(features)
+                predict_classic = classic_model.predict(features)
+                proba_classic = classic_model.predict_proba(features)
 
-            else:
+                # ----------------------------------Perform CNN prediction---------------------------------------------#
                 # Separate windowing
                 w_emg = 100
                 w_imu = 25
@@ -175,21 +189,42 @@ def main():
                 predict_emg = cnn_emg_mode.predict_classes(x_emg)
                 predict_imu = cnn_imu_model.predict_classes(x_imu)
 
-                evaluate_predictions(proba_emg, predict_emg, proba_imu, predict_imu, label, live_prediction_path)
-                wait(3)
+                # ----------------------------------Evaluate results---------------------------------------------------#
+                evaluate_predictions(proba_emg, predict_emg,
+                                     proba_imu, predict_imu, label,
+                                     predict_classic, proba_classic,
+                                     live_prediction_path)
     hub.stop()
 
 
-def evaluate_predictions(proba_emg, pred_emg, proba_imu, pred_imu, y_true, live_prediction_path):
-    sum_proba_emg, sum_proba_imu = [], []
+def evaluate_predictions(cnn_proba_emg, cnn_pred_emg,
+                         cnn_proba_imu, cnn_pred_imu,
+                         classic_proba, classic_pred,
+                         y_true, live_prediction_path):
+    timestamp = str(time.time())
+    cnn_emg_path = live_prediction_path + timestamp + "emg_prediction.csv"
+    cnn_imu_path = live_prediction_path + timestamp + "imu_prediction.csv"
+    classic_path = live_prediction_path + timestamp + "classic_prediction.csv"
+    sequence_path = live_prediction_path + timestamp + "sequence_prediction.csv"
+
+    sum_proba_emg, sum_proba_imu, sum_proba_classic = [], [], []
+
     for i in range(12):
-        sum_proba_emg.append(np.mean([float(x[i]) for x in proba_emg]))
-        sum_proba_imu.append(np.mean([float(x[i]) for x in proba_imu]))
+        sum_proba_emg.append(np.mean([float(x[i]) for x in cnn_proba_emg]))
+        sum_proba_imu.append(np.mean([float(x[i]) for x in cnn_proba_imu]))
+        sum_proba_classic.append(np.mean([float(x[i]) for x in classic_proba]))
 
     index_max_emg = np.argmax(sum_proba_emg)
     index_max_imu = np.argmax(sum_proba_imu)
+    index_max_classic = np.argmax(sum_proba_classic)
+
+    write_prediction_to_file(cnn_emg_path, cnn_pred_emg, y_true)
+    write_prediction_to_file(cnn_imu_path, cnn_pred_imu, y_true)
+    write_prediction_to_file(classic_path, classic_pred, y_true)
+
     print("EMG prediction:", Constant.label_display_without_rest[index_max_emg],
-          "\nIMU preddiction:", Constant.label_display_without_rest[index_max_imu])
+          "\nIMU prediction:", Constant.label_display_without_rest[index_max_imu],
+          "\nClassic prediction", Constant.label_display_with_rest[index_max_classic])
 
     if not index_max_imu == index_max_emg:
         if np.abs(sum_proba_emg[index_max_emg] - sum_proba_imu[index_max_imu]) >= 0.1:
@@ -201,25 +236,20 @@ def evaluate_predictions(proba_emg, pred_emg, proba_imu, pred_imu, y_true, live_
         final_choice = index_max_emg
     print("Final choice:", Constant.label_display_without_rest[final_choice])
 
-    emg_pred_correct, imu_pred_correct = 0, 0
-    timestamp = str(time.time())
-    f_emg = open(live_prediction_path + timestamp + "emg_prediction.csv", 'a', newline='')
-    f_imu = open(live_prediction_path + timestamp + "emg_prediction.csv", 'a', newline='')
-    for p in pred_emg:
-        if p == y_true:
-            emg_pred_correct += 1
-            with f_emg:
-                writer = csv.writer(f_emg, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([p, y_true])
-        f_emg.close()
+    write_prediction_to_file(sequence_path, ["CNN", final_choice], y_true)
+    write_prediction_to_file(sequence_path, ["Classic", index_max_classic], y_true)
 
-    for p in pred_imu:
+
+def write_prediction_to_file(file_path, y_pred, y_true):
+    file = open(file_path, 'a', newline='')
+    correct = 0
+    for p in y_pred:
         if p == y_true:
-            imu_pred_correct += 1
-            with f_imu:
-                writer = csv.writer(f_emg, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            correct += 1
+            with file:
+                writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
                 writer.writerow([p, y_true])
-    f_imu.close()
+    file.close()
 
 
 def most_common(lst):
@@ -253,7 +283,7 @@ def pair_devices():
     global DEVICE_L
     print("Pair devices - Start")
     with hub.run_in_background(device_listener):
-        wait(.5)
+        Helper_functions.wait(.5)
         for i in range(3):  # Three trials to pair
             devices = device_listener.devices
             for device in devices:
@@ -269,7 +299,7 @@ def pair_devices():
                 print("paired")
                 log.info("Devices paired")
                 return DEVICE_L, DEVICE_R
-            wait(2)
+            Helper_functions.wait(2)
     hub.stop()
     print("Pair devices - Done")
     return None, None
@@ -283,7 +313,7 @@ def reformat_raw_data(emg=[], ori=[], acc=[], gyr=[]):
     g = [[j.x, j.y, j.z] for j in [h[0] for h in [g[1:] for g in gyr]]]
     imu = []
     for i in range(len(o)):
-        #todo check warum teilweise nicht gleichlang
+        # todo check warum teilweise nicht gleichlang
         tmp = o[i]
         tmp.extend([x for x in a[i]])
         tmp.extend([x for x in g[i]])

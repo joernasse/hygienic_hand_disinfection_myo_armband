@@ -125,9 +125,24 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
     return True
 
 
-def train_user_dependent_grid_search():
+def train_user_dependent_grid_search(classifier, training_data, test_data, norm):
     print("User dependent grid search - Start")
-    print("User dependent grid search - Done")
+    x_train, y_train = flat_users_data(training_data)
+    x_test, y_test = flat_users_data(test_data)
+
+    # Norm
+    if norm:
+        x_train = norm_data(x_train)
+
+    print("Train length", len(x_train),
+          "\nValidation length", len(x_test))
+
+    classifier = GridSearchCV(estimator=classifier, param_grid=Constant.rf_parameter, n_jobs=-1, verbose=1, cv=10)
+
+    classifier.fit(x_train, y_train)
+    y_predict = classifier.predict(x_test)
+    accuracy = accuracy_score(y_test, y_predict)
+    return classifier, accuracy, y_test, y_predict
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name, save_path, save_model=False,

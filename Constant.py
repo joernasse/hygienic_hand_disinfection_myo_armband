@@ -68,11 +68,10 @@ identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 collections_path_default = 'G:/Masterarbeit/Collections/'
 test_set_size = 0.1
-validation_set_size = 0.2
+validation_set_size = 0.1
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
 
-# SEPARATE = "separate"
 CONTINUES = "continues"
 
 # Save_Load_CSV
@@ -150,12 +149,14 @@ USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
-USERS_SUB = ["User009", "User010", "User011", "User012",
+USERS_SUB = ["User001", "User003", "User004",
+             "User005", "User006", "User007", "User008",
+             "User009", "User010", "User011", "User012",
              "User013", "User014", "User015"]
 
 # Without user007
-USERS_cross = ["User002", "User003", "User004",
-               "User005", "User006", "User007", "User008",
+USERS_cross = ["User001", "User002", "User003", "User004",
+               "User005", "User006", "User008",
                "User009", "User010", "User011", "User012",
                "User013", "User014", "User015"]
 
@@ -170,10 +171,11 @@ level_5 = [rehman, georgi, robinson, mantena]
 # ----------------------------------Classic Classifier-----------------------------------------------------------------#
 random_forest = RandomForestClassifier(n_jobs=-1, criterion='gini', n_estimators=256, min_samples_split=2,
                                        bootstrap=True, max_depth=16, max_features=3, verbose=1)
-rf_parameter = {'criterion': ['gini'],
-                'max_depth': [16, 64],
-                'min_samples_split': [2, 3],
-                'min_samples_leaf': [3, 4],
+rf_parameter = {'n_estimators': [256],
+                'criterion': ['gini'],
+                'max_depth': [8, 64],
+                'min_samples_split': [2, 3, 5],
+                'min_samples_leaf': [3, 4, 6],
                 "max_features": [3, 10],
                 'bootstrap': [True, False]}
 gauss = GAUSS()
@@ -193,7 +195,7 @@ qda = QDA()
 classifiers = [random_forest, lda, qda, gauss, knn, svc]
 classifier_names = ["Random Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
 
-# ----------------------------------Pre processing with Filter and normalization----------------------------------------#
+# ----------------------------------Pre processing with Filter and normalization---------------------------------------#
 count_devices = 2
 fs_emg = 200
 fs_imu = 50

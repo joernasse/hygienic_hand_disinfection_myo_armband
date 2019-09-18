@@ -1,7 +1,8 @@
 from __future__ import print_function
 
+import tensorflow
 from keras.utils import plot_model
-
+import matplotlib.pyplot as plt
 import Classification
 import Constant
 import Deep_learning
@@ -37,7 +38,6 @@ def preprocess_raw_data(window, overlap, user_list, data_set, preprocess, sensor
     print("Window", window, "Overlap", overlap)
 
     raw_data = Process_data.collect_data_for_single_sensor(user_list, sensor, data_set)
-    # print(len(raw_data['Step1']))
     if norm_by_rest:
         print("Start normalization")
         raw_data = Helper_functions.normalize_by_rest_gesture(data=raw_data, sensor=sensor)
@@ -59,8 +59,8 @@ def preprocess_raw_data(window, overlap, user_list, data_set, preprocess, sensor
 
     # TODO check if working in windowing function above
 
-    print("Window length", len(w_data),
-          "\nLabel length", len(labels),
+    print("Window number", len(w_data),
+          "\nLabel number", len(labels),
           "\nPreprocessing raw data - Done")
     return w_data, labels
 
@@ -113,49 +113,69 @@ def pre_process_raw_data_adapt_model(window, overlap, users, sensor, skip_steps_
 
 
 def main():
-    # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User001_Unknown/no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
-    # predict_for_unknown_user_cnn(load_model_path, "User001", "no_pre_pro-separate-IMU-25-0.9-NA")
-    # return True
+    # --------------------------------------------Plot CNN-------------------------------------------------------------#
+    # tensorflow.keras.utils.plot_model(Deep_learning.create_cnn_1_model(8, 100, 12),
+    #                                   to_file='G:/Masterarbeit/CNN_1_structure.svg', show_shapes=True,
+    #                                   show_layer_names=True)
+    # --------------------------------------------Plot CNN-------------------------------------------------------------#
 
+    # --------------------------------------------Predict user independent CNN - START---------------------------------#
+    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User007_Unknown/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"
+    # predict_for_unknown_user_cnn(load_model_path, "User007", "no_pre_pro-separate-EMG-100-0.9-NA")
+    # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
-    save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
-    for user in Constant.USERS_SUB:
-        train_user_dependent_cnn(["no_pre_pro-separate-EMG-100-0.9-NA"], user,
-                                 False, save_path, True, Constant.CNN_KAGGLE, True)
-    return True
+    # save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
+    # for user in Constant.USERS_SUB:
+    #     train_user_dependent_cnn(["no_pre_pro-separate-EMG-100-0.9-NA"], user,
+    #                              False, save_path, True, Constant.CNN_KAGGLE, True)
+    # return True
     # --------------------------------------------Train user dependent CNN - END---------------------------------------#
 
-    # train_user_independent("no_pre_pro-separate-IMU-100-0.9-rehman",trainings_data=Constant.USERS,feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
-    # train_user_dependent(Constant.USERS, skip_rest=True)  # feature_extraction_complete()
-    # calculation_config_statistics()
+    # --------------------------------------------Grid search ---------------------------------------------------------#
+    # user_independent_grid_search(Constant.random_forest, "Random Forest", "./",
+    #                              "no_pre_pro-separate-EMGIMU-100-0.9-georgi", True, True, Constant.USERS_cross,
+    #                              "G:/Masterarbeit/feature_sets_filter/", "User007", True, True)
     # return True
+    # --------------------------------------------Grid search ---------------------------------------------------------#
 
-    # calculation_config_statistics()
-    # path = os.getcwd()
-    # for config in Constant.top_ten_user_dependent_configs[1:]:
-    #     train_user_independent(config=config, ignore_rest_gesture=True,
-    #                            trainings_data=Constant.USERS, feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
-    # return True
-    # load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
+    # -
+    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-separatecontinues-IMU-25-0.9-NA"], "User002", False,
+                               "./", False, Constant.CNN_KAGGLE, True, 32, 100, 5)
+    # -
 
-    # --------------------------------------------Train CNN 1----------------------------------------------#
-    # save_path = save_path + "/CNN_1/"
-    # if not os.path.isdir(save_path):  # Collection dir
-    #     os.mkdir(save_path)
-    # # name, acc = Deep_learning.cnn_1(x, labels, save_path, batch=50, epochs=500, config=config)
-    #
-    # f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
-    # with f:
-    #     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    #     writer.writerow([user, name, str(acc), config])
-    # f.close()
-    # del x
-    # del labels
 
-    # --------------------------------------------Train CNN kaggle-----------------------------------------------------#
+#
+
+# train_user_independent("no_pre_pro-separate-IMU-100-0.9-rehman",trainings_data=Constant.USERS,feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
+# train_user_dependent(Constant.USERS, skip_rest=True)  # feature_extraction_complete()
+# calculation_config_statistics()
+# return True
+
+# calculation_config_statistics()
+# path = os.getcwd()
+# for config in Constant.top_ten_user_dependent_configs[1:]:
+#     train_user_independent(config=config, ignore_rest_gesture=True,
+#                            trainings_data=Constant.USERS, feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
+# return True
+# load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
+
+# --------------------------------------------Train CNN 1----------------------------------------------#
+# save_path = save_path + "/CNN_1/"
+# if not os.path.isdir(save_path):  # Collection dir
+#     os.mkdir(save_path)
+# # name, acc = Deep_learning.cnn_1(x, labels, save_path, batch=50, epochs=500, config=config)
+#
+# f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
+# with f:
+#     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#     writer.writerow([user, name, str(acc), config])
+# f.close()
+# del x
+# del labels
+
+# --------------------------------------------Train CNN kaggle-----------------------------------------------------#
 
 
 # save_path = "G:/Masterarbeit/deep_learning_filter/" + "User007_Unknown"
@@ -548,7 +568,7 @@ def train_user_independent_cnn(train_user_list, config_list, user, norm=False, s
         data_set = config_split[1]
         sensor = config_split[2]
         window = int(config_split[3])
-        overlap = float(config_list[4])
+        overlap = float(config_split[4])
 
         x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=train_user_list,
                                         preprocess=preprocess, data_set=data_set, sensor=sensor,
@@ -629,7 +649,10 @@ def predict_for_unknown_user_cnn(model_path, user, config):
     window = int(config_split[3])
     overlap = float(config_split[4])
     norm = bool(config_split[5])
-
+    if norm == "norm":
+        norm = True
+    else:
+        norm = False
     x, labels = preprocess_raw_data(window=window, overlap=overlap, user_list=[user], data_set=data_set,
                                     preprocess=preprocess,
                                     sensor=sensor, ignore_rest_gesture=True, norm_by_rest=False)
@@ -641,6 +664,40 @@ def predict_for_unknown_user_cnn(model_path, user, config):
             x[i] = sc.transform(x[i])
             config += "norm"
     evaluation, accuracy_score = Deep_learning.predict_for_load_model(x, labels, model, batch_size=32)
+
+
+def user_independent_grid_search(classifier, name, save_path, config, visualization, save_model, training_user_list,
+                                 feature_sets_path, test_user, ignore_rest_gesture, norm):
+    training_data = Save_Load.load_raw_data(config=config, user_list=training_user_list, path=feature_sets_path)
+    test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+
+    if ignore_rest_gesture:
+        test_data[0] = Process_data.remove_rest_gesture_data(user_data=test_data[0])
+        for i in range(len(training_data)):
+            training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
+
+    classifier, accuracy, y_test, y_predict = Classification.train_user_dependent_grid_search(classifier=classifier,
+                                                                                              training_data=training_data,
+                                                                                              test_data=test_data,
+                                                                                              norm=norm)
+
+    f = open(save_path + "/Overview_user_independent_" + config + ".csv", 'a', newline='')
+    with f:
+        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+
+    writer.writerow([name, str(accuracy), config])
+    f.close()
+
+    if visualization:
+        Helper_functions.result_visualization(y_true=y_test, y_predict=y_predict, show_figures=False,
+                                              labels=Constant.labels_without_rest, config=config)
+        plt.show()
+    if save_model:
+        save = save_path + "/" + name + config + '.joblib'
+        Classification.save_classifier(classifier, save)
+    print("User independent - Done")
+    print("User dependent grid search - Done")
+    return True
 
 
 if __name__ == '__main__':

@@ -125,7 +125,7 @@ def result_visualization(y_true, y_predict, show_figures=False,
     if show_figures:
         plt.show()
 
-    acc_score=sklearn.metrics.accuracy_score(y_true, y_predict)
+    acc_score = sklearn.metrics.accuracy_score(y_true, y_predict)
     print("Accuracy score", sklearn.metrics.accuracy_score(y_true, y_predict),
           "\nClassification report", sklearn.metrics.classification_report(y_true, y_predict),
           "\nMean absolute error", sklearn.metrics.mean_absolute_error(y_true, y_predict))
@@ -237,3 +237,17 @@ def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
     print("Normalization by Rest gesture - Done")
     return data
 
+
+def countdown(time=5):
+    """
+
+    :param introduction_screen:
+    :param time:
+    :return:
+    """
+    while time:
+        min, secs = divmod(time, 60)
+        time_format = '{:02d}:{:02d}'.format(min, secs)
+        print(time_format)
+        time.sleep(1)
+        time -= 1
