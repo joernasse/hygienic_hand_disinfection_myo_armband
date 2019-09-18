@@ -95,7 +95,7 @@ def plot_confusion_matrix(y_true, y_predict, classes, norm=False, title=None, cm
 
 
 def result_visualization(y_true, y_predict, show_figures=False,
-                         labels=Constant.label_display_without_rest, config="", save_path=""):
+                         labels=Constant.label_display_without_rest, config="", save_path="./"):
     """
 
     :param history:
@@ -141,7 +141,7 @@ def result_visualization(y_true, y_predict, show_figures=False,
     return acc_score
 
 
-def process_history(history, save_path="", config="", show_results=False):
+def visualization_history(history, save_path="./", config="", show_results=False):
     """
 
     :param history:

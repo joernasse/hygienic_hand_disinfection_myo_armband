@@ -45,6 +45,7 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
           "\nTest", len(x_test),
           "\nBatch size", batch,
           "\nEpochs", epochs)
+
     print("Training for", cnn_pattern, " - Start")
     if cnn_pattern == Constant.CNN_KAGGLE:
         model = create_kaggle_model(x_train.shape[1], x_train.shape[2], classes)
@@ -73,7 +74,7 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
                         use_multiprocessing=True)
     print("Training for", cnn_pattern, " - Done")
     if visualization:
-        Helper_functions.process_history(history, save_path=save_path, config=config, show_results=visualization)
+        Helper_functions.visualization_history(history, save_path=save_path, config=config, show_results=visualization)
 
     if perform_test:
         print("Prediction for", cnn_pattern, " - Start")
@@ -162,14 +163,14 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
     validation_size = (int(len(x) * validation_size)) / len(x)
     x_train, x_val, y_train, y_val = train_test_split(x_train, y_train, random_state=42, test_size=validation_size)
 
-    y_val_one_hot = to_categorical(y_val)
+    y_val = to_categorical(y_val)
     x_val = np.array(x_val)[:, :, :, np.newaxis]
 
     x_train = np.asarray(x_train)
     x_train = np.array(x_train)[:, :, :, np.newaxis]
 
     y_train = to_categorical(y_train)
-    return x_train, x_test, x_val, y_train, y_test, y_val_one_hot, classes
+    return x_train, x_test, x_val, y_train, y_test, y_val, classes
 
 
 # def cnn_1(x, y, save_path, batch, epochs, config=""):
@@ -243,8 +244,8 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
 #     return "CNN_1", acc
 
 
-def adapt_model_for_user(x_train, y_train, save_path, batch, epochs,
-                         user_name, x_test, y_test, save_label=None, model=None):
+def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_test_in, y_test_in,
+                         cnn_pattern=Constant.CNN_KAGGLE, model=None):
     """
 
     :param x_train:
@@ -259,42 +260,41 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs,
     :param model:
     :return:
     """
-    x_train, y_train, classes, = prepare_data_for_cnn(x_train, y_train, adapt_model=True)
-    save_path_1 = save_path + "/cnn_kaggle_adapt_model.h5"
+    x_train, x_test, x_val, y_train, y_test, y_val, classes = prepare_data_for_cnn(x_train, y=y_train,
+                                                                                   calc_test_set=False)
+    x_test = np.array(x_test_in)[:, :, :, np.newaxis]
+    print("Training", len(x_train),
+          "\nValidation", len(x_val),
+          "\nTest", len(x_test),
+          "\nBatch size", batch,
+          "\nEpochs", epochs)
+
     if model is None:
-        print("No model loaded, use new model")
-        model = create_kaggle_model(x_train.shape[1], x_train.shape[2])
-        save_path_1 = save_path + "/cnn_kaggle_only_user_short_train_model.h5"
-        epochs = epochs * 5  # Da untrainiertes Netz
+        print("No load model found - create new one")
+        model = create_kaggle_model(x_train.shape[1], x_train.shape[2], classes)
+        model.compile(loss=keras.losses.categorical_crossentropy,
+                      optimizer=keras.optimizers.RMSprop(),
+                      metrics=['accuracy'])
     cp_callback = [
         keras.callbacks.EarlyStopping(
-            monitor='val_acc',
-            patience=10,
-            mode='max',
-            verbose=1),
+            monitor='val_acc', patience=5,
+            mode='max', verbose=1),
         keras.callbacks.ModelCheckpoint(
-            save_path_1,
-            verbose=1,
-            monitor='val_acc',
-            save_best_only=True,
-            mode='max')
-    ]
-    print("batch_size", batch, "epochs", epochs)
+            save_path + "/" + config + "_cnn_" + cnn_pattern + "_adapt.h5", verbose=1,
+            monitor='val_acc', save_best_only=True, mode='max')]
+
     start = time()
     history = model.fit(x_train, y_train,
                         batch_size=batch,
                         epochs=epochs,
-                        validation_data=(x_train, y_train),
+                        validation_data=(x_val, y_val),
                         callbacks=cp_callback,
                         verbose=1)
     print("--- %s seconds ---" % (time() - start))
-    model.summary()
-
-    x_test, tmp_y, tmp = prepare_data_for_cnn(x_test, y_test, adapt_model=True)
     y_predict = model.predict_classes(x_test, batch)
 
-    Helper_functions.result_visualization(history, y_test, y_predict)
-    # plt.show()
+    Helper_functions.visualization_history(history, "./", config, True)
+    Helper_functions.result_visualization(y_test_in, y_predict, True, Constant.label_display_without_rest, config, "./")
     print("finish")
 
 
