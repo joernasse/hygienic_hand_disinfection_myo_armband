@@ -285,19 +285,20 @@ class IntroductionScreen(Frame):
             wait(3)
             self.close()
 
-    def countdown(self, time=5):
+    def countdown(self, t=5):
         """
 
         :param introduction_screen:
-        :param time:
+        :param t:
         :return:
         """
-        while time:
-            min, secs = divmod(time, 60)
+        while t:
+            min, secs = divmod(t, 60)
             time_format = '{:02d}:{:02d}'.format(min, secs)
             self.set_status_text("Pause! " + time_format)
             time.sleep(1)
-            time -= 1
+            t -= 1
+
     def close(self):
         """
         Close the current window
@@ -478,7 +479,7 @@ def collect_data(current_session):
     g_introduction_screen.set_countdown_text("")
 
     with hub.run_in_background(gesture_listener.on_event):
-        countdown(g_introduction_screen, 3)
+        g_introduction_screen.countdown(3)
         for i in range(len(Constant.label)):
             path = g_raw_path + "/" + "s" + str(current_session) + Constant.label[i]
             emg_l, emg_r = [], []
@@ -514,7 +515,7 @@ def collect_data(current_session):
             if g_mode == Constant.SEPARATE:
                 wait(.5)
                 if i < len(Constant.label) - 1:
-                    countdown(g_introduction_screen, g_break)
+                    g_introduction_screen.countdown(g_break)
 
     g_introduction_screen.set_countdown_text("")
     g_introduction_screen.set_status_text("Session " + str(current_session + 1) + " done!")
@@ -552,7 +553,7 @@ def initialize_data_collection(raw_path, trial, mode, record_time=5):
 
     if pair_devices():
         g_record_time = record_time
-        g_introduction_screen.change_img("intro_screen.jpg")
+        g_introduction_screen.change_image("intro_screen.jpg")
         g_img_path = os.getcwd() + "/gestures/"
         g_files = os.listdir(g_img_path)
         g_introduction_screen.set_status_text("Hold every gesture for 5 seconds")

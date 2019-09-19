@@ -179,12 +179,15 @@ def ssc(x):
     :return: float
             result of calculation (slope sign changes)
     """
-    f = 0
-    for n in range(1, len(x) - 1):
-        res = (x[n] - x[n - 1]) * x[n] - x[n + 1]
-        if res >= Constant.threshold:
-            f += 1
-    return f
+    try:
+        f = 0
+        for n in range(1, len(x) - 1):
+            res = (x[n] - x[n - 1]) * x[n] - x[n + 1]
+            if res >= Constant.threshold:
+                f += 1
+        return f
+    except:
+        print("")
 
 
 # Robinson-PatternClassificationHand-2017.pdf
