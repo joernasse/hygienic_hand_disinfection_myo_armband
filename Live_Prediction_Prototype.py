@@ -53,6 +53,7 @@ sequence_duration = [5, 4, 3, 2]
 cnn_emg_models = []
 cnn_imu_models = []
 classic_models = []
+live_prediction_path = "./Live_Prediction/"
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -115,7 +116,7 @@ def check_samples_rate(n=5, record_time=1):
     if (n * 2 * 200) * 0.85 > sum_emg:
         print("EMG sample rate under 85%")
 
-    if (n * 2 * 50) * 0.9 > sum_imu:
+    if (n * 2 * 50) * 0.85 > sum_imu:
         print("IMU sample rate under 85%")
 
     print("Check samples rate - Done")
@@ -170,7 +171,6 @@ def main():
     global cnn_imu_models
     global classic_models
 
-    live_prediction_path = "./Live_Prediction/"
     preprocess = Constant.no_pre_processing
     init()
     Helper_functions.wait(2)
@@ -225,24 +225,57 @@ def main():
                 predict_imu = [clf.predict_classes(x_imu) for clf in cnn_imu_models]
 
                 # ----------------------------------Evaluate results---------------------------------------------------#
-                evaluate_predictions(cnn_pred_emg=predict_emg,
-                                     cnn_proba_emg=proba_emg,
-                                     cnn_pred_imu=predict_imu,
-                                     cnn_proba_imu=proba_imu,
-                                     classic_pred=predict_classic,
-                                     y_true=label,
-                                     live_prediction_path=live_prediction_path)
-                #
-                #
-                #     proba_emg, predict_emg,
-                #                      proba_imu, predict_imu, label,
-                #                      predict_classic, proba_classic,
-                #                      live_prediction_path)
+                evaluate_predictions_1(predict=predict_emg,
+                                       proba=proba_emg,
+                                       y_true=label,
+                                       log_file_name="label_" + str(label) + "_emg_prediction.csv",
+                                       clf_names=cnn_emg_paths)
+                evaluate_predictions_1(predict=predict_imu,
+                                       proba=proba_imu,
+                                       y_true=label,
+                                       log_file_name="label_" + str(label) + "_imu_prediction.csv",
+                                       clf_names=cnn_imu_paths)
+                evaluate_predictions_1(predict=predict_classic,
+                                       proba=[],
+                                       y_true=label,
+                                       log_file_name="label_" + str(label) + "_classic_prediction.csv",
+                                       classic=True,
+                                       clf_names=classic_paths)
     hub.stop()
 
 
-def evaluate_predictions(cnn_proba_emg, cnn_pred_emg, cnn_proba_imu, cnn_pred_imu,
-                         classic_pred, y_true, live_prediction_path):
+def evaluate_predictions_1(predict, proba, y_true, log_file_name, clf_names, classic=False):
+    save_path = live_prediction_path + log_file_name
+    for n in range(len(predict)):
+        sum_proba = []
+        if classic:
+            file = open(save_path, 'a', newline='')
+            writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow([clf_names[n]])
+            sum_pred_classic_dict = collections.Counter(predict[n])
+            sum_proba_classic = np.divide(list(sum_pred_classic_dict.values()), len(predict[n]))
+            index_max_classic = max(sum_pred_classic_dict, key=sum_pred_classic_dict.get)
+            with file:
+                writer.writerow(["label", "predict_sum"])
+                for key in sum_pred_classic_dict.keys():
+                    writer.writerow([key, sum_pred_classic_dict[key]])
+                writer.writerow([Constant.write_separater])
+
+        else:
+            file = open(save_path, 'a', newline='')
+            writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+            writer.writerow([clf_names[n]])
+            write_prediction_to_file(save_path, predict[n], proba[n], y_true)
+            for i in range(Constant.classes):
+                sum_proba.append(np.mean([float(x[i]) for x in proba[n]]))
+                index_max_emg = np.argmax(sum_proba)
+            with file:
+                writer.writerow([[x for x in sum_proba], index_max_emg])
+                writer.writerow([Constant.write_separater])
+
+
+def evaluate_predictions(cnn_proba_emg, cnn_pred_emg, cnn_proba_imu, cnn_pred_imu, classic_pred, y_true,
+                         live_prediction_path):
     timestamp = str(time.time())
     cnn_emg_path = live_prediction_path + timestamp + "emg_prediction.csv"
     cnn_imu_path = live_prediction_path + timestamp + "imu_prediction.csv"
@@ -298,11 +331,10 @@ def evaluate_predictions(cnn_proba_emg, cnn_pred_emg, cnn_proba_imu, cnn_pred_im
 def write_prediction_to_file(file_path, y_pred=None, y_prob=None, y_true=None):
     file = open(file_path, 'a', newline='')
     with file:
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        writer.writerow(["predict", "probabilities", "true_label"])
         for i in range(len(y_pred)):
-            for i in range(len(y_pred)):
-                writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([y_pred[i], y_prob[i], y_true])
-        writer.writerow([Constant.write_separater])
+            writer.writerow([y_pred[i], [x for x in y_prob[i]], y_true])
     file.close()
 
 
