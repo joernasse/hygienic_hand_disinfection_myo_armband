@@ -1,5 +1,5 @@
 import os
-import signal
+import scipy.signal as signal
 from scipy.stats import zscore
 import Constant
 import Feature_extraction as fe
@@ -325,6 +325,7 @@ def remove_rest_gesture_data(user_data):
             The data set from which the date of "Rest" gesture shoul be removed
     :return: list<dict{'data':array,'label':array}>
     """
+    print("Remove data for rest gesture - START")
     data, label_ = [], []
     for i in range(len(user_data['label'])):
         if user_data['label'][i] == 12:
@@ -333,4 +334,5 @@ def remove_rest_gesture_data(user_data):
         label_.append(user_data['label'][i])
     user_data['data'] = data
     user_data['label'] = label_
+    print("Remove data for rest gesture - DONE")
     return user_data

@@ -104,18 +104,36 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
 
 
 def main():
+    feature_extraction(["User001"])
+    train_user_dependent_classic(user_list=["User001"],
+                                 feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
+                                 ignore_rest_gesture=True,
+                                 predefine_config="no_pre_pro-separate-EMGIMU-100-0.9-rehman",
+                                 model_save_path="./",
+                                 save_model=True,
+                                 visualization=False,
+                                 classifiers=[Constant.random_forest],
+                                 classifier_names=["Random Forest"],
+                                 norm=True)
+    return True
+    # --------------------------------------------Train user independent classic - START-------------------------------#
+    # train_user_independent_classic("no_pre_pro-separate-EMGIMU-100-0.9-rehman", True,
+    #                                "//192.168.2.101/g/Masterarbeit/feature_sets_filter/", Constant.USERS_SUB, "User007",
+    #                                "./", [Constant.random_forest], ["Random Forest"], True, True, True)
+    # return True
+    # --------------------------------------------Train user independent classic - END---------------------------------#
+
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#
-    # model_l_path = "G:/Masterarbeit/Results/User_independent_cnn/" \
-    #                "User002_Unknown/no_pre_pro-separatecontinues-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
-    #
+    # model_l_path = "//192.168.2.101/g/Masterarbeit/Results/User_independent_cnn/" \
+    #                "User007_Unknown/no_pre_pro-separate-EMG-25-0.9-NA_cnn_model.h5"
     # x_train, y_train, x_test, y_test = \
-    #     pre_process_raw_data_adapt_model(window=25, overlap=0.9, user="User002",
-    #                                      sensor=Constant.IMU, data_set=Constant.SEPARATE+Constant.CONTINUES,
-    #                                      collection_path="G:/Masterarbeit/Collections/")
+    #     pre_process_raw_data_adapt_model(window=25, overlap=0.9, user="User007",
+    #                                      sensor=Constant.EMG, data_set=Constant.SEPARATE,
+    #                                      collection_path="//192.168.2.101/g/Masterarbeit/Collections/")
     #
     # Deep_learning.adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10,
-    #                                    x_test_in=x_test, y_test_in=y_test, model=load_model(model_l_path),
-    #                                    config="no_pre_pro-separatecontinues-IMU-25-0.9-N")
+    #                                    x_test_in=x_test, y_test_in=y_test, model=None,
+    #                                    config="no_pre_pro-separate-IMU-25-0.9-norm-NA")
     # return True
     # --------------------------------------------Adapt CNN for Unknown User END---------------------------------------#
 
@@ -281,7 +299,8 @@ def main():
 
 def train_user_independent_classic(config, ignore_rest_gesture=True, feature_sets_path="",
                                    training_users=Constant.USERS_cross, test_user="User007", save_path="./",
-                                   classifier=Constant.classifiers, classifier_names=Constant.classifier_names):
+                                   classifier=Constant.classifiers, classifier_names=Constant.classifier_names,
+                                   norm=False, save_model=False, visualization=False):
     """
 
     :param config:
@@ -292,11 +311,15 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
     :param save_path:
     :param classifier:
     :param classifier_names:
+    :param norm:
+    :param save_model:
+    :param visualization:
     :return:
     """
     print("Current config", config)
     training_data = Save_Load.load_raw_data(config=config, user_list=training_users, path=feature_sets_path)
     test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+    print(len(training_data))
 
     if ignore_rest_gesture:
         test_data[0] = Process_data.remove_rest_gesture_data(user_data=test_data[0])
@@ -309,8 +332,9 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
                                           classifiers_name=classifier_names,
                                           save_path=save_path,
                                           config=config,
-                                          norm=True,
-                                          save_model=False)
+                                          norm=norm,
+                                          save_model=save_model,
+                                          visualization=visualization)
 
 
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
@@ -405,14 +429,15 @@ def train_cnn(window, overlap, save_path="./", load_model_path="", sensor=Consta
         # Deep_learning.cnn_rehman(np.asarray(emg_windows), np.asarray(labels), save_path)
 
 
-def train_user_dependent_classic(users, feature_set_path, ignore_rest_gesture=True, predefine_config=None,
-                                 model_save_path="./"):
+def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gesture=True, predefine_config=None,
+                                 model_save_path="./", save_model=False, visualization=False,
+                                 classifiers=Constant.classifiers,classifier_names=Constant.classifier_names,norm=True):
     """
     Go over all config steps and prepare data for each combination of configuration.
     Each level in Config. can be changed in the Constant.py
     Load feature set described by config.
     Ignore Rest gesture if "skip_rest" is True
-    :param users: list
+    :param user_list: list
             List of string which represent the users
     :param feature_set_path: string
             Path to folder with the feature sets
@@ -425,7 +450,7 @@ def train_user_dependent_classic(users, feature_set_path, ignore_rest_gesture=Tr
             The path where the classifier/model should be saved
     :return:
     """
-    for user in users:
+    for user in user_list:
         print(user)
         for pre in Constant.level_0:
             for data_set in Constant.level_1:
@@ -445,16 +470,17 @@ def train_user_dependent_classic(users, feature_set_path, ignore_rest_gesture=Tr
                                     continue
 
                                 if ignore_rest_gesture:
-                                    users_data = Process_data.remove_rest_gesture_data(users_data)
+                                    users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
                                 Classification.train_user_dependent(user_data=users_data,
                                                                     config=config,
                                                                     user_name=user,
-                                                                    classifiers=Constant.classifiers,
-                                                                    classifiers_name=Constant.classifier_names,
+                                                                    classifiers=classifiers,
+                                                                    classifiers_name=classifier_names,
                                                                     save_path=model_save_path,
-                                                                    save_model=False,
-                                                                    visualization=False)
+                                                                    save_model=save_model,
+                                                                    visualization=visualization,
+                                                                    norm=norm)
         return True
 
 
@@ -496,13 +522,13 @@ def user_dependent_complete(feature_set_path, save_path="./", n_jobs=4):
         p.join()
 
 
-def feature_extraction(users):
+def feature_extraction(user_list):
     """
     Extract the features from a given set of users
-    :param users:  array, shape = [n_users] The array of users for feature extraction
+    :param user_list:  array, shape = [n_users] The array of users for feature extraction
     :return: No returns
     """
-    for user in users:
+    for user in user_list:
         for preprocessing in Constant.level_0:
             for data_set in Constant.level_1:
                 for sensor in Constant.level_2:

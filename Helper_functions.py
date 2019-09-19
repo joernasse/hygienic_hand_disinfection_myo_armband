@@ -238,16 +238,10 @@ def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
     return data
 
 
-def countdown(time=5):
-    """
-
-    :param introduction_screen:
-    :param time:
-    :return:
-    """
-    while time:
-        min, secs = divmod(time, 60)
-        time_format = '{:02d}:{:02d}'.format(min, secs)
-        print(time_format)
+def countdown(t):
+    while t:
+        mins, secs = divmod(t, 60)
+        timeformat = '{:02d}:{:02d}'.format(mins, secs)
+        print(timeformat, end='\r')
         time.sleep(1)
-        time -= 1
+        t -= 1

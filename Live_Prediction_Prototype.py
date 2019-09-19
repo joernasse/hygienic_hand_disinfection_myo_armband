@@ -13,10 +13,24 @@ import Helper_functions
 import Process_data
 import numpy as np
 from tensorflow.python.keras.models import load_model
+from itertools import groupby
+import collections
 
-classic_clf_path = "G:/Masterarbeit/user_dependent_detail/User001Random_Forest_User_dependentseparate-EMGIMU-100-0.75-georgi.joblib"
+from Classification import norm_data
+
+classic_clf_paths = "G:/Masterarbeit/user_dependent_detail/User001Random_Forest_User_dependentseparate-EMGIMU-100-0.75-georgi.joblib"
 imu_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
 emg_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_emg_0"
+
+cnn_emg_paths = ["./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5",
+                 "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-EMG-100-0.9-norm-NA_cnn_kaggle.h5"]
+
+cnn_imu_paths = ["./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5",
+                 "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"]
+
+classic_paths = [
+    "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib",
+    "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"]
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
@@ -36,6 +50,9 @@ emg_dict = {"timestamp": [],
             "label": []}
 
 sequence_duration = [5, 4, 3, 2]
+cnn_emg_models = []
+cnn_imu_models = []
+classic_models = []
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -105,21 +122,31 @@ def check_samples_rate(n=5, record_time=1):
     return
 
 
-def init():
+def init(live_prediction_path="./Live_Prediction"):
     global status
+    global cnn_emg_models
+    global cnn_imu_models
+    global classic_models
+
+    if not os.path.isdir(live_prediction_path):  # Collection dir
+        os.mkdir(live_prediction_path)
+
     status = 1
     print("Initialization - Start")
     Helper_functions.wait(3)
     pair_devices()
-    cnn_imu_model = load_model("./no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5")
-    cnn_emg_mode = load_model("./no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5")
-    with open(classic_clf_path, 'rb') as pickle_file:
-        classic_model = pickle.load(pickle_file)
+
+    for path in cnn_emg_paths:
+        cnn_emg_models.append(load_model(path))
+    for path in cnn_imu_paths:
+        cnn_imu_models.append(load_model(path))
+    for path in classic_paths:
+        with open(path, 'rb') as pickle_file:
+            classic_models.append(pickle.load(pickle_file))
     # wait(4)
     status = 0
-    print("Initialization - Done")
     check_samples_rate()
-    return cnn_imu_model, cnn_emg_mode, classic_model
+    print("Initialization - Done")
 
 
 def preprocess_data(w_emg, w_imu, preprocess):
@@ -139,11 +166,13 @@ def preprocess_data(w_emg, w_imu, preprocess):
 
 
 def main():
-    live_prediction_path = "./Live_Prediction"
-    if not os.path.isdir(live_prediction_path):  # Collection dir
-        os.mkdir(live_prediction_path)
+    global cnn_emg_models
+    global cnn_imu_models
+    global classic_models
+
+    live_prediction_path = "./Live_Prediction/"
     preprocess = Constant.no_pre_processing
-    cnn_imu_model, cnn_emg_mode, classic_model = init()
+    init()
     Helper_functions.wait(2)
 
     with hub.run_in_background(gesture_listener.on_event):
@@ -151,9 +180,11 @@ def main():
             for label in range(len(Constant.label_display_without_rest)):
                 # ----------------------------------Record data--------------------------------------------------------#
                 print("Start with sequence. \nThe recording time of the gesture is " + str(seq) + " seconds.")
-                Helper_functions.countdown(3)
                 print(Constant.label_display_without_rest[label], "Start")
+                DEVICE_R.vibrate(libmyo.VibrationType.short)
+                Helper_functions.countdown(3)
                 emg, ori, acc, gyr = collect_raw_data(record_time=seq)
+                DEVICE_L.vibrate(libmyo.VibrationType.short)
                 print("Stop")
 
                 emg, imu = reformat_raw_data(emg, ori, acc, gyr)
@@ -167,11 +198,15 @@ def main():
                 w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
 
                 # Feature extraction
-                mode = Constant.georgi
+                mode = Constant.rehman
                 features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
-                predict_classic = classic_model.predict(features)
-                proba_classic = classic_model.predict_proba(features)
 
+                # Norm
+                norm = True
+                if norm:
+                    features = norm_data(features)
+
+                predict_classic = [clf.predict(features) for clf in classic_models]
                 # ----------------------------------Perform CNN prediction---------------------------------------------#
                 # Separate windowing
                 w_emg = 100
@@ -183,72 +218,91 @@ def main():
                 x_emg = np.array(w_emg)[:, :, :, np.newaxis]
                 x_imu = np.array(w_imu)[:, :, :, np.newaxis]
 
-                proba_emg = cnn_emg_mode.predict_proba(x_emg)
-                proba_imu = cnn_imu_model.predict_proba(x_imu)
+                proba_emg = [clf.predict_proba(x_emg) for clf in cnn_emg_models]
+                proba_imu = [clf.predict_proba(x_imu) for clf in cnn_imu_models]
 
-                predict_emg = cnn_emg_mode.predict_classes(x_emg)
-                predict_imu = cnn_imu_model.predict_classes(x_imu)
+                predict_emg = [clf.predict_classes(x_emg) for clf in cnn_emg_models]
+                predict_imu = [clf.predict_classes(x_imu) for clf in cnn_imu_models]
 
                 # ----------------------------------Evaluate results---------------------------------------------------#
-                evaluate_predictions(proba_emg, predict_emg,
-                                     proba_imu, predict_imu, label,
-                                     predict_classic, proba_classic,
-                                     live_prediction_path)
+                evaluate_predictions(cnn_pred_emg=predict_emg,
+                                     cnn_proba_emg=proba_emg,
+                                     cnn_pred_imu=predict_imu,
+                                     cnn_proba_imu=proba_imu,
+                                     classic_pred=predict_classic,
+                                     y_true=label,
+                                     live_prediction_path=live_prediction_path)
+                #
+                #
+                #     proba_emg, predict_emg,
+                #                      proba_imu, predict_imu, label,
+                #                      predict_classic, proba_classic,
+                #                      live_prediction_path)
     hub.stop()
 
 
-def evaluate_predictions(cnn_proba_emg, cnn_pred_emg,
-                         cnn_proba_imu, cnn_pred_imu,
-                         classic_proba, classic_pred,
-                         y_true, live_prediction_path):
+def evaluate_predictions(cnn_proba_emg, cnn_pred_emg, cnn_proba_imu, cnn_pred_imu,
+                         classic_pred, y_true, live_prediction_path):
     timestamp = str(time.time())
     cnn_emg_path = live_prediction_path + timestamp + "emg_prediction.csv"
     cnn_imu_path = live_prediction_path + timestamp + "imu_prediction.csv"
     classic_path = live_prediction_path + timestamp + "classic_prediction.csv"
     sequence_path = live_prediction_path + timestamp + "sequence_prediction.csv"
 
-    sum_proba_emg, sum_proba_imu, sum_proba_classic = [], [], []
+    for n in range(len(cnn_proba_emg)):
+        # Save prediction results for each sample
+        write_prediction_to_file(cnn_emg_path, cnn_pred_emg[n], cnn_proba_emg[n], y_true)
+        write_prediction_to_file(cnn_imu_path, cnn_pred_imu[n], cnn_proba_imu[n], y_true)
+        write_prediction_to_file(classic_path, classic_pred[n], [], y_true)
 
-    for i in range(12):
-        sum_proba_emg.append(np.mean([float(x[i]) for x in cnn_proba_emg]))
-        sum_proba_imu.append(np.mean([float(x[i]) for x in cnn_proba_imu]))
-        sum_proba_classic.append(np.mean([float(x[i]) for x in classic_proba]))
+        sum_proba_emg, sum_proba_imu = [], []
+        for i in range(Constant.classes):
+            sum_proba_emg.append(np.mean([float(x[i]) for x in cnn_proba_emg[n]]))
+            sum_proba_imu.append(np.mean([float(x[i]) for x in cnn_proba_imu[n]]))
+        sum_pred_classic_dict = collections.Counter(classic_pred[n])
+        sum_proba_classic = np.divide(list(sum_pred_classic_dict.values()), len(classic_pred[n]))
 
-    index_max_emg = np.argmax(sum_proba_emg)
-    index_max_imu = np.argmax(sum_proba_imu)
-    index_max_classic = np.argmax(sum_proba_classic)
+        index_max_emg = np.argmax(sum_proba_emg)
+        index_max_imu = np.argmax(sum_proba_imu)
+        index_max_classic = max(sum_pred_classic_dict, key=sum_pred_classic_dict.get)
 
-    write_prediction_to_file(cnn_emg_path, cnn_pred_emg, y_true)
-    write_prediction_to_file(cnn_imu_path, cnn_pred_imu, y_true)
-    write_prediction_to_file(classic_path, classic_pred, y_true)
-
-    print("EMG prediction:", Constant.label_display_without_rest[index_max_emg],
-          "\nIMU prediction:", Constant.label_display_without_rest[index_max_imu],
-          "\nClassic prediction", Constant.label_display_with_rest[index_max_classic])
-
-    if not index_max_imu == index_max_emg:
-        if np.abs(sum_proba_emg[index_max_emg] - sum_proba_imu[index_max_imu]) >= 0.1:
-            if sum_proba_emg[index_max_emg] > sum_proba_imu[index_max_imu]:
-                final_choice = index_max_emg
-            else:
-                final_choice = index_max_imu
-    else:
-        final_choice = index_max_emg
-    print("Final choice:", Constant.label_display_without_rest[final_choice])
-
-    write_prediction_to_file(sequence_path, ["CNN", final_choice], y_true)
-    write_prediction_to_file(sequence_path, ["Classic", index_max_classic], y_true)
-
-
-def write_prediction_to_file(file_path, y_pred, y_true):
-    file = open(file_path, 'a', newline='')
-    correct = 0
-    for p in y_pred:
-        if p == y_true:
-            correct += 1
-            with file:
+        # Save combined results for each classifier
+        write_prediction_to_file(cnn_emg_path, sum_proba_emg)
+        write_prediction_to_file(cnn_imu_path, sum_proba_imu)
+        file = open(classic_path, 'a', newline='')
+        with file:
+            for key in sum_pred_classic_dict.keys():
                 writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-                writer.writerow([p, y_true])
+                writer.writerow([key, sum_pred_classic_dict[key]])
+            writer.writerow([Constant.write_separater])
+        file.close()
+
+        print("EMG prediction:", Constant.label_display_without_rest[index_max_emg],
+              "\nIMU prediction:", Constant.label_display_without_rest[index_max_imu],
+              "\nClassic prediction", Constant.label_display_with_rest[index_max_classic])
+
+        if not index_max_imu == index_max_emg:
+            if np.abs(sum_proba_emg[index_max_emg] - sum_proba_imu[index_max_imu]) >= 0.1:
+                if sum_proba_emg[index_max_emg] > sum_proba_imu[index_max_imu]:
+                    final_choice = index_max_emg
+                else:
+                    final_choice = index_max_imu
+        else:
+            final_choice = index_max_emg
+        print("Final choice:", Constant.label_display_without_rest[final_choice])
+
+        write_prediction_to_file(sequence_path, ["CNN", final_choice], y_true)
+        # write_prediction_to_file(sequence_path, ["Classic", index_max_classic], y_true)
+
+
+def write_prediction_to_file(file_path, y_pred=None, y_prob=None, y_true=None):
+    file = open(file_path, 'a', newline='')
+    with file:
+        for i in range(len(y_pred)):
+            for i in range(len(y_pred)):
+                writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+                writer.writerow([y_pred[i], y_prob[i], y_true])
+        writer.writerow([Constant.write_separater])
     file.close()
 
 
@@ -259,15 +313,25 @@ def most_common(lst):
 def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
     feature_emg, feature_imu = [], []
     for x in w_emg:
-        if mode == Constant.georgi:
-            feature_emg.append(Feature_extraction.georgi(x, sensor=Constant.EMG))
-        else:
-            feature_emg.append(Feature_extraction.mantena(x))
+        feature = []
+        for n in range(8):
+            if mode == Constant.georgi:
+                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.EMG))
+            if mode == Constant.rehman:
+                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
+            else:
+                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+        feature_emg.append(feature)
     for x in w_imu:
-        if mode == Constant.georgi:
-            feature_imu.append(Feature_extraction.georgi(x, sensor=Constant.IMU))
-        else:
-            feature_imu.append(Feature_extraction.mantena(x))
+        feature = []
+        for n in range(9):
+            if mode == Constant.georgi:
+                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.IMU))
+            if mode == Constant.rehman:
+                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
+            else:
+                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+        feature_imu.append(feature)
 
     features = []
     for i in range(len(feature_imu)):
@@ -311,6 +375,7 @@ def reformat_raw_data(emg=[], ori=[], acc=[], gyr=[]):
     o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
     a = [[f.x, f.y, f.z] for f in [e[0] for e in [d[1:] for d in acc]]]
     g = [[j.x, j.y, j.z] for j in [h[0] for h in [g[1:] for g in gyr]]]
+    Helper_functions.wait(0.5)
     imu = []
     for i in range(len(o)):
         # todo check warum teilweise nicht gleichlang

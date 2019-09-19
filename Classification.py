@@ -93,9 +93,11 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
         # Norm
         if norm:
             x_train = norm_data(x_train)
+            x_test = norm_data(x_test)
+            config = config + "_norm"
 
-        print("Train length", len(x_train),
-              "\nValidation length", len(x_test))
+        print("Training number", len(x_train),
+              "\nTest number", len(x_test))
 
         classifiers[i].fit(x_train, y_train)
         y_predict = classifiers[i].predict(x_test)
@@ -105,7 +107,7 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
         f = open(save_path + "/Overview_user_independent_" + config + ".csv", 'a', newline='')
         with f:
             writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow([classifiers_name[i], str(accuracy), config])
+            writer.writerow([classifiers_name[i], str(accuracy), config])
         f.close()
 
         if accuracy > best:
@@ -114,8 +116,12 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
         name = classifiers_name[i]
 
         if visualization:
-            Helper_functions.result_visualization(y_true=y_test, y_predict=y_predict, show_figures=False,
-                                                  labels=Constant.labels_without_rest, config=config)
+            Helper_functions.result_visualization(y_true=y_test,
+                                                  y_predict=y_predict,
+                                                  show_figures=visualization,
+                                                  labels=Constant.labels_without_rest,
+                                                  config=config,
+                                                  save_path=save_path)
             plt.show()
         if save_model:
             save = save_path + "/" + name + config + '.joblib'
@@ -146,7 +152,7 @@ def train_user_dependent_grid_search(classifier, training_data, test_data, norm)
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name, save_path, save_model=False,
-                         visualization=False):
+                         visualization=False,norm=False):
     """
 
     :param user_data:
@@ -164,6 +170,11 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
     x_train, x_test, y_train, y_test = train_test_split(user_data['data'], user_data['label'],
                                                         test_size=Constant.test_set_size, random_state=42, shuffle=True)
     for i in range(len(classifiers)):
+        if norm:
+            x_train = norm_data(x_train)
+            x_test = norm_data(x_test)
+            config+="_norm"
+
         classifiers[i].fit(x_train, y_train)
         y_predict = classifiers[i].predict(x_test)
 

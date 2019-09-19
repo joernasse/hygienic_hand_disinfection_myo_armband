@@ -66,13 +66,14 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-collections_path_default = 'G:/Masterarbeit/Collections/'
+collections_path_default = '//192.168.2.101/g/Masterarbeit/Collections/'
 test_set_size = 0.1
 validation_set_size = 0.1
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
-
 CONTINUES = "continues"
+classes=12
+write_separater="#----------------------------------------#"
 
 # Save_Load_CSV
 emg_headline = ["timestamp",
@@ -150,7 +151,7 @@ USERS = ["User001", "User002", "User003", "User004",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
 USERS_SUB = ["User001", "User003", "User004",
-             "User005", "User006", "User007", "User008",
+             "User005", "User006", "User002", "User008",
              "User009", "User010", "User011", "User012",
              "User013", "User014", "User015"]
 
