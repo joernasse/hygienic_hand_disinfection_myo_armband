@@ -311,7 +311,7 @@ def predict_for_load_model(x_test, y_test, model, batch_size):
     y_predict = model.predict_classes(x_test, batch_size)
     evaluation = model.evaluate(x_test, to_categorical(y_test))
     print("EVAL", evaluation)
-    accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True)
+    accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True,save_path="./")
     return evaluation, accuracy_score
 
 

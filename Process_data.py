@@ -302,12 +302,14 @@ def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     :param ignore_rest_gesture:
     :return:
     """
-    labels, window_data, emg_data = [], [], []
+    labels, window_data, emg_data, raw = [], [], [], 0
     if ignore_rest_gesture:
         label = Constant.labels_without_rest
     else:
         label = Constant.label
     for key in label:
+        raw += len(raw_data[key])
+        print(raw)
         window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window,
                                                   degree_of_overlap=overlap)
         window_data.extend(window_tmp)

@@ -105,18 +105,18 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
 
 def main():
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#
-    # model_l_path = "//192.168.2.101/g/Masterarbeit/Results/User_independent_cnn/" \
-    #                "User007_Unknown/no_pre_pro-separate-EMG-25-0.9-NA_cnn_model.h5"
-
-    x_train, y_train, x_test, y_test = \
-        pre_process_raw_data_adapt_model(window=25, overlap=0.9, user="User007",
-                                         sensor=Constant.EMG, data_set=Constant.SEPARATE,
-                                         collection_path="//192.168.2.101/g/Masterarbeit/Collections/")
-
-    Deep_learning.adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10,
-                                       x_test_in=x_test, y_test_in=y_test, model=None,
-                                       config="no_pre_pro-separate-IMU-25-0.9-norm-NA")
-    return True
+    # model_l_path = "G:/Masterarbeit/Results/User_independent_cnn/" \
+    #                "User002_Unknown/no_pre_pro-separatecontinues-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
+    #
+    # x_train, y_train, x_test, y_test = \
+    #     pre_process_raw_data_adapt_model(window=25, overlap=0.9, user="User002",
+    #                                      sensor=Constant.IMU, data_set=Constant.SEPARATE+Constant.CONTINUES,
+    #                                      collection_path="G:/Masterarbeit/Collections/")
+    #
+    # Deep_learning.adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10,
+    #                                    x_test_in=x_test, y_test_in=y_test, model=load_model(model_l_path),
+    #                                    config="no_pre_pro-separatecontinues-IMU-25-0.9-N")
+    # return True
     # --------------------------------------------Adapt CNN for Unknown User END---------------------------------------#
 
     # --------------------------------------------Plot CNN-------------------------------------------------------------#
@@ -126,8 +126,8 @@ def main():
     # --------------------------------------------Plot CNN-------------------------------------------------------------#
 
     # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User007_Unknown/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"
-    # predict_for_unknown_user_cnn(load_model_path, "User007", "no_pre_pro-separate-EMG-100-0.9-NA")
+    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    # predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
     # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
@@ -146,10 +146,11 @@ def main():
     # return True
     # --------------------------------------------Grid search ---------------------------------------------------------#
 
-    # -
-    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-separatecontinues-IMU-25-0.9-NA"], "User002", False,
-                               "./", False, Constant.CNN_KAGGLE, True, 32, 100, 5)
-    # -
+    # --------------------------------------------Train user independent CNN - START-----------------------------------#
+    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-IMU-25-0.9-NA"], "User002", True,
+                               "./", False, Constant.CNN_KAGGLE, True, 32, 50, 2)
+    return True
+    # --------------------------------------------Train user independent CNN - END-----------------------------------#
 
     #
 
@@ -556,7 +557,7 @@ def calculation_config_statistics(load_path):
 
 def train_user_independent_cnn(train_user_list, config_list, user, norm=False, save_path="./",
                                perform_test=False, cnn_pattern=Constant.CNN_1, ignore_rest_gesture=True, batch=32,
-                               epochs=10, early_stopping=5):
+                               epochs=100, early_stopping=3):
     """
 
     :param train_user_list:
@@ -592,7 +593,7 @@ def train_user_independent_cnn(train_user_list, config_list, user, norm=False, s
                 sc = sklearn.preprocessing.StandardScaler(copy=True, with_std=True)
                 sc.fit(x[i])
                 x[i] = sc.transform(x[i])
-                config += "norm"
+            config += "_norm"
 
         model, model_name, acc = Deep_learning.calculate_cnn(x=x, y=labels, save_path=save_path,
                                                              batch=batch, epochs=epochs, config=config,
