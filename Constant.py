@@ -171,7 +171,7 @@ level_5 = [rehman, georgi, robinson, mantena]
 
 # ----------------------------------Classic Classifier-----------------------------------------------------------------#
 random_forest = RandomForestClassifier(n_jobs=-1, criterion='gini', n_estimators=256, min_samples_split=2,
-                                       bootstrap=True, max_depth=16, max_features=3, verbose=1)
+                                       bootstrap=True, max_depth=16, max_features=3, verbose=0)
 rf_parameter = {'n_estimators': [256],
                 'criterion': ['gini'],
                 'max_depth': [8, 64],

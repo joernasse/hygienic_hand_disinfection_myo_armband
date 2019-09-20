@@ -117,7 +117,7 @@ def window_for_one_sensor(input_data, window, degree_of_overlap=0):
             last = int(first + window)
             data = data_cutted[first:last]
             if not len(data) == window:
-                print(label, " - first/last", first, last)
+                # print(label, " - first/last", first, last)
                 first += int(window - offset)
                 break
             w_data.append(np.asarray(data))

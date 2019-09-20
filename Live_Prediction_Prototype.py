@@ -49,11 +49,13 @@ emg_dict = {"timestamp": [],
             "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
             "label": []}
 
-sequence_duration = [5, 4, 3, 2]
+sequence_duration = [2, 5, 4, 3, 2]
 cnn_emg_models = []
 cnn_imu_models = []
 classic_models = []
 live_prediction_path = "./Live_Prediction/"
+collect_for_train_random_forest = True
+x_train = []
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -170,6 +172,10 @@ def main():
     global cnn_emg_models
     global cnn_imu_models
     global classic_models
+    global collect_for_train_random_forest
+    global x_train
+    y_train = []
+    live_classifier = None
 
     preprocess = Constant.no_pre_processing
     init()
@@ -180,9 +186,9 @@ def main():
             for label in range(len(Constant.label_display_without_rest)):
                 # ----------------------------------Record data--------------------------------------------------------#
                 print("Start with sequence. \nThe recording time of the gesture is " + str(seq) + " seconds.")
+                Helper_functions.countdown(3)
                 print(Constant.label_display_without_rest[label], "Start")
                 DEVICE_R.vibrate(libmyo.VibrationType.short)
-                Helper_functions.countdown(3)
                 emg, ori, acc, gyr = collect_raw_data(record_time=seq)
                 DEVICE_L.vibrate(libmyo.VibrationType.short)
                 print("Stop")
@@ -205,8 +211,16 @@ def main():
                 norm = True
                 if norm:
                     features = norm_data(features)
+                    if collect_for_train_random_forest:
+                        x_train.extend(features)
+                        y_train.extend([label] * len(features))
 
                 predict_classic = [clf.predict(features) for clf in classic_models]
+
+                # IF live classifier is trained
+                if not collect_for_train_random_forest and live_classifier is not None:
+                    predict_live_classifier = live_classifier.predict(features)
+
                 # ----------------------------------Perform CNN prediction---------------------------------------------#
                 # Separate windowing
                 w_emg = 100
@@ -241,6 +255,21 @@ def main():
                                        log_file_name="label_" + str(label) + "_classic_prediction.csv",
                                        classic=True,
                                        clf_names=classic_paths)
+                if live_classifier is not None:
+                    evaluate_predictions_1(predict=predict_live_classifier,
+                                           proba=[], y_true=label,
+                                           log_file_name="Live Classifier",
+                                           clf_names=["Random Forest Live"],
+                                           classic=True)
+
+                Helper_functions.countdown(3)
+
+            if collect_for_train_random_forest:
+                collect_for_train_random_forest = False
+                print("Training Samples", len(x_train))
+                live_classifier = Constant.random_forest.fit(x_train, y_train)
+                del x_train
+                del y_train
     hub.stop()
 
 
@@ -261,7 +290,6 @@ def evaluate_predictions_1(predict, proba, y_true, log_file_name, clf_names, cla
                 writer.writerow(
                     [index_max_classic, sum_pred_classic_dict[index_max_classic], [x for x in sum_pred_classic_dict]])
                 writer.writerow([Constant.write_separater])
-                file.close()
 
             else:
                 sum_proba = []
@@ -463,10 +491,10 @@ def window_live_classic(emg, imu, window, overlap):
         d_imu = imu[first_imu:last_imu]
 
         if not len(d_emg) == window:
-            print("first/last", first_emg, last_emg)
+            # print("first/last", first_emg, last_emg)
             continue
         if not len(d_imu) == window_imu:
-            print("first/last", first_imu, last_imu)
+            # print("first/last", first_imu, last_imu)
             continue
         first_emg += int(window - offset_emg)
         first_imu += int(window_imu - offset_imu)
@@ -488,7 +516,7 @@ def window_live_separate(raw_data, window, overlap):
         last = int(first + window)
         data = raw_data[first:last]
         if not len(data) == window:
-            print("first/last", first, last)
+            # print("first/last", first, last)
             continue
         first += int(window - offset)
         window_data.append(np.asarray(data))
