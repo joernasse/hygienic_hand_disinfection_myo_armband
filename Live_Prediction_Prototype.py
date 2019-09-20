@@ -246,32 +246,36 @@ def main():
 
 def evaluate_predictions_1(predict, proba, y_true, log_file_name, clf_names, classic=False):
     save_path = live_prediction_path + log_file_name
-    for n in range(len(predict)):
-        sum_proba = []
-        if classic:
-            file = open(save_path, 'a', newline='')
-            writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([clf_names[n]])
-            sum_pred_classic_dict = collections.Counter(predict[n])
-            sum_proba_classic = np.divide(list(sum_pred_classic_dict.values()), len(predict[n]))
-            index_max_classic = max(sum_pred_classic_dict, key=sum_pred_classic_dict.get)
-            with file:
+    file = open(save_path, 'a', newline='')
+    writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    with file:
+        for n in range(len(predict)):
+            if classic:
+                writer.writerow([clf_names[n]])
+                sum_pred_classic_dict = collections.OrderedDict(sorted(collections.Counter(predict[n]).items()))
+                index_max_classic = max(sum_pred_classic_dict, key=sum_pred_classic_dict.get)
                 writer.writerow(["label", "predict_sum"])
                 for key in sum_pred_classic_dict.keys():
                     writer.writerow([key, sum_pred_classic_dict[key]])
+                writer.writerow(["best_label", ])
+                writer.writerow(
+                    [index_max_classic, sum_pred_classic_dict[index_max_classic], [x for x in sum_pred_classic_dict]])
                 writer.writerow([Constant.write_separater])
+                file.close()
 
-        else:
-            file = open(save_path, 'a', newline='')
-            writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow([clf_names[n]])
-            write_prediction_to_file(save_path, predict[n], proba[n], y_true)
-            for i in range(Constant.classes):
-                sum_proba.append(np.mean([float(x[i]) for x in proba[n]]))
-                index_max_emg = np.argmax(sum_proba)
-            with file:
-                writer.writerow([[x for x in sum_proba], index_max_emg])
+            else:
+                sum_proba = []
+                for i in range(Constant.classes):
+                    sum_proba.append(np.mean([float(x[i]) for x in proba[n]]))
+                writer.writerow([clf_names[n]])
+                writer.writerow(["predict", "probabilities", "true_label"])
+                for j in range(len(predict[n])):
+                    writer.writerow([predict[n][j], [x for x in proba[n][j]], y_true])
+                    # number_prediction = collections.Counter([x for x in predict])
+                    index_max_emg = np.argmax(sum_proba)
+                writer.writerow([index_max_emg, [x for x in sum_proba]])
                 writer.writerow([Constant.write_separater])
+    file.close()
 
 
 def evaluate_predictions(cnn_proba_emg, cnn_pred_emg, cnn_proba_imu, cnn_pred_imu, classic_pred, y_true,
