@@ -347,7 +347,7 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
         index_max = np.argmax(sum_proba)
 
         # Summary results
-        save_path = path + file_prefix + "_summary"
+        save_path = path + file_prefix + "_summary.csv"
         if not os.path.isfile(save_path):
             write_header = True
         file = open(save_path, 'a', newline='')
@@ -361,7 +361,7 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
         file.close()
 
         # Detailed results
-        save_path = path + file_prefix + "_detail"
+        save_path = path + file_prefix + "_detail.csv"
         if not os.path.isfile(save_path):
             write_header = True
         file = open(save_path, 'a', newline='')
