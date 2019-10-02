@@ -159,7 +159,7 @@ def load_raw_data(config, path, user_list=USERS):
         try:
             file = open(path + user + "-" + config + ".csv")
         except:
-            print("Open file is not possible")
+            print(path + user + "-" + config + ".csv not found")
             return []
         reader = csv.reader(file, delimiter=';')
         for column in reader:

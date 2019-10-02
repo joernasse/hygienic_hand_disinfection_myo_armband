@@ -152,7 +152,7 @@ def train_user_dependent_grid_search(classifier, training_data, test_data, norm)
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name, save_path, save_model=False,
-                         visualization=False,norm=False):
+                         visualization=False, norm=False):
     """
 
     :param user_data:
@@ -169,11 +169,13 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
     best, best_clf, name = 0, None, "no_name"
     x_train, x_test, y_train, y_test = train_test_split(user_data['data'], user_data['label'],
                                                         test_size=Constant.test_set_size, random_state=42, shuffle=True)
+    if norm:
+        config += "_norm"
+
     for i in range(len(classifiers)):
         if norm:
             x_train = norm_data(x_train)
             x_test = norm_data(x_test)
-            config+="_norm"
 
         classifiers[i].fit(x_train, y_train)
         y_predict = classifiers[i].predict(x_test)
