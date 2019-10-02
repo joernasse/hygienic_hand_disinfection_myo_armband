@@ -18,13 +18,13 @@ def mav(array):  # Mean Absolute Value
         sum += np.abs(i)
     return 1 / n * sum
 
-
-def var(array):  # Variance
+# Variance
+def var(array):
     n = len(array)
     sum = 0
-    for i in array:
-        sum += np.abs(i)
-    return 1 / (n - 1) * sum
+    for a in array:
+        sum += a * a
+    return (1 / float(n - 1)) * sum
 
 
 # Zero Crossing
@@ -35,12 +35,6 @@ def zc(x):
         if (x[i] * x[i + 1] <= Constant.threshold) and (np.abs(x[i] - x[i + 1]) >= Constant.threshold):
             sum += 1
     return sum
-
-
-# def unison_shuffled_copies(a, b):
-#     assert len(a) == len(b)
-#     p = np.random.permutation(len(a))
-#     return a[p], b[p]
 
 
 # integrated absolute value

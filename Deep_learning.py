@@ -313,14 +313,24 @@ def predict_for_load_model(x_test, y_test, model, batch_size):
     return evaluation, accuracy_score
 
 
+def create_rehman_model(shape_x, shape_y, output):
+    model = Sequential()
+    # layer 1
+    model.add(Conv2D(32, kernel_size=3,
+                     activation='relu',
+                     input_shape=(shape_x, shape_y, 1)))
+    model.add(MaxPooling2D(pool_size=(3,1)))
+    model.add(Dense(512, activation='elu'))
+    model.add(Dense(output, activation='softmax'))
+    return model
+
 def create_cnn_1_model(shape_x, shape_y, output):
     model = Sequential()
 
     # layer 1
     model.add(Conv2D(32, kernel_size=3,
                      activation='relu',
-                     input_shape=(shape_x,
-                                  shape_y, 1)))
+                     input_shape=(shape_x, shape_y, 1)))
     model.add(MaxPooling2D(pool_size=(2, 2)))
 
     # Layer 2

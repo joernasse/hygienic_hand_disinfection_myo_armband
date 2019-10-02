@@ -103,19 +103,81 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
     return window_data_train, labels_train, window_data_test, labels_test
 
 
+def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
+    raw_emg_length_by_user = []
+    raw_imu_length_by_user = []
+    optimal_emg_length_total = []
+    optimal_imu_length_total = []
+    file = open("./raw_data_summary.csv", 'a', newline='')
+    writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+    writer.writerow(["user", "emg_samples", "optimal_emg", "quote_emg", "imu_samples", "optimal_imu", "quote_imu"])
+
+    for user in Constant.USERS:
+        load_path = path + user
+        path_add = [Constant.SEPARATE_PATH, Constant.CONTINUES_PATH]
+        number_emg_sample, number_imu_sample, number_record = 0, 0, 0
+        directories = [os.listdir(load_path + Constant.SEPARATE_PATH), os.listdir(load_path + Constant.CONTINUES_PATH)]
+        for i in range(len(directories)):  # go through all directories
+            for steps in directories[i]:  # go through all Steps
+                raw_emg, raw_imu = Save_Load.load_raw_data_for_both_sensors(
+                    emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
+                    imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
+                number_emg_sample += len(raw_emg['ch0'])
+                number_imu_sample += len(raw_imu['x_ori'])
+            number_record += len(directories[i])
+
+        raw_emg_length_by_user.append(number_emg_sample)
+        raw_imu_length_by_user.append(number_imu_sample)
+
+        optimal_emg_length = number_record * 5 * 400
+        optimal_imu_length = number_record * 5 * 100
+
+        optimal_emg_length_total.append(optimal_emg_length)
+        optimal_imu_length_total.append(optimal_imu_length)
+
+        quote_emg = number_emg_sample / optimal_emg_length
+        quote_imu = number_imu_sample / optimal_imu_length
+
+        writer.writerow(
+            [user, str(number_emg_sample), optimal_emg_length, quote_emg, number_imu_sample, optimal_imu_length,
+             quote_imu])
+    total_emg = np.sum(raw_emg_length_by_user)
+    total_imu = np.sum(raw_imu_length_by_user)
+    total_optimum_emg = np.sum(optimal_emg_length_total)
+    total_optimum_imu = np.sum(optimal_imu_length_total)
+    writer.writerow(["User1_to_15", total_emg, total_optimum_emg, total_emg / total_optimum_emg, total_imu,
+                     total_optimum_imu, total_imu / total_optimum_imu])
+    file.close()
+
+
 def main():
+    calculation_config_statistics("G:/Masterarbeit/")
+    #
+    # calculate_total_raw_data()
+    # return True
+
     # feature_extraction(["User001"])
+    # n_jobs = 8
+    # partitioned_configs = np.array_split(Constant.missing_config_calc, n_jobs)
+    # processes = [mp.Process(target=train_user_dependent_classic,
+    #                         args=([Constant.USERS_SUB, "G:/Masterarbeit/feature_sets_filter/", True,
+    #                                partitioned_configs[i]])) for i in range(n_jobs)]
+    # for p in processes:
+    #     p.start()
+    # for p in processes:
+    #     p.join()
+
     # train_user_dependent_classic(user_list=["User001"],
-    #                              feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
+    #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
     #                              ignore_rest_gesture=True,
-    #                              predefine_config="no_pre_pro-separate-EMGIMU-100-0.9-rehman",
+    #                              predefine_configs=Constant.missing_config_calc,
     #                              model_save_path="./",
     #                              save_model=True,
     #                              visualization=False,
-    #                              classifiers=[Constant.random_forest],
-    #                              classifier_names=["Random Forest"],
+    #                              classifiers=Constant.classifiers,
+    #                              classifier_names=Constant.classifier_names,
     #                              norm=True)
-    # return True
+    return True
     # --------------------------------------------Train user independent classic - START-------------------------------#
     # train_user_independent_classic("no_pre_pro-separate-EMGIMU-100-0.9-rehman", True,
     #                                "//192.168.2.101/g/Masterarbeit/feature_sets_filter/", Constant.USERS_SUB, "User007",
@@ -144,9 +206,9 @@ def main():
     # --------------------------------------------Plot CNN-------------------------------------------------------------#
 
     # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-continues-IMU-25-0.9-NA_norm_CNN_Kaggle.h5"
-    predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-continues-IMU-25-0.9-NA-norm")
-    return True
+    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    # predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
+    # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
@@ -165,7 +227,7 @@ def main():
     # --------------------------------------------Grid search ---------------------------------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-EMG-100-0.9-NA"], "User002", True,
+    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-IMU-25-0.9-NA"], "User002", True,
                                "./", False, Constant.CNN_KAGGLE, True, 32, 50, 2)
     return True
     # --------------------------------------------Train user independent CNN - END-----------------------------------#
@@ -338,8 +400,7 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
 
 
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
-                                                    collection_path=Constant.collections_path_default,
-                                                    session='s0'):
+                                                    collection_path=Constant.collections_path_default, session='s0'):
     global path_add
 
     training_dict = {
@@ -402,36 +463,10 @@ def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
     return training_dict, test_dict
 
 
-def train_cnn(window, overlap, save_path="./", load_model_path="", sensor=Constant.IMU, cnn_model_name="CNN_1"):
-    print("window", window, "overlap", overlap)
-    if not load_model_path == "":
-        imu, emg = Process_data.collect_data_for_single_sensor(["User007"], sensor)
-        imu_windows, emg_windows, labels = Process_data.window_raw_data_for_nn(window, overlap, imu, emg, sensor)
-        labels = [int(i) for i in labels]
-        print(len(imu_windows), len(labels))
-        if sensor == Constant.IMU:
-            Deep_learning.predict_for_load_model(np.asarray(imu_windows), np.asarray(labels),
-                                                 load_model(load_model_path + "/cnn_imu_model.h5"))
-        else:
-            Deep_learning.predict_for_load_model(np.asarray(emg_windows), np.asarray(labels),
-                                                 load_model(load_model_path + "/cnn_imu_model.h5"))
-    else:
-        imu, emg = Process_data.collect_data_for_single_sensor(["User001"], sensor)
-        imu_windows, emg_windows, labels = Process_data.window_raw_data_for_nn(window, overlap, imu, emg, sensor)
-        labels = [int(i) for i in labels]
-        print(len(emg_windows), len(labels))
-        if sensor == Constant.IMU:
-            Deep_learning.cnn_1(np.asarray(imu_windows), np.asarray(labels), save_path)
-        else:
-            Deep_learning.cnn_1(np.asarray(emg_windows), np.asarray(labels), save_path)
-
-        # Deep_learning.cnn_1(np.asarray(emg_windows), np.asarray(labels), save_path)
-        # Deep_learning.cnn_rehman(np.asarray(emg_windows), np.asarray(labels), save_path)
-
-
-def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gesture=True, predefine_config=None,
+def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gesture=True, predefine_configs=None,
                                  model_save_path="./", save_model=False, visualization=False,
-                                 classifiers=Constant.classifiers,classifier_names=Constant.classifier_names,norm=True):
+                                 classifiers=Constant.classifiers, classifier_names=Constant.classifier_names,
+                                 norm=True):
     """
     Go over all config steps and prepare data for each combination of configuration.
     Each level in Config. can be changed in the Constant.py
@@ -444,44 +479,68 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
     :param ignore_rest_gesture: boolean
             If True, skip the "Rest" gesture
             If False, don´t skip "Rest" gesture
-    :param predefine_config: string
+    :param predefine_configs: string
             Can be used to use only the predefine config, instead of iterate over all all possible configurations.
     :param model_save_path: string
             The path where the classifier/model should be saved
     :return:
     """
-    for user in user_list:
-        print(user)
-        for pre in Constant.level_0:
-            for data_set in Constant.level_1:
-                for sensor in Constant.level_2:
-                    for window in Constant.level_3:
-                        for overlap in Constant.level_4:
-                            for feature in Constant.level_5:
-                                config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + \
-                                         "-" + str(overlap) + "-" + feature
-                                if predefine_config:
-                                    config = predefine_config
+    for config in predefine_configs:
+        if predefine_configs is not None:
+            for user in user_list:
+                print(user)
+                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
+                                                     user_list=[user])
 
-                                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
-                                                                     user_list=[user])
+                if not users_data:
+                    continue
 
-                                if not users_data:
-                                    continue
+                if ignore_rest_gesture:
+                    users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                                if ignore_rest_gesture:
-                                    users_data = Process_data.remove_rest_gesture_data(users_data[0])
+                Classification.train_user_dependent(user_data=users_data,
+                                                    config=config,
+                                                    user_name=user,
+                                                    classifiers=classifiers,
+                                                    classifiers_name=classifier_names,
+                                                    save_path=model_save_path,
+                                                    save_model=save_model,
+                                                    visualization=visualization,
+                                                    norm=norm)
 
-                                Classification.train_user_dependent(user_data=users_data,
-                                                                    config=config,
-                                                                    user_name=user,
-                                                                    classifiers=classifiers,
-                                                                    classifiers_name=classifier_names,
-                                                                    save_path=model_save_path,
-                                                                    save_model=save_model,
-                                                                    visualization=visualization,
-                                                                    norm=norm)
-        return True
+        #     TODO remove after use
+    return True
+
+    for pre in Constant.level_0:
+        for data_set in Constant.level_1:
+            for sensor in Constant.level_2:
+                for window in Constant.level_3:
+                    for overlap in Constant.level_4:
+                        for feature in Constant.level_5:
+                            config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + \
+                                     "-" + str(overlap) + "-" + feature
+                            if predefine_configs:
+                                config = predefine_configs
+
+                            users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
+                                                                 user_list=[user])
+
+                            if not users_data:
+                                continue
+
+                            if ignore_rest_gesture:
+                                users_data = Process_data.remove_rest_gesture_data(users_data[0])
+
+                            Classification.train_user_dependent(user_data=users_data,
+                                                                config=config,
+                                                                user_name=user,
+                                                                classifiers=classifiers,
+                                                                classifiers_name=classifier_names,
+                                                                save_path=model_save_path,
+                                                                save_model=save_model,
+                                                                visualization=visualization,
+                                                                norm=norm)
+    return True
 
 
 def feature_extraction_complete(n_jobs=4):
@@ -689,7 +748,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
     sensor = config_split[2]
     window = int(config_split[3])
     overlap = float(config_split[4])
-    norm = config_split[6]
+    norm = bool(config_split[5])
     if norm == "norm":
         norm = True
     else:
