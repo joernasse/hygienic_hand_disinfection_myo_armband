@@ -223,6 +223,7 @@ def main():
 
                 # ----------------------------------Perform CNN prediction---------------------------------------------#
                 # Separate windowing
+
                 w_emg = 100
                 w_imu = 25
                 overlap = 0.9

@@ -104,18 +104,18 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
 
 
 def main():
-    feature_extraction(["User001"])
-    train_user_dependent_classic(user_list=["User001"],
-                                 feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
-                                 ignore_rest_gesture=True,
-                                 predefine_config="no_pre_pro-separate-EMGIMU-100-0.9-rehman",
-                                 model_save_path="./",
-                                 save_model=True,
-                                 visualization=False,
-                                 classifiers=[Constant.random_forest],
-                                 classifier_names=["Random Forest"],
-                                 norm=True)
-    return True
+    # feature_extraction(["User001"])
+    # train_user_dependent_classic(user_list=["User001"],
+    #                              feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
+    #                              ignore_rest_gesture=True,
+    #                              predefine_config="no_pre_pro-separate-EMGIMU-100-0.9-rehman",
+    #                              model_save_path="./",
+    #                              save_model=True,
+    #                              visualization=False,
+    #                              classifiers=[Constant.random_forest],
+    #                              classifier_names=["Random Forest"],
+    #                              norm=True)
+    # return True
     # --------------------------------------------Train user independent classic - START-------------------------------#
     # train_user_independent_classic("no_pre_pro-separate-EMGIMU-100-0.9-rehman", True,
     #                                "//192.168.2.101/g/Masterarbeit/feature_sets_filter/", Constant.USERS_SUB, "User007",
@@ -144,9 +144,9 @@ def main():
     # --------------------------------------------Plot CNN-------------------------------------------------------------#
 
     # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
-    # predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
-    # return True
+    load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-continues-IMU-25-0.9-NA_norm_CNN_Kaggle.h5"
+    predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-continues-IMU-25-0.9-NA-norm")
+    return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
@@ -165,7 +165,7 @@ def main():
     # --------------------------------------------Grid search ---------------------------------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-IMU-25-0.9-NA"], "User002", True,
+    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-EMG-100-0.9-NA"], "User002", True,
                                "./", False, Constant.CNN_KAGGLE, True, 32, 50, 2)
     return True
     # --------------------------------------------Train user independent CNN - END-----------------------------------#
@@ -689,7 +689,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
     sensor = config_split[2]
     window = int(config_split[3])
     overlap = float(config_split[4])
-    norm = bool(config_split[5])
+    norm = config_split[6]
     if norm == "norm":
         norm = True
     else:
