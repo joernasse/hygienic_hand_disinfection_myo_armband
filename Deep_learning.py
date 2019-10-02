@@ -151,7 +151,6 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
     :param test_size:
     :return:
     """
-    classes = len(Counter(y).keys())
     if test_size > 0 and calc_test_set:
         x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=test_size)
         x_test = np.array(x_test)[:, :, :, np.newaxis]
@@ -170,6 +169,7 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
     x_train = np.array(x_train)[:, :, :, np.newaxis]
 
     y_train = to_categorical(y_train)
+    classes = len(Counter(y).keys())
     return x_train, x_test, x_val, y_train, y_test, y_val, classes
 
 
@@ -244,8 +244,8 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
 #     return "CNN_1", acc
 
 
-def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_test_in, y_test_in,
-                         cnn_pattern=Constant.CNN_KAGGLE, model=None):
+def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_test_in, y_test_in, model,
+                         calc_test_set=False, cnn_pattern=Constant.CNN_KAGGLE):
     """
 
     :param x_train:
@@ -253,34 +253,30 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
     :param save_path:
     :param batch:
     :param epochs:
-    :param user_name:
-    :param x_test:
-    :param y_test:
-    :param save_label:
+    :param config:
+    :param x_test_in:
+    :param y_test_in:
     :param model:
+    :param calc_test_set:
+    :param cnn_pattern:
     :return:
     """
     x_train, x_test, x_val, y_train, y_test, y_val, classes = prepare_data_for_cnn(x_train, y=y_train,
-                                                                                   calc_test_set=False)
-    x_test = np.array(x_test_in)[:, :, :, np.newaxis]
+                                                                                   calc_test_set=calc_test_set)
+    if len(x_test_in) > 0:
+        x_test = np.array(x_test_in)[:, :, :, np.newaxis]
     print("Training", len(x_train),
           "\nValidation", len(x_val),
           "\nTest", len(x_test),
           "\nBatch size", batch,
           "\nEpochs", epochs)
 
-    if model is None:
-        print("No load model found - create new one")
-        model = create_kaggle_model(x_train.shape[1], x_train.shape[2], classes)
-        model.compile(loss=keras.losses.categorical_crossentropy,
-                      optimizer=keras.optimizers.RMSprop(),
-                      metrics=['accuracy'])
     cp_callback = [
         keras.callbacks.EarlyStopping(
             monitor='val_acc', patience=5,
-            mode='max', verbose=1),
+            mode='max', verbose=0),
         keras.callbacks.ModelCheckpoint(
-            save_path + "/" + config + "_cnn_" + cnn_pattern + "_adapt.h5", verbose=1,
+            save_path + "/" + config + "_cnn_" + cnn_pattern + "_adapt.h5", verbose=0,
             monitor='val_acc', save_best_only=True, mode='max')]
 
     start = time()
@@ -289,13 +285,15 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
                         epochs=epochs,
                         validation_data=(x_val, y_val),
                         callbacks=cp_callback,
-                        verbose=1)
+                        verbose=2)
     print("--- %s seconds ---" % (time() - start))
-    y_predict = model.predict_classes(x_test, batch)
-
-    Helper_functions.visualization_history(history, "./", config, True)
-    Helper_functions.result_visualization(y_test_in, y_predict, True, Constant.label_display_without_rest, config, "./")
+    if len(x_test_in) > 0:
+        y_predict = model.predict_classes(x_test, batch)
+        Helper_functions.visualization_history(history, "./", config, True)
+        Helper_functions.result_visualization(y_test_in, y_predict, True, Constant.label_display_without_rest, config,
+                                              "./")
     print("finish")
+    return model
 
 
 def predict_for_load_model(x_test, y_test, model, batch_size):
@@ -311,7 +309,7 @@ def predict_for_load_model(x_test, y_test, model, batch_size):
     y_predict = model.predict_classes(x_test, batch_size)
     evaluation = model.evaluate(x_test, to_categorical(y_test))
     print("EVAL", evaluation)
-    accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True,save_path="./")
+    accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True, save_path="./")
     return evaluation, accuracy_score
 
 

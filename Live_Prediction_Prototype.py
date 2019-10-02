@@ -8,6 +8,7 @@ from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
 import Constant
+import Deep_learning
 import Feature_extraction
 import Helper_functions
 import Process_data
@@ -17,20 +18,14 @@ from itertools import groupby
 import collections
 
 from Classification import norm_data
+from Deep_learning import adapt_model_for_user
 
-classic_clf_paths = "G:/Masterarbeit/user_dependent_detail/User001Random_Forest_User_dependentseparate-EMGIMU-100-0.75-georgi.joblib"
-imu_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
-emg_cnn_path = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_emg_0"
-
-cnn_emg_paths = ["./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5",
-                 "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-EMG-100-0.9-norm-NA_cnn_kaggle.h5"]
-
-cnn_imu_paths = ["./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5",
-                 "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"]
-
-classic_paths = [
-    "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib",
-    "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"]
+cnn_emg_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+cnn_imu_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
+cnn_emg_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-EMG-100-0.9-norm-NA_cnn_kaggle.h5"
+cnn_imu_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
+classic_ud_path = "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
+classic_ui_path = "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
@@ -49,13 +44,9 @@ emg_dict = {"timestamp": [],
             "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
             "label": []}
 
-sequence_duration = [2, 5, 4, 3, 2]
-cnn_emg_models = []
-cnn_imu_models = []
-classic_models = []
+seq_duration = [5, 4, 3, 2]
 live_prediction_path = "./Live_Prediction/"
-collect_for_train_random_forest = True
-x_train = []
+x_train_classic = []
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -98,17 +89,14 @@ gesture_listener = GestureListener()
 def check_samples_rate(n=5, record_time=1):
     print("Check samples rate - Start")
     sum_emg, sum_imu = 0, 0
-    with hub.run_in_background(gesture_listener.on_event):
-        print("Warm up")
-        Helper_functions.wait(2)
-        for i in range(n):
-            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
-            sum_emg += len(emg)
-            sum_imu += len(ori)
-            print("EMG length", len(emg),
-                  "\nIMU length", len(ori))
-        hub.stop()
-
+    print("Warm up")
+    Helper_functions.wait(2)
+    for i in range(n):
+        emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+        sum_emg += len(emg)
+        sum_imu += len(ori)
+        print("EMG length", len(emg),
+              "\nIMU length", len(ori))
     max_emg = (n * 2 * record_time * 200)
     max_imu = (n * 2 * record_time * 50)
     sr_emg = (sum_emg / max_emg) * 100
@@ -139,17 +127,18 @@ def init(live_prediction_path="./Live_Prediction"):
     Helper_functions.wait(3)
     pair_devices()
 
-    for path in cnn_emg_paths:
-        cnn_emg_models.append(load_model(path))
-    for path in cnn_imu_paths:
-        cnn_imu_models.append(load_model(path))
-    for path in classic_paths:
-        with open(path, 'rb') as pickle_file:
-            classic_models.append(pickle.load(pickle_file))
-    # wait(4)
+    cnn_emg_ud = load_model(cnn_emg_ud_path)
+    cnn_imu_ud = load_model(cnn_imu_ud_path)
+    cnn_emg_ui = load_model(cnn_emg_ui_path)
+    cnn_imu_ui = load_model(cnn_imu_ui_path)
+    with open(classic_ud_path, 'rb') as pickle_file:
+        classic_ud = pickle.load(pickle_file)
+    with open(classic_ui_path, 'rb') as pickle_file:
+        classic_ui = pickle.load(pickle_file)
+
     status = 0
-    check_samples_rate()
     print("Initialization - Done")
+    return cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
 
 
 def preprocess_data(w_emg, w_imu, preprocess):
@@ -169,113 +158,232 @@ def preprocess_data(w_emg, w_imu, preprocess):
 
 
 def main():
-    global cnn_emg_models
-    global cnn_imu_models
-    global classic_models
-    global collect_for_train_random_forest
-    global x_train
-    y_train = []
-    live_classifier = None
+    adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
+    cnn_adapt_collect, classic_live_collect = True, True
+    classic_live = None
+    datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number = 0, 0, 0
+    total_raw_emg, total_raw_imu = 0, 0
+    session = 2
 
     preprocess = Constant.no_pre_processing
-    init()
-    Helper_functions.wait(2)
-
+    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = init()
+    classic_ud.verbose = 0
+    classic_ui.verbose = 0
     with hub.run_in_background(gesture_listener.on_event):
-        for seq in sequence_duration:
-            for label in range(len(Constant.label_display_without_rest)):
-                # ----------------------------------Record data--------------------------------------------------------#
-                print("Start with sequence. \nThe recording time of the gesture is " + str(seq) + " seconds.")
-                Helper_functions.countdown(3)
-                print(Constant.label_display_without_rest[label], "Start")
-                DEVICE_R.vibrate(libmyo.VibrationType.short)
-                emg, ori, acc, gyr = collect_raw_data(record_time=seq)
-                DEVICE_L.vibrate(libmyo.VibrationType.short)
-                print("Stop")
+        check_samples_rate()
+        Helper_functions.wait(2)
+        for s in range(session):
+            for n in range(len(seq_duration)):
+                Helper_functions.cls()
+                print(
+                    "Start with sequence. \nThe recording time of the gesture is " + str(seq_duration[n]) + " seconds.")
+                for label in range(len(Constant.label_display_without_rest)):
+                    Helper_functions.countdown(3)
+                    # ----------------------------------Record data--------------------------------------------------------#
+                    print(Constant.label_display_without_rest[label], "Start")
+                    DEVICE_R.vibrate(libmyo.VibrationType.short)
+                    emg, ori, acc, gyr = collect_raw_data(record_time=seq_duration[n])
+                    total_raw_emg += len(emg)
+                    total_raw_imu += len(ori)
 
-                emg, imu = reformat_raw_data(emg, ori, acc, gyr)
-                # ----------------------------------Perform classic prediction-----------------------------------------#
-                window = 100
-                overlap = 0.9
-                # Classic windowing, EMG and IMU together
-                w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
+                    DEVICE_L.vibrate(libmyo.VibrationType.short)
+                    print("Stop")
 
-                # Preprocessing
-                w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
+                    emg, imu = reformat_raw_data(emg, ori, acc, gyr)
+                    # ----------------------------------Perform classic prediction-----------------------------------------#
+                    window = 100
+                    overlap = 0.9
+                    # Classic windowing, EMG and IMU together
+                    w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
 
-                # Feature extraction
-                mode = Constant.rehman
-                features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
+                    # tmp_w_emg = (len(emg) - window)/(window * (1-overlap)) + 1
+                    # print("raw_emg_length", len(emg),
+                    #       "\nformal window number", tmp_w_emg,
+                    #       "\nreal window number", len(w_emg))
 
-                # Norm
-                norm = True
-                if norm:
-                    features = norm_data(features)
-                    if collect_for_train_random_forest:
-                        x_train.extend(features)
+                    # Preprocessing
+                    w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
+
+                    # Feature extraction
+                    mode = Constant.rehman
+                    features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
+                    datum_classic_number += len(features)
+
+                    # Norm
+                    norm = True
+                    if norm:
+                        features = norm_data(features)
+
+                    if classic_live_collect:
+                        x_train_classic.extend(features)
                         y_train.extend([label] * len(features))
 
-                predict_classic = [clf.predict(features) for clf in classic_models]
+                    predict_classic_ud = classic_ud.predict(features)
+                    predict_classic_ui = classic_ui.predict(features)
 
-                # IF live classifier is trained
-                if not collect_for_train_random_forest and live_classifier is not None:
-                    predict_live_classifier = live_classifier.predict(features)
+                    # IF live classifier is trained
+                    if not classic_live_collect and classic_live is not None:
+                        predict_classic_live = classic_live.predict(features)
 
-                # ----------------------------------Perform CNN prediction---------------------------------------------#
-                # Separate windowing
+                    # ----------------------------------Perform CNN prediction---------------------------------------------#
+                    # Separate windowing
+                    w_emg = 100
+                    w_imu = 25
+                    overlap = 0.9
+                    w_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
+                    w_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
 
-                w_emg = 100
-                w_imu = 25
-                overlap = 0.9
-                w_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
-                w_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+                    datum_cnn_emg_number += len(w_emg)
+                    datum_cnn_imu_number += len(w_imu)
 
-                x_emg = np.array(w_emg)[:, :, :, np.newaxis]
-                x_imu = np.array(w_imu)[:, :, :, np.newaxis]
+                    if cnn_adapt_collect:
+                        adapt_cnn_emg_train.extend(w_emg)
+                        adapt_cnn_imu_train.extend(w_imu)
+                        y_train_emg.extend([label] * len(w_emg))
+                        y_train_imu.extend([label] * len(w_imu))
 
-                proba_emg = [clf.predict_proba(x_emg) for clf in cnn_emg_models]
-                proba_imu = [clf.predict_proba(x_imu) for clf in cnn_imu_models]
+                    x_emg = np.array(w_emg)[:, :, :, np.newaxis]
+                    x_imu = np.array(w_imu)[:, :, :, np.newaxis]
 
-                predict_emg = [clf.predict_classes(x_emg) for clf in cnn_emg_models]
-                predict_imu = [clf.predict_classes(x_imu) for clf in cnn_imu_models]
+                    proba_emg_ud = cnn_emg_ud.predict_proba(x_emg)
+                    proba_imu_ud = cnn_imu_ud.predict_proba(x_imu)
+                    predict_emg_ud = cnn_emg_ud.predict_classes(x_emg)
+                    predict_imu_ud = cnn_imu_ud.predict_classes(x_imu)
 
-                # ----------------------------------Evaluate results---------------------------------------------------#
-                evaluate_predictions_1(predict=predict_emg,
-                                       proba=proba_emg,
-                                       y_true=label,
-                                       log_file_name="label_" + str(label) + "_emg_prediction.csv",
-                                       clf_names=cnn_emg_paths)
-                evaluate_predictions_1(predict=predict_imu,
-                                       proba=proba_imu,
-                                       y_true=label,
-                                       log_file_name="label_" + str(label) + "_imu_prediction.csv",
-                                       clf_names=cnn_imu_paths)
-                evaluate_predictions_1(predict=predict_classic,
-                                       proba=[],
-                                       y_true=label,
-                                       log_file_name="label_" + str(label) + "_classic_prediction.csv",
-                                       classic=True,
-                                       clf_names=classic_paths)
-                if live_classifier is not None:
-                    evaluate_predictions_1(predict=predict_live_classifier,
-                                           proba=[], y_true=label,
-                                           log_file_name="Live Classifier",
-                                           clf_names=["Random Forest Live"],
-                                           classic=True)
+                    proba_emg_ui = cnn_emg_ui.predict_proba(x_emg)
+                    proba_imu_ui = cnn_imu_ui.predict_proba(x_imu)
+                    predict_emg_ui = cnn_emg_ui.predict_classes(x_emg)
+                    predict_imu_ui = cnn_imu_ui.predict_classes(x_imu)
 
-                Helper_functions.countdown(3)
+                    if not cnn_adapt_collect:
+                        proba_emg_adapt = cnn_emg_adapt.predict_proba(x_emg)
+                        proba_imu_adapt = cnn_imu_adapt.predict_proba(x_imu)
 
-            if collect_for_train_random_forest:
-                collect_for_train_random_forest = False
-                print("Training Samples", len(x_train))
-                live_classifier = Constant.random_forest.fit(x_train, y_train)
-                del x_train
-                del y_train
+                        predict_emg_adapt = cnn_emg_adapt.predict_classes(x_emg)
+                        predict_imu_adapt = cnn_imu_adapt.predict_classes(x_imu)
+
+                    # ----------------------------------Evaluate results-----------------------------------------------#
+                    eval_predictions(predict=predict_emg_ud, proba=proba_emg_ud, y_true=label, file_prefix="cnn_emg_ud",
+                                     session=s, seq=n, classic=False)
+                    eval_predictions(predict=predict_imu_ud, proba=proba_imu_ud, y_true=label, file_prefix="cnn_imu_ud",
+                                     session=s, seq=n, classic=False)
+                    eval_predictions(predict=predict_emg_ui, proba=proba_emg_ui, y_true=label, file_prefix="cnn_emg_ui",
+                                     session=s, seq=n, classic=False)
+                    eval_predictions(predict=predict_imu_ui, proba=proba_imu_ui, y_true=label, file_prefix="cnn_imu_ui",
+                                     session=s, seq=n, classic=False)
+                    eval_predictions(predict=predict_classic_ud, proba=[], y_true=label, file_prefix="classic_ud",
+                                     session=s, seq=n, classic=True)
+                    eval_predictions(predict=predict_classic_ui, proba=[], y_true=label, file_prefix="classic_ui",
+                                     session=s, seq=n, classic=True)
+
+                    if not cnn_adapt_collect:
+                        eval_predictions(predict=predict_emg_adapt, proba=proba_emg_adapt, y_true=label,
+                                         file_prefix="cnn_emg_adapt", session=s, seq=n, classic=False)
+                        eval_predictions(predict=predict_imu_adapt, proba=proba_imu_adapt, y_true=label,
+                                         file_prefix="cnn_imu_adapt", session=s, seq=n, classic=False)
+
+                    if not classic_live_collect:
+                        eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
+                                         file_prefix="classic_live",
+                                         session=s, seq=n, classic=True)
+
+                if classic_live_collect:
+                    print("Train classic")
+                    print("Training Samples", len(x_train_classic))
+                    classic_live = Constant.random_forest.fit(x_train_classic, y_train)
+                    classic_live_collect = False
+
+                if cnn_adapt_collect:
+                    print("Adapt EMG CNN")
+                    cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_ui, x_train=adapt_cnn_emg_train,
+                                                         y_train=y_train_emg, x_test_in=[], y_test_in=[],
+                                                         save_path="./", batch=8, epochs=10, config="live-adapt-EMG",
+                                                         calc_test_set=False)
+                    print("Adapt IMU CNN")
+                    cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_ui, x_train=adapt_cnn_imu_train,
+                                                         y_train=y_train_imu, x_test_in=[], y_test_in=[],
+                                                         save_path="./", batch=8, epochs=10, config="live-adapt-IMU",
+                                                         calc_test_set=False)
+                    cnn_adapt_collect = False
     hub.stop()
 
 
-def evaluate_predictions_1(predict, proba, y_true, log_file_name, clf_names, classic=False):
-    save_path = live_prediction_path + log_file_name
+def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
+    write_header = False
+    if not os.path.isdir(live_prediction_path + file_prefix):  # Collection dir
+        os.mkdir(live_prediction_path + file_prefix)
+    path = live_prediction_path + file_prefix + "/"
+    number_samples = len(predict)
+    sum_predict_dict = collections.OrderedDict(sorted(collections.Counter(predict).items()))
+    if y_true in sum_predict_dict.keys():
+        correct_samples = sum_predict_dict[y_true]
+    else:
+        correct_samples = 0
+    if classic:
+        index_max = max(sum_predict_dict, key=sum_predict_dict.get)
+
+        # Summary results
+        save_path = path + file_prefix + "_summary.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(
+                ["Session", "seq", "y_true", "number_samples", "predicion_seq", "predicion_seq_number",
+                 "correct_samples", "correct_samples_precent"])
+        writer.writerow([session, seq, y_true, number_samples, index_max, sum_predict_dict[index_max], correct_samples,
+                         correct_samples / number_samples])
+        file.close()
+
+        # Detailed results
+        save_path = path + file_prefix + "_detail.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(["prediction", "predict_percent", "predict_distribution", "y_true"])
+        writer.writerow([index_max, sum_predict_dict[index_max], [x for x in sum_predict_dict], y_true])
+        file.close()
+
+    else:
+        sum_proba = []
+        for i in range(Constant.classes):
+            sum_proba.append(np.mean([float(x[i]) for x in proba]))
+        index_max = np.argmax(sum_proba)
+
+        # Summary results
+        save_path = path + file_prefix + "_summary.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(
+                ["session", "seq", "y_true", "number_samples", "best_probability", "prediction_seq", "correct_samples",
+                 "correct_samples_percent"])
+        writer.writerow([session, seq, y_true, number_samples, index_max, sum_proba[index_max], correct_samples,
+                         correct_samples / number_samples])
+        file.close()
+
+        # Detailed results
+        save_path = path + file_prefix + "_detail.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(["prediction", "probability_distribution", "y_true"])
+        for j in range(len(predict)):
+            writer.writerow([predict[j], [x for x in proba[j]], y_true])
+        file.close()
+
+    return True
+
+
+def evaluate_predictions(predict, proba, y_true, log_file_name, clf_names, classic=False):
+    save_path = live_prediction_path + log_file_name.split('/')[-1]
     file = open(save_path, 'a', newline='')
     writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
     with file:
@@ -440,7 +548,15 @@ def reformat_raw_data(emg=[], ori=[], acc=[], gyr=[]):
     o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
     a = [[f.x, f.y, f.z] for f in [e[0] for e in [d[1:] for d in acc]]]
     g = [[j.x, j.y, j.z] for j in [h[0] for h in [g[1:] for g in gyr]]]
-    Helper_functions.wait(0.5)
+
+    length = len(o)
+    if any(len(lst) != length for lst in [a, g]):
+        length = min(len(o), len(a), len(g))
+        o = o[:length]
+        a = a[:length]
+        g = g[:length]
+    # at least one list has a different length
+
     imu = []
     for i in range(len(o)):
         # todo check warum teilweise nicht gleichlang
@@ -468,8 +584,8 @@ def collect_raw_data(record_time):
         end = time.time()
         dif = end - start
     status = 0
-    log.info("EMG %d", len(EMG))
-    log.info("IMU %d", len(ORI))
+    # print("EMG %d", len(EMG))
+    # print("IMU %d", len(ORI))
 
     # Only for count length
     # emg_count_list.append(len(EMG))
