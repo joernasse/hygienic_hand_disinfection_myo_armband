@@ -2,7 +2,6 @@ from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W
 from tkinter.ttk import Progressbar, Separator, Frame
 
 from PIL import Image, ImageTk
-
 import Constant
 from Collect_data import collect_data, initialize_data_collection
 from Constant import *

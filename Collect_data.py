@@ -4,7 +4,7 @@ import threading
 import time
 import Constant
 import logging as log
-import Live_Prediction_Prototype
+import Live_prototype
 import myo as libmyo
 from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL, \
     DISABLED, NORMAL
@@ -49,17 +49,12 @@ class GestureListener(libmyo.DeviceListener):
         self.emg_data_queue = collections.deque(maxlen=queue_size)
         self.ori_data_queue = collections.deque(maxlen=queue_size)
 
-    def on_arm_synced(self, event):
-        print("x")
-
     def on_connected(self, event):
         event.device.stream_emg(StreamEmg.enabled)
 
     def on_emg(self, event):
         with self.lock:
             if status:
-                emg_l.append(DEVICE_L.emg)
-                emg_r.append(DEVICE_R.emg)
                 EMG.append([event.timestamp, event.emg])
 
     def on_orientation(self, event):
@@ -68,10 +63,6 @@ class GestureListener(libmyo.DeviceListener):
                 ORI.append([event.timestamp, event.orientation])
                 ACC.append([event.timestamp, event.acceleration])
                 GYR.append([event.timestamp, event.gyroscope])
-
-    def get_ori_data(self):
-        with self.lock:
-            return list(self.ori_data_queue)
 
 
 init()
@@ -120,7 +111,7 @@ class CollectDataWindow(Frame):
                                           command=lambda: self.setup_introduction_screen(mode=Constant.CONTINUES,
                                                                                          trial=True))
         self.live_prototype_btn = Button(master=self, text="Live Prototype",
-                                         command=lambda: Live_Prediction_Prototype.main())
+                                         command=lambda: Live_prototype.main())
         self.close_btn = Button(self, text="Close", command=collect_window.withdraw)
 
         # --------------------------------------------Layout-----------------------------------------------------------#
@@ -580,3 +571,25 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+import myo as libmyo
+from myo import init, Hub, StreamEmg
+
+DEVICE_R, DEVICE_L = None, None
+init()
+hub = Hub()
+device_listener = libmyo.ApiDeviceListener()
+
+with hub.run_in_background(device_listener):
+    devices = device_listener.devices
+    for d in devices:
+        if d.arm == "left":
+            DEVICE_L = d
+            DEVICE_L.stream_emg(True)
+        elif d.arm == "right":
+            DEVICE_R = d
+            DEVICE_R.stream_emg(True)
+    if not (DEVICE_L is None) and not (DEVICE_R is None):
+        DEVICE_R.vibrate(libmyo.VibrationType.short)
+        DEVICE_L.vibrate(libmyo.VibrationType.lon)
+hub.stop()

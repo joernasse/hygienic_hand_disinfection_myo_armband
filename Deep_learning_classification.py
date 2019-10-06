@@ -296,7 +296,7 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
     return model
 
 
-def predict_for_load_model(x_test, y_test, model, batch_size):
+def predict_for_load_model(x_test, y_test, model, batch_size=32):
     """
 
     :param x_test:
