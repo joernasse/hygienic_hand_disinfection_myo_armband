@@ -9,7 +9,6 @@ import numpy as np
 np.seterr(divide='ignore')
 
 
-# Select user directory --  load all emg and imu data, window it, extract features
 def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                      save_path_for_featureset="./", load_path=Constant.collections_path_default):
     """
@@ -55,9 +54,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                     emg_path=load_path + path_add[i] + "/" + steps + "/emg.csv",
                     imu_path=load_path + path_add[i] + "/" + steps + "/imu.csv")
 
-                w_emg, w_imu = window_data_for_both_sensor(raw_emg, raw_imu,
-                                                           window=window,
-                                                           degree_of_overlap=overlap,
+                w_emg, w_imu = window_data_for_both_sensor(raw_emg, raw_imu, window=window, degree_of_overlap=overlap,
                                                            skip_timestamp=1)
 
                 # Preprocess each window
@@ -99,7 +96,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
 
 def window_for_one_sensor(input_data, window, degree_of_overlap=0):
     """
-
+    TODO
     :param input_data:
     :param window:
     :param degree_of_overlap:
@@ -117,7 +114,6 @@ def window_for_one_sensor(input_data, window, degree_of_overlap=0):
             last = int(first + window)
             data = data_cutted[first:last]
             if not len(data) == window:
-                # print(label, " - first/last", first, last)
                 first += int(window - offset)
                 break
             w_data.append(np.asarray(data))
@@ -255,20 +251,9 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
     :param collection_path:
     :return:
     """
-    path_add=[]
-    raw_data = {'Step0': [],
-                'Step1': [],
-                'Step1_1': [],
-                'Step1_2': [],
-                'Step2': [],
-                'Step2_1': [],
-                'Step3': [],
-                'Step4': [],
-                'Step5': [],
-                'Step5_1': [],
-                'Step6': [],
-                'Step6_1': [],
-                'Rest': []}
+    path_add = []
+    raw_data = {'Step0': [], 'Step1': [], 'Step1_1': [], 'Step1_2': [], 'Step2': [], 'Step2_1': [], 'Step3': [],
+                'Step4': [], 'Step5': [], 'Step5_1': [], 'Step6': [], 'Step6_1': [], 'Rest': []}
 
     for user in user_list:
         directories = []
@@ -295,7 +280,7 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
 
 def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     """
-
+    TODO
     :param window:
     :param overlap:
     :param raw_data:
@@ -310,8 +295,7 @@ def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     for key in label:
         raw += len(raw_data[key])
         print(raw)
-        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window,
-                                                  degree_of_overlap=overlap)
+        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window, degree_of_overlap=overlap)
         window_data.extend(window_tmp)
         np.vstack((window_data, window_tmp))
         labels.extend(np.asarray(label))

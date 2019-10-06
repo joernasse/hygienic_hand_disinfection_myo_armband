@@ -7,10 +7,9 @@ from keras import layers
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from tensorflow.python import keras
-from tensorflow.python.keras import Sequential, optimizers
-from tensorflow.python.keras.layers import Conv2D, Flatten, Dense, MaxPooling2D, Dropout, BatchNormalization, Activation
+from tensorflow.python.keras import Sequential
+from tensorflow.python.keras.layers import Conv2D, Flatten, Dense, MaxPooling2D, Dropout
 import tensorflow as tf
-# from tensorflow.keras import layers
 import Constant
 import Helper_functions
 
@@ -97,7 +96,6 @@ def dnn(save_path, users_data, batch, epochs):
     :param epochs:
     :return:
     """
-    # for n in range(len(Constant.USERS_cross)):
     test_user = users_data[0].copy()
     train_users = users_data.copy()
     train_users.pop(0)
@@ -112,7 +110,7 @@ def dnn(save_path, users_data, batch, epochs):
     model.add(layers.Dense(2048, activation='elu'))
     model.add(layers.Dense(1024, activation='elu'))
     model.add(layers.Dense(512, activation='elu'))
-    # model.add(Dropout(0.5))
+    model.add(Dropout(0.5))
     model.add(layers.Dense(classes, activation='softmax'))
 
     model.compile(loss=keras.losses.categorical_crossentropy,
@@ -319,10 +317,11 @@ def create_rehman_model(shape_x, shape_y, output):
     model.add(Conv2D(32, kernel_size=3,
                      activation='relu',
                      input_shape=(shape_x, shape_y, 1)))
-    model.add(MaxPooling2D(pool_size=(3,1)))
+    model.add(MaxPooling2D(pool_size=(3, 1)))
     model.add(Dense(512, activation='elu'))
     model.add(Dense(output, activation='softmax'))
     return model
+
 
 def create_cnn_1_model(shape_x, shape_y, output):
     model = Sequential()

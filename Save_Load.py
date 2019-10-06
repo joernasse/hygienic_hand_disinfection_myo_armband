@@ -73,7 +73,7 @@ def save_features(features, file_name):
 # TODO: besserer Name
 def load_raw_for_single_sensor(path):
     """
-
+    TODO
     :param path:
     :return:
     """
@@ -81,7 +81,6 @@ def load_raw_for_single_sensor(path):
     try:
         file = open(path)
     except:
-        # print("ERROR!")
         return []
     reader = csv.reader(file, delimiter=';')
     next(reader, None)
@@ -92,7 +91,7 @@ def load_raw_for_single_sensor(path):
 
 def load_raw_data_for_both_sensors(emg_path, imu_path):
     """
-
+    TODO
     :param emg_path: string
             The path to the emg.csv to open the file
     :param imu_path: string
@@ -119,9 +118,9 @@ def load_raw_data_for_both_sensors(emg_path, imu_path):
     try:
         imu_file, emg_file = open(imu_path), open(emg_path)
         for file in [emg_file, imu_file]:
-            if file.name.__contains__('emg'):
+            if 'emg' in file.name:
                 load_data = emg_load_data
-            elif file.name.__contains__('imu'):
+            elif 'imu' in file.name:
                 load_data = imu_load_data
             reader = csv.reader(file, delimiter=';')
             first_line = True
@@ -144,7 +143,7 @@ def load_raw_data_for_both_sensors(emg_path, imu_path):
 
 def load_raw_data(config, path, user_list=USERS):
     """
-
+    TODO
     :param config: string
             Describes the configuration for the features
     :param user_list: array
@@ -190,7 +189,7 @@ def load_raw_data(config, path, user_list=USERS):
 
 def create_directories_for_data_collection(proband, delete_old, raw_path, raw_con, raw_sep):
     """
-
+    TODO
     :param proband:
     :param delete_old:
     :param raw_path:
@@ -221,7 +220,7 @@ def create_directories_for_data_collection(proband, delete_old, raw_path, raw_co
 
 def load_prediction_summary(path):
     """
-
+    TODO
     :param path:
     :return:
     """

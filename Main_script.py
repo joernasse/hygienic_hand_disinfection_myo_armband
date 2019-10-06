@@ -1,7 +1,4 @@
 from __future__ import print_function
-
-import tensorflow
-from keras.utils import plot_model
 import matplotlib.pyplot as plt
 import Classic_classification
 import Constant

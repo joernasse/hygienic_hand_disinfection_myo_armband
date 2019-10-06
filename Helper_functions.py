@@ -9,7 +9,7 @@ from sklearn.metrics import confusion_matrix
 
 def cls():
     """
-    Clear commandline window
+    Clear Cmmandline window
     :return: No returns
     """
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -94,19 +94,23 @@ def plot_confusion_matrix(y_true, y_predict, classes, norm=False, title=None, cm
     return fig
 
 
-def result_visualization(y_true, y_predict, show_figures=False,
-                         labels=Constant.label_display_without_rest, config="", save_path="./"):
+def result_visualization(y_true, y_predict, show_figures=False, labels=Constant.label_display_without_rest,
+                         config="", save_path="./"):
     """
-
-    :param history:
+    Visualization of the prediction results
     :param y_true: list
             The correct labels for a set of data(samples)
     :param y_predict: list
             The predicted list for the same set of data, where the y_true came from
-    :param show_figures:
-    :param labels:
-    :param config:
-    :param save_path:
+    :param show_figures: boolean, default False
+            If True diagram is displayed
+            If False diagram is not displayed
+    :param labels: list, default Constant.label_display_without_rest
+            List of labels to display
+    :param config: string, default ""
+            Current configuration
+    :param save_path:string, default "./"
+            Specifies the path to save the file
     :return:
     """
     np.set_printoptions(precision=2)
@@ -143,7 +147,7 @@ def result_visualization(y_true, y_predict, show_figures=False,
 
 def visualization_history(history, save_path="./", config="", show_results=False):
     """
-
+    Visualization of the training history. The diagrams can optional be saved and hide
     :param history:
     :param save_path: sting
             Path for saving the file (folder)
@@ -179,7 +183,7 @@ def visualization_history(history, save_path="./", config="", show_results=False
 
 def flat_users_data(dict_data):
     """
-
+    Flat the date structure from a given directory to an array
     :param dict_data:dict{'data':list,'label':list}
             Represent the data structure as directory. Contains data and labels
     :return: array,array
@@ -196,7 +200,7 @@ def flat_users_data(dict_data):
 
 def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
     """
-
+    TODO
     :param data:
     :param sensor:
     :param mode:
@@ -239,6 +243,12 @@ def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
 
 
 def countdown(t):
+    """
+    Calculate the countdown from given value t
+    :param t: int
+            countdown duration
+    :return:
+    """
     while t:
         mins, secs = divmod(t, 60)
         timeformat = '{:02d}:{:02d}'.format(mins, secs)
