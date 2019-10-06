@@ -18,12 +18,14 @@ def mav(array):  # Mean Absolute Value
         sum += np.abs(i)
     return 1 / n * sum
 
+
 # Variance
 def var(array):
     n = len(array)
+    mean = mav(array)
     sum = 0
     for a in array:
-        sum += a * a
+        sum += np.power(a - mean, 2)
     return (1 / float(n - 1)) * sum
 
 

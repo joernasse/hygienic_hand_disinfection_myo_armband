@@ -151,21 +151,20 @@ def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
 
 
 def main():
-    calculation_config_statistics("G:/Masterarbeit/")
     #
     # calculate_total_raw_data()
     # return True
 
     # feature_extraction(["User001"])
-    # n_jobs = 8
-    # partitioned_configs = np.array_split(Constant.missing_config_calc, n_jobs)
-    # processes = [mp.Process(target=train_user_dependent_classic,
-    #                         args=([Constant.USERS_SUB, "G:/Masterarbeit/feature_sets_filter/", True,
-    #                                partitioned_configs[i]])) for i in range(n_jobs)]
-    # for p in processes:
-    #     p.start()
-    # for p in processes:
-    #     p.join()
+    n_jobs = 4
+    partitioned_configs = np.array_split(Constant.missing_config_calc, n_jobs)
+    processes = [mp.Process(target=train_user_dependent_classic,
+                            args=([Constant.USERS, "G:/Masterarbeit/feature_sets_filter/", True,
+                                   partitioned_configs[i]])) for i in range(n_jobs)]
+    for p in processes:
+        p.start()
+    for p in processes:
+        p.join()
 
     # train_user_dependent_classic(user_list=["User001"],
     #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
@@ -466,7 +465,7 @@ def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
 def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gesture=True, predefine_configs=None,
                                  model_save_path="./", save_model=False, visualization=False,
                                  classifiers=Constant.classifiers, classifier_names=Constant.classifier_names,
-                                 norm=True):
+                                 norm=False):
     """
     Go over all config steps and prepare data for each combination of configuration.
     Each level in Config. can be changed in the Constant.py
@@ -493,8 +492,16 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                                                      user_list=[user])
 
                 if not users_data:
-                    continue
-
+                    config_split = config.split('-')
+                    ol = float(config_split[4])
+                    if ol == 0:
+                        ol = int(config_split[4])
+                    Process_data.process_raw_data(user=user, pre=config_split[0], data_set=config_split[1],
+                                                  sensor=config_split[2], window=int(config_split[3]),
+                                                  overlap=ol, feature=config_split[5],
+                                                  save_path_for_featureset="G:/Masterarbeit/Collections/",
+                                                  summary_path="G:/Masterarbeit/feature_sets_filter/")
+                    users_data = Save_Load.load_raw_data(config=config, path=feature_set_path, user_list=[user])
                 if ignore_rest_gesture:
                     users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
@@ -617,10 +624,13 @@ def calculation_config_statistics(load_path):
                             config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
                                 overlap) + "-" + feature
                             config_items = []
-
                             for item in overview:
-                                if config == item[4]:
-                                    config_items.append(item)
+                                try:
+                                    if config == item[4]:
+                                        config_items.append(item)
+                                except:
+                                    continue
+
                             if not config_items:
                                 continue
                             # print(len(config_items))
