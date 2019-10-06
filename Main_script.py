@@ -151,7 +151,9 @@ def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
 
 
 def main():
-    calculation_config_statistics("G:/Masterarbeit/")
+    calc_missing_config("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_update.csv")
+    return True
+    # calculation_config_statistics("G:/Masterarbeit/")
     #
     # calculate_total_raw_data()
     # return True
@@ -623,7 +625,6 @@ def calculation_config_statistics(load_path):
                                     config_items.append(item)
                             if not config_items:
                                 continue
-                            # print(len(config_items))
                             if len(config_items) == 90:  # Für jeden Nutzer ein Eintrag
                                 print(config_items[0][2])
                                 config_mean.append([config,
@@ -638,6 +639,35 @@ def calculation_config_statistics(load_path):
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in config_mean:
             writer.writerow(item)
+
+
+def calc_missing_config(load_path):
+    missing_config=[]
+    overview = Save_Load.load_prediction_summary(path=load_path)
+    for pre in Constant.level_0:
+        for data_set in Constant.level_1:
+            for sensor in Constant.level_2:
+                for window in Constant.level_3:
+                    for overlap in Constant.level_4:
+                        for feature in Constant.level_5:
+                            config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
+                                overlap) + "-" + feature
+                            config_items = []
+
+                            for item in overview:
+                                try:
+                                    if config == item[4]:
+                                        config_items.append(item)
+                                except:
+                                    continue
+                            if not config_items:
+                                missing_config.append(config)
+    f = open("G:Masterarbeit/Results/User_dependent_classic/missing_config"+str(len(missing_config))+".csv", 'w', newline='')
+    with f:
+        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        for item in missing_config:
+            writer.writerow([item])
+
 
 
 def train_user_independent_cnn(train_user_list, config_list, user, norm=False, save_path="./",
