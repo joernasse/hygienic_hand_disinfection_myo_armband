@@ -3,9 +3,9 @@ from __future__ import print_function
 import tensorflow
 from keras.utils import plot_model
 import matplotlib.pyplot as plt
-import Classification
+import Classic_classification
 import Constant
-import Deep_learning
+import Deep_learning_classification
 import Helper_functions
 import Process_data
 import Save_Load
@@ -390,15 +390,15 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
-    Classification.train_user_independent(training_data=training_data,
-                                          test_data=test_data,
-                                          classifiers=classifier,
-                                          classifiers_name=classifier_names,
-                                          save_path=save_path,
-                                          config=config,
-                                          norm=norm,
-                                          save_model=save_model,
-                                          visualization=visualization)
+    Classic_classification.train_user_independent(training_data=training_data,
+                                                  test_data=test_data,
+                                                  classifiers=classifier,
+                                                  classifiers_name=classifier_names,
+                                                  save_path=save_path,
+                                                  config=config,
+                                                  norm=norm,
+                                                  save_model=save_model,
+                                                  visualization=visualization)
 
 
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
@@ -500,15 +500,15 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                 if ignore_rest_gesture:
                     users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                Classification.train_user_dependent(user_data=users_data,
-                                                    config=config,
-                                                    user_name=user,
-                                                    classifiers=classifiers,
-                                                    classifiers_name=classifier_names,
-                                                    save_path=model_save_path,
-                                                    save_model=save_model,
-                                                    visualization=visualization,
-                                                    norm=norm)
+                Classic_classification.train_user_dependent(user_data=users_data,
+                                                            config=config,
+                                                            user_name=user,
+                                                            classifiers=classifiers,
+                                                            classifiers_name=classifier_names,
+                                                            save_path=model_save_path,
+                                                            save_model=save_model,
+                                                            visualization=visualization,
+                                                            norm=norm)
 
         #     TODO remove after use
     return True
@@ -533,15 +533,15 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                             if ignore_rest_gesture:
                                 users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                            Classification.train_user_dependent(user_data=users_data,
-                                                                config=config,
-                                                                user_name=user,
-                                                                classifiers=classifiers,
-                                                                classifiers_name=classifier_names,
-                                                                save_path=model_save_path,
-                                                                save_model=save_model,
-                                                                visualization=visualization,
-                                                                norm=norm)
+                            Classic_classification.train_user_dependent(user_data=users_data,
+                                                                        config=config,
+                                                                        user_name=user,
+                                                                        classifiers=classifiers,
+                                                                        classifiers_name=classifier_names,
+                                                                        save_path=model_save_path,
+                                                                        save_model=save_model,
+                                                                        visualization=visualization,
+                                                                        norm=norm)
     return True
 
 
@@ -710,10 +710,10 @@ def train_user_independent_cnn(train_user_list, config_list, user, norm=False, s
                 x[i] = sc.transform(x[i])
             config += "_norm"
 
-        model, model_name, acc = Deep_learning.calculate_cnn(x=x, y=labels, save_path=save_path,
-                                                             batch=batch, epochs=epochs, config=config,
-                                                             early_stopping=early_stopping, cnn_pattern=cnn_pattern,
-                                                             perform_test=perform_test)
+        model, model_name, acc = Deep_learning_classification.calculate_cnn(x=x, y=labels, save_path=save_path,
+                                                                            batch=batch, epochs=epochs, config=config,
+                                                                            early_stopping=early_stopping, cnn_pattern=cnn_pattern,
+                                                                            perform_test=perform_test)
 
         f = open(save_path + "/Results" + cnn_pattern + "_UI.csv", 'a', newline='')
         with f:
@@ -757,10 +757,10 @@ def train_user_dependent_cnn(config_list, user, norm=False, save_path="./", perf
                 x[i] = sc.transform(x[i])
                 config += "norm"
 
-        model, model_name, acc = Deep_learning.calculate_cnn(x=x, y=labels, save_path=save_path,
-                                                             batch=32, epochs=100, config=config,
-                                                             early_stopping=5, cnn_pattern=cnn_pattern,
-                                                             perform_test=perform_test)
+        model, model_name, acc = Deep_learning_classification.calculate_cnn(x=x, y=labels, save_path=save_path,
+                                                                            batch=32, epochs=100, config=config,
+                                                                            early_stopping=5, cnn_pattern=cnn_pattern,
+                                                                            perform_test=perform_test)
 
         f = open(overview_path + "/Results" + cnn_pattern + config + "_UD.csv", 'a', newline='')
         with f:
@@ -793,7 +793,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
             sc.fit(x[i])
             x[i] = sc.transform(x[i])
             config += "norm"
-    evaluation, accuracy_score = Deep_learning.predict_for_load_model(x, labels, model, batch_size=32)
+    evaluation, accuracy_score = Deep_learning_classification.predict_for_load_model(x, labels, model, batch_size=32)
 
 
 def user_independent_grid_search(classifier, name, save_path, config, visualization, save_model, training_user_list,
@@ -806,10 +806,10 @@ def user_independent_grid_search(classifier, name, save_path, config, visualizat
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
-    classifier, accuracy, y_test, y_predict = Classification.train_user_dependent_grid_search(classifier=classifier,
-                                                                                              training_data=training_data,
-                                                                                              test_data=test_data,
-                                                                                              norm=norm)
+    classifier, accuracy, y_test, y_predict = Classic_classification.train_user_dependent_grid_search(classifier=classifier,
+                                                                                                      training_data=training_data,
+                                                                                                      test_data=test_data,
+                                                                                                      norm=norm)
 
     f = open(save_path + "/Overview_user_independent_" + config + ".csv", 'a', newline='')
     with f:
@@ -824,7 +824,7 @@ def user_independent_grid_search(classifier, name, save_path, config, visualizat
         plt.show()
     if save_model:
         save = save_path + "/" + name + config + '.joblib'
-        Classification.save_classifier(classifier, save)
+        Classic_classification.save_classifier(classifier, save)
     print("User independent - Done")
     print("User dependent grid search - Done")
     return True

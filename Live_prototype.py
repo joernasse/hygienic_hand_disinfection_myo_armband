@@ -7,15 +7,14 @@ from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
 import Constant
-import Deep_learning
 import Feature_extraction
 import Helper_functions
 import Process_data
 import numpy as np
 from tensorflow.python.keras.models import load_model
 import collections
-from Classification import norm_data
-from Deep_learning import adapt_model_for_user
+from Classic_classification import norm_data
+from Deep_learning_classification import adapt_model_for_user
 
 cnn_emg_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
 cnn_imu_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
@@ -172,7 +171,7 @@ def main():
                     "Start with sequence. \nThe recording time of the gesture is " + str(seq_duration[n]) + " seconds.")
                 for label in range(len(Constant.label_display_without_rest)):
                     Helper_functions.countdown(3)
-                    # ----------------------------------Record data--------------------------------------------------------#
+                    # ----------------------------------Record data----------------------------------------------------#
                     print(Constant.label_display_without_rest[label], "Start")
                     DEVICE_R.vibrate(libmyo.VibrationType.short)
                     emg, ori, acc, gyr = collect_raw_data(record_time=seq_duration[n])
@@ -183,7 +182,7 @@ def main():
                     print("Stop")
 
                     emg, imu = reformat_raw_data(emg, ori, acc, gyr)
-                    # ----------------------------------Perform classic prediction-----------------------------------------#
+                    # ----------------------------------Perform classic prediction-------------------------------------#
                     window = 100
                     overlap = 0.9
                     # Classic windowing, EMG and IMU together
@@ -218,7 +217,7 @@ def main():
                     if not classic_live_collect and classic_live is not None:
                         predict_classic_live = classic_live.predict(features)
 
-                    # ----------------------------------Perform CNN prediction---------------------------------------------#
+                    # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
                     w_emg = 100
                     w_imu = 25
