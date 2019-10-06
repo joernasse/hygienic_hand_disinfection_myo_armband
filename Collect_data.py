@@ -276,7 +276,7 @@ class IntroductionScreen(Frame):
 
     def countdown(self, t=5):
         """
-
+        Countdown from a given value t. Also display the current time at the UI
         :param introduction_screen: instance of introduction screen from Gui.py. Set countdown text
         :param t: int, countdown time
         :return:
