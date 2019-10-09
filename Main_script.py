@@ -1,7 +1,4 @@
 from __future__ import print_function
-
-import tensorflow
-from keras.utils import plot_model
 import matplotlib.pyplot as plt
 import Classic_classification
 import Constant
@@ -151,9 +148,9 @@ def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
 
 
 def main():
-    calc_missing_config("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_update.csv")
-    return True
-    # calculation_config_statistics("G:/Masterarbeit/")
+    # calc_missing_config("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_update.csv")
+    # calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
+    # return True
     #
     # calculate_total_raw_data()
     # return True
@@ -169,35 +166,46 @@ def main():
     # for p in processes:
     #     p.join()
 
-    # train_user_dependent_classic(user_list=["User001"],
-    #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
-    #                              ignore_rest_gesture=True,
-    #                              predefine_configs=Constant.missing_config_calc,
-    #                              model_save_path="./",
-    #                              save_model=True,
-    #                              visualization=False,
-    #                              classifiers=Constant.classifiers,
-    #                              classifier_names=Constant.classifier_names,
-    #                              norm=True)
+    train_user_dependent_classic(user_list=Constant.USERS,
+                                 feature_set_path="G:/Masterarbeit/feature_sets_filter/",
+                                 ignore_rest_gesture=True,
+                                 predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
+                                 model_save_path="./",
+                                 save_model=False,
+                                 visualization=False,
+                                 classifiers=[Constant.random_forest],
+                                 classifier_names=["Random_Forest"],
+                                 norm=False)
     return True
+
     # --------------------------------------------Train user independent classic - START-------------------------------#
-    # train_user_independent_classic("no_pre_pro-separate-EMGIMU-100-0.9-rehman", True,
-    #                                "//192.168.2.101/g/Masterarbeit/feature_sets_filter/", Constant.USERS_SUB, "User007",
+    # config = "no_pre_pro-separate-EMG-100-0.9-robinson"
+    # base_path="G:/Masterarbeit/"
+    # train_user_independent_classic(config, True, base_path+"/feature_sets_filter/", Constant.USERS_SUB, "User002",
     #                                "./", [Constant.random_forest], ["Random Forest"], True, True, True)
     # return True
     # --------------------------------------------Train user independent classic - END---------------------------------#
 
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#
-    # model_l_path = "//192.168.2.101/g/Masterarbeit/Results/User_independent_cnn/" \
-    #                "User007_Unknown/no_pre_pro-separate-EMG-25-0.9-NA_cnn_model.h5"
-    # x_train, y_train, x_test, y_test = \
-    #     pre_process_raw_data_adapt_model(window=25, overlap=0.9, user="User007",
-    #                                      sensor=Constant.EMG, data_set=Constant.SEPARATE,
-    #                                      collection_path="//192.168.2.101/g/Masterarbeit/Collections/")
+    # base_path = "G:/Masterarbeit"
+    # model_path = base_path + "/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    # config = "no_pre_pro-separatecontinues-EMG-100-0.9-NA"
+    # user = "User002"
+    # config_split = config.split('-')
+    # preprocess = config_split[0]
+    # sensor = config_split[2]
+    # data_set = config_split[1]
+    # window = int(config_split[3])
+    # overlap = float(config_split[4])
     #
-    # Deep_learning.adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10,
-    #                                    x_test_in=x_test, y_test_in=y_test, model=None,
-    #                                    config="no_pre_pro-separate-IMU-25-0.9-norm-NA")
+    # x_train, y_train, x_test, y_test = pre_process_raw_data_adapt_model(window=window, overlap=overlap, user=user,
+    #                                                                     sensor=sensor, data_set=data_set,
+    #                                                                     collection_path=base_path + "/Collections/")
+    # model = load_model(model_path)
+    #
+    # Deep_learning_classification.adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32,
+    #                                                   epochs=10, x_test_in=x_test, y_test_in=y_test, model=model,
+    #                                                   file_name=user + config)
     # return True
     # --------------------------------------------Adapt CNN for Unknown User END---------------------------------------#
 
@@ -215,7 +223,7 @@ def main():
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
     # save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
-    # for user in Constant.USERS_SUB:
+    # for user in [Constant.USERS_SUB]:
     #     train_user_dependent_cnn(["no_pre_pro-separate-EMG-100-0.9-NA"], user,
     #                              False, save_path, True, Constant.CNN_KAGGLE, True)
     # return True
@@ -229,9 +237,9 @@ def main():
     # --------------------------------------------Grid search ---------------------------------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-IMU-25-0.9-NA"], "User002", True,
-                               "./", False, Constant.CNN_KAGGLE, True, 32, 50, 2)
-    return True
+    # train_user_independent_cnn(Constant.USERS_SUB, ["no_pre_pro-continues-IMU-25-0.9-NA"], "User002", True,
+    #                            "./", False, Constant.CNN_KAGGLE, True, 32, 50, 2)
+    # return True
     # --------------------------------------------Train user independent CNN - END-----------------------------------#
 
     #
@@ -390,14 +398,9 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
-    Classic_classification.train_user_independent(training_data=training_data,
-                                                  test_data=test_data,
-                                                  classifiers=classifier,
-                                                  classifiers_name=classifier_names,
-                                                  save_path=save_path,
-                                                  config=config,
-                                                  norm=norm,
-                                                  save_model=save_model,
+    Classic_classification.train_user_independent(training_data=training_data, test_data=test_data,
+                                                  classifiers=classifier, classifiers_name=classifier_names,
+                                                  save_path=save_path, config=config, norm=norm, save_model=save_model,
                                                   visualization=visualization)
 
 
@@ -468,7 +471,7 @@ def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
 def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gesture=True, predefine_configs=None,
                                  model_save_path="./", save_model=False, visualization=False,
                                  classifiers=Constant.classifiers, classifier_names=Constant.classifier_names,
-                                 norm=False):
+                                 norm=True):
     """
     Go over all config steps and prepare data for each combination of configuration.
     Each level in Config. can be changed in the Constant.py
@@ -491,32 +494,18 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
         if predefine_configs is not None:
             for user in user_list:
                 print(user)
-                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
-                                                     user_list=[user])
+                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path, user_list=[user])
 
                 if not users_data:
-                    config_split = config.split('-')
-                    ol = float(config_split[4])
-                    if ol == 0:
-                        ol = int(config_split[4])
-                    Process_data.process_raw_data(user=user, pre=config_split[0], data_set=config_split[1],
-                                                  sensor=config_split[2], window=int(config_split[3]),
-                                                  overlap=ol, feature=config_split[5],
-                                                  save_path_for_featureset="G:/Masterarbeit/Collections/",
-                                                  summary_path="G:/Masterarbeit/feature_sets_filter/")
-                    users_data = Save_Load.load_raw_data(config=config, path=feature_set_path, user_list=[user])
+                    continue
+
                 if ignore_rest_gesture:
                     users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                Classic_classification.train_user_dependent(user_data=users_data,
-                                                            config=config,
-                                                            user_name=user,
-                                                            classifiers=classifiers,
-                                                            classifiers_name=classifier_names,
-                                                            save_path=model_save_path,
-                                                            save_model=save_model,
-                                                            visualization=visualization,
-                                                            norm=norm)
+                Classic_classification.train_user_dependent(user_data=users_data, config=config, user_name=user,
+                                                            classifiers=classifiers, classifiers_name=classifier_names,
+                                                            save_path=model_save_path, save_model=save_model,
+                                                            visualization=visualization, norm=norm)
 
         #     TODO remove after use
     return True
@@ -629,25 +618,29 @@ def calculation_config_statistics(load_path):
                             config_items = []
 
                             for item in overview:
-                                try:
-                                    if config == item[4]:
-                                        config_items.append(item)
-                                except:
-                                    continue
+                                if config == item[4]:
+                                    config_items.append(item)
 
                             if not config_items:
                                 continue
-                            # print(len(config_items))
-                            if len(config_items) == 90:  # Für jeden Nutzer ein Eintrag
-                                print(config_items[0][2])
-                                config_mean.append([config,
-                                                    # [x[1] for x in config_items],
-                                                    np.mean([float(x[2]) for x in config_items]),
-                                                    [x[2] for x in config_items]])
-                            else:
-                                print("")
 
-    f = open("G:Masterarbeit/user_dependent_detail/Overview_by_config.csv", 'w', newline='')
+                            for clf_name in Constant.classifier_names:
+                                clf_list = []
+                                for user in Constant.USERS:
+                                    for item in config_items:
+                                        if user == item[0] and clf_name == item[1]:
+                                            if not user in [x for x in [config for config in clf_list]]:
+                                                clf_list.append(item)
+                                            else:
+                                                print("duplicate")
+                                if len(clf_list) == 15:
+                                    config_mean.append(
+                                        [config + "-" + clf_name, np.mean([float(x[2]) for x in clf_list]),
+                                         [x[2] for x in clf_list]])
+                                else:
+                                    print(clf_list)
+
+    f = open("G:/Masterarbeit/Results/User_dependent_classic/Overview_by_config_tmp.csv", 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in config_mean:
@@ -655,7 +648,7 @@ def calculation_config_statistics(load_path):
 
 
 def calc_missing_config(load_path):
-    missing_config=[]
+    missing_config = []
     overview = Save_Load.load_prediction_summary(path=load_path)
     for pre in Constant.level_0:
         for data_set in Constant.level_1:
@@ -675,12 +668,12 @@ def calc_missing_config(load_path):
                                     continue
                             if not config_items:
                                 missing_config.append(config)
-    f = open("G:Masterarbeit/Results/User_dependent_classic/missing_config"+str(len(missing_config))+".csv", 'w', newline='')
+    f = open("G:Masterarbeit/Results/User_dependent_classic/missing_config" + str(len(missing_config)) + ".csv", 'w',
+             newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in missing_config:
             writer.writerow([item])
-
 
 
 def train_user_independent_cnn(train_user_list, config_list, user, norm=False, save_path="./",
@@ -725,7 +718,8 @@ def train_user_independent_cnn(train_user_list, config_list, user, norm=False, s
 
         model, model_name, acc = Deep_learning_classification.calculate_cnn(x=x, y=labels, save_path=save_path,
                                                                             batch=batch, epochs=epochs, config=config,
-                                                                            early_stopping=early_stopping, cnn_pattern=cnn_pattern,
+                                                                            early_stopping=early_stopping,
+                                                                            cnn_pattern=cnn_pattern,
                                                                             perform_test=perform_test)
 
         f = open(save_path + "/Results" + cnn_pattern + "_UI.csv", 'a', newline='')
@@ -819,10 +813,11 @@ def user_independent_grid_search(classifier, name, save_path, config, visualizat
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
-    classifier, accuracy, y_test, y_predict = Classic_classification.train_user_dependent_grid_search(classifier=classifier,
-                                                                                                      training_data=training_data,
-                                                                                                      test_data=test_data,
-                                                                                                      norm=norm)
+    classifier, accuracy, y_test, y_predict = Classic_classification.train_user_dependent_grid_search(
+        classifier=classifier,
+        training_data=training_data,
+        test_data=test_data,
+        norm=norm)
 
     f = open(save_path + "/Overview_user_independent_" + config + ".csv", 'a', newline='')
     with f:

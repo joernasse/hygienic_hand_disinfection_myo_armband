@@ -6,6 +6,10 @@ import time
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
+import tensorflow as tf
+
+from sklearn import clone
+
 import Constant
 import Feature_extraction
 import Helper_functions
@@ -22,6 +26,15 @@ cnn_emg_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-E
 cnn_imu_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
 classic_ud_path = "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
 classic_ui_path = "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
+
+cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+
+headline_summary = ["Session", "seq", "y_true", "number_samples", "prediction_seq",
+                    "prediction_seq_number", "correct_samples", "correct_samples_percent"]
+
+headline_classic_detail = ["prediction", "probability_distribution", "y_true"]
+headline_cnn_detail = ["prediction", "predict_percent", "predict_distribution", "y_true"]
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # emg
@@ -83,6 +96,12 @@ gesture_listener = GestureListener()
 
 
 def check_samples_rate(n=5, record_time=1):
+    """
+
+    :param n:
+    :param record_time:
+    :return:
+    """
     print("Check samples rate - Start")
     sum_emg, sum_imu = 0, 0
     print("Warm up")
@@ -100,25 +119,20 @@ def check_samples_rate(n=5, record_time=1):
     print("DS EMG", sr_emg,
           "\nDS_IMU", sr_imu)
     if (n * 2 * 200) * 0.85 > sum_emg:
-        print("EMG sample rate under 85%")
+        print("EMG sample rate is under 85%")
 
     if (n * 2 * 50) * 0.85 > sum_imu:
-        print("IMU sample rate under 85%")
+        print("IMU sample rate is under 85%")
 
     print("Check samples rate - Done")
     return
 
 
-def init(live_prediction_path="./Live_Prediction"):
-    global status
-    if not os.path.isdir(live_prediction_path):  # Collection dir
-        os.mkdir(live_prediction_path)
+def load_models_for_validation():
+    """
 
-    status = 1
-    print("Initialization - Start")
-    Helper_functions.wait(3)
-    pair_devices()
-
+    :return:
+    """
     cnn_emg_ud = load_model(cnn_emg_ud_path)
     cnn_imu_ud = load_model(cnn_imu_ud_path)
     cnn_emg_ui = load_model(cnn_emg_ui_path)
@@ -127,10 +141,25 @@ def init(live_prediction_path="./Live_Prediction"):
         classic_ud = pickle.load(pickle_file)
     with open(classic_ui_path, 'rb') as pickle_file:
         classic_ui = pickle.load(pickle_file)
+    return cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
 
+
+def init(live_prediction_path="./Live_Prediction"):
+    """
+
+    :param live_prediction_path:
+    :return:
+    """
+    global status
+    if not os.path.isdir(live_prediction_path):  # Collection dir
+        os.mkdir(live_prediction_path)
+
+    status = 1
+    print("Initialization - Start")
+    Helper_functions.wait(3)
+    pair_devices()
     status = 0
     print("Initialization - Done")
-    return cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
 
 
 def preprocess_data(w_emg, w_imu, preprocess):
@@ -150,22 +179,397 @@ def preprocess_data(w_emg, w_imu, preprocess):
 
 
 def main():
+    """
+
+    :return:
+    """
+
+    cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+    cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+    # validate_models(session=2)
+    live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
+                    cnn_emg=load_model(cnn_emg_user001_path),
+                    cnn_imu=load_model(cnn_imu_user001_path),
+                    clf_type='cnn',
+                    record_time=2)
+
+
+def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
+    """
+
+    :param predict:
+    :param proba:
+    :param y_true:
+    :param file_prefix:
+    :param session:
+    :param seq:
+    :param classic:
+    :return:
+    """
+    write_header = False
+    if not os.path.isdir(live_prediction_path + file_prefix):  # Collection dir
+        os.mkdir(live_prediction_path + file_prefix)
+
+    path = live_prediction_path + file_prefix + "/"
+    number_samples = len(predict)
+    sum_predict_dict = collections.OrderedDict(sorted(collections.Counter(predict).items()))
+    if y_true in sum_predict_dict.keys():
+        correct_samples = sum_predict_dict[y_true]
+    else:
+        correct_samples = 0
+    if classic:
+        index_max = max(sum_predict_dict, key=sum_predict_dict.get)
+
+        # Summary results
+        save_path = path + file_prefix + "_summary.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(headline_summary)
+        writer.writerow([session, seq, y_true, number_samples, index_max, sum_predict_dict[index_max], correct_samples,
+                         correct_samples / number_samples])
+        file.close()
+
+        # Detailed results
+        save_path = path + file_prefix + "_detail.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(headline_classic_detail)
+        writer.writerow([index_max, sum_predict_dict[index_max], [x for x in sum_predict_dict], y_true])
+        file.close()
+
+    else:
+        sum_proba, index_max = sum_sequence_proba(proba)
+
+        # Summary results
+        save_path = path + file_prefix + "_summary.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(headline_summary)
+
+        writer.writerow([session, seq, y_true, number_samples, index_max, sum_proba[index_max], correct_samples,
+                         correct_samples / number_samples])
+        file.close()
+
+        # Detailed results
+        save_path = path + file_prefix + "_detail.csv"
+        if not os.path.isfile(save_path):
+            write_header = True
+        file = open(save_path, 'a', newline='')
+        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        if write_header:
+            writer.writerow(headline_cnn_detail)
+        for j in range(len(predict)):
+            writer.writerow([predict[j], [x for x in proba[j]], y_true])
+        file.close()
+
+    return True
+
+
+def feature_extraction_live(w_emg, w_imu, feature_set=Constant.rehman):
+    """
+
+    :param w_emg:
+    :param w_imu:
+    :param feature_set:
+    :return:
+    """
+    feature_emg, feature_imu = [], []
+    for x in w_emg:
+        feature = []
+        for n in range(8):
+            if feature_set == Constant.georgi:
+                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.EMG))
+            if feature_set == Constant.rehman:
+                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
+            else:
+                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+        feature_emg.append(feature)
+    for x in w_imu:
+        feature = []
+        for n in range(9):
+            if feature_set == Constant.georgi:
+                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.IMU))
+            if feature_set == Constant.rehman:
+                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
+            else:
+                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+        feature_imu.append(feature)
+
+    features = []
+    for i in range(len(feature_imu)):
+        f = []
+        for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
+            f.extend(x)
+        features.append(f)
+    return features
+
+
+def pair_devices():
+    """
+
+    :return:
+    """
+    global DEVICE_R
+    global DEVICE_L
+    print("Pair devices - Start")
+    with hub.run_in_background(device_listener):
+        Helper_functions.wait(.5)
+        for i in range(3):  # Three trials to pair
+            devices = device_listener.devices
+            for device in devices:
+                if device.arm == Constant.LEFT:
+                    DEVICE_L = device
+                    DEVICE_L.stream_emg(True)
+                elif device.arm == Constant.RIGHT:
+                    DEVICE_R = device
+                    DEVICE_R.stream_emg(True)
+            if not (DEVICE_L is None) and not (DEVICE_R is None):
+                DEVICE_R.vibrate(libmyo.VibrationType.short)
+                DEVICE_L.vibrate(libmyo.VibrationType.short)
+                print("paired")
+                log.info("Devices paired")
+                return DEVICE_L, DEVICE_R
+            Helper_functions.wait(2)
+    hub.stop()
+    print("Pair devices - Done")
+    return None, None
+
+
+def reformat_raw_data(emg, ori, acc, gyr):
+    """
+
+    :param emg:
+    :param ori:
+    :param acc:
+    :param gyr:
+    :return:
+    """
+    o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
+    a = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in acc]]]
+    g = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in gyr]]]
+
+    length = len(o)
+    if any(len(lst) != length for lst in [a, g]):
+        length = min(len(o), len(a), len(g))
+        o = o[:length]
+        a = a[:length]
+        g = g[:length]
+    # at least one list has a different length - unknown reason
+
+    imu = []
+    for i in range(len(o)):
+        # todo check warum teilweise nicht gleichlang
+        tmp = o[i]
+        tmp.extend([x for x in a[i]])
+        tmp.extend([x for x in g[i]])
+        imu.append(tmp)
+
+    emg = [y[0] for y in [x[1:] for x in emg]]
+    return emg, imu
+
+
+def collect_raw_data(record_time):
+    """
+
+    :param record_time:
+    :return:
+    """
+    global EMG
+    global ORI
+    global ACC
+    global GYR
+    global status
+
+    EMG, ORI, ACC, GYR = [], [], [], []
+    dif, status = 0, 0
+    start = time.time()
+    while dif <= record_time:
+        status = 1
+        end = time.time()
+        dif = end - start
+    status = 0
+    return EMG, ORI, ACC, GYR
+
+
+def window_live_classic(emg, imu, window, overlap):
+    """
+
+    :param emg:
+    :param imu:
+    :param window:
+    :param overlap:
+    :return:
+    """
+    window_imu = int(window / (len(emg) / len(imu)))
+    offset_imu = window_imu * overlap
+    offset_emg = window * overlap
+    blocks = int((len(emg) / abs(window - offset_emg)))
+
+    first_emg, first_imu = 0, 0
+    w_emg, w_imu = [], []
+    for i in range(blocks):
+        last_emg = first_emg + window
+        last_imu = int(first_imu + window_imu)
+        d_emg = emg[first_emg:last_emg]
+        d_imu = imu[first_imu:last_imu]
+
+        if not len(d_emg) == window:
+            continue
+        if not len(d_imu) == window_imu:
+            continue
+        first_emg += int(window - offset_emg)
+        first_imu += int(window_imu - offset_imu)
+        w_emg.append(np.asarray(d_emg))
+        w_imu.append(np.asarray(d_imu))
+    return w_emg, w_imu
+
+
+def window_live_separate(raw_data, window, overlap):
+    """
+
+    :param raw_data:
+    :param window:
+    :param overlap:
+    :return:
+    """
+    window_data = []
+    # window EMG data
+    length = len(raw_data)
+    offset = window * overlap
+    blocks = int(length / abs(window - offset))
+
+    first = 0
+    for i in range(blocks):
+        # data = []
+        last = int(first + window)
+        data = raw_data[first:last]
+        if not len(data) == window:
+            # print("first/last", first, last)
+            continue
+        first += int(window - offset)
+        window_data.append(np.asarray(data))
+        first += int(window - offset)
+    return window_data
+
+
+def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_type="cnn", record_time=1):
+    """
+
+    :param config:
+    :param cnn_emg:
+    :param cnn_imu:
+    :param clf_classic:
+    :param clf_type:
+    :param record_time:
+    :return:
+    """
+    pair_devices()
+    config_split = config.split('-')
+    preprocess = config_split[0]
+    window = int(config_split[3])
+    overlap = float(config_split[4])
+    feature_set = config_split[5]
+    w_emg=100
+    w_imu=25
+
+    if len(config_split) > 5 and 'norm' in config[6]:
+        norm = True
+    else:
+        norm = False
+
+    with hub.run_in_background(gesture_listener.on_event):
+        # check_samples_rate()
+        Helper_functions.wait(2)
+        Helper_functions.countdown(3)
+        while 1:
+            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+            emg, imu = reformat_raw_data(emg, ori, acc, gyr)
+            if "classic" in clf_type:
+                w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
+                w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
+                features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, feature_set=feature_set)
+
+                if norm:
+                    features = norm_data(features)
+                prediction = clf_classic.predict(features)
+            elif "cnn" in clf_type:
+                img_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
+                img_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+                x_emg = np.array(img_emg)[:, :, :, np.newaxis]
+                x_imu = np.array(img_imu)[:, :, :, np.newaxis]
+
+                prediction = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg),
+                                                        cnn_imu.predict_proba(x_imu))
+            print(prediction)
+            Helper_functions.wait(0.5)
+
+
+def prediction_calculation_cnn(emg_prediction, imu_prediction):
+    """
+
+    :param emg_prediction:
+    :param imu_prediction:
+    :return:
+    """
+    sum_emg, best_index_emg = sum_sequence_proba(emg_prediction)
+    sum_imu, best_index_imu = sum_sequence_proba(imu_prediction)
+    best_emg = sum_emg[best_index_emg]
+    best_imu = sum_imu[best_index_imu]
+
+    if best_emg > best_imu:
+        index = best_index_emg
+    else:
+        index = best_imu
+    return Constant.label_display_without_rest[index]
+
+
+def sum_sequence_proba(proba):
+    """
+
+    :param proba:
+    :return:
+    """
+    sum_proba = []
+    for i in range(Constant.classes):
+        sum_proba.append(np.mean([float(x[i]) for x in proba]))
+    return sum_proba, np.argmax(sum_proba)
+
+
+def validate_models(session=2):
+    """
+
+    :param session:
+    :return:
+    """
+    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
+    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
     cnn_adapt_collect, classic_live_collect = True, True
     classic_live = None
-    datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number = 0, 0, 0
-    total_raw_emg, total_raw_imu = 0, 0
-    session = 2
-
+    datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
+    classic_ud.verbose, classic_ui.verbose = 0, 0
     preprocess = Constant.no_pre_processing
-    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = init()
-    classic_ud.verbose = 0
-    classic_ui.verbose = 0
+    w_emg = 100
+    w_imu = 25
+    w_classic = 100
+    overlap = 0.9
+    init()
+
     with hub.run_in_background(gesture_listener.on_event):
         check_samples_rate()
         Helper_functions.wait(2)
         for s in range(session):
             for n in range(len(seq_duration)):
+                input("Press enter to start")
                 Helper_functions.cls()
                 print(
                     "Start with sequence. \nThe recording time of the gesture is " + str(seq_duration[n]) + " seconds.")
@@ -183,22 +587,15 @@ def main():
 
                     emg, imu = reformat_raw_data(emg, ori, acc, gyr)
                     # ----------------------------------Perform classic prediction-------------------------------------#
-                    window = 100
-                    overlap = 0.9
                     # Classic windowing, EMG and IMU together
-                    w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
-
-                    # tmp_w_emg = (len(emg) - window)/(window * (1-overlap)) + 1
-                    # print("raw_emg_length", len(emg),
-                    #       "\nformal window number", tmp_w_emg,
-                    #       "\nreal window number", len(w_emg))
+                    image_emg, image_imu = window_live_classic(emg, imu, w_classic, overlap)
 
                     # Preprocessing
-                    w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
+                    image_emg, image_imu = preprocess_data(image_emg, image_imu, preprocess)
 
                     # Feature extraction
                     mode = Constant.rehman
-                    features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, mode=mode)
+                    features = feature_extraction_live(w_emg=image_emg, w_imu=image_imu, feature_set=mode)
                     datum_classic_number += len(features)
 
                     # Norm
@@ -213,29 +610,26 @@ def main():
                     predict_classic_ud = classic_ud.predict(features)
                     predict_classic_ui = classic_ui.predict(features)
 
-                    # IF live classifier is trained
+                    # If live classifier is trained
                     if not classic_live_collect and classic_live is not None:
                         predict_classic_live = classic_live.predict(features)
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
-                    w_emg = 100
-                    w_imu = 25
-                    overlap = 0.9
-                    w_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
-                    w_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+                    image_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
+                    image_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
 
-                    datum_cnn_emg_number += len(w_emg)
-                    datum_cnn_imu_number += len(w_imu)
+                    datum_cnn_emg_number += len(image_emg)
+                    datum_cnn_imu_number += len(image_imu)
 
                     if cnn_adapt_collect:
-                        adapt_cnn_emg_train.extend(w_emg)
-                        adapt_cnn_imu_train.extend(w_imu)
-                        y_train_emg.extend([label] * len(w_emg))
-                        y_train_imu.extend([label] * len(w_imu))
+                        adapt_cnn_emg_train.extend(image_emg)
+                        adapt_cnn_imu_train.extend(image_imu)
+                        y_train_emg.extend([label] * len(image_emg))
+                        y_train_imu.extend([label] * len(image_imu))
 
-                    x_emg = np.array(w_emg)[:, :, :, np.newaxis]
-                    x_imu = np.array(w_imu)[:, :, :, np.newaxis]
+                    x_emg = np.array(image_emg)[:, :, :, np.newaxis]
+                    x_imu = np.array(image_imu)[:, :, :, np.newaxis]
 
                     proba_emg_ud = cnn_emg_ud.predict_proba(x_emg)
                     proba_imu_ud = cnn_imu_ud.predict_proba(x_imu)
@@ -286,280 +680,20 @@ def main():
                     classic_live_collect = False
 
                 if cnn_adapt_collect:
-                    print("Adapt EMG CNN")
-                    cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_ui, x_train=adapt_cnn_emg_train,
+                    print("Train Adapt CNN EMG")
+                    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+                    cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_adapt, x_train=adapt_cnn_emg_train,
                                                          y_train=y_train_emg, x_test_in=[], y_test_in=[],
-                                                         save_path="./", batch=8, epochs=10, config="live-adapt-EMG",
+                                                         save_path="./", batch=8, epochs=10, file_name="live-adapt-EMG",
                                                          calc_test_set=False)
-                    print("Adapt IMU CNN")
-                    cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_ui, x_train=adapt_cnn_imu_train,
+                    print("Train Adapt CNN IMU")
+                    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
+                    cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_adapt, x_train=adapt_cnn_imu_train,
                                                          y_train=y_train_imu, x_test_in=[], y_test_in=[],
-                                                         save_path="./", batch=8, epochs=10, config="live-adapt-IMU",
+                                                         save_path="./", batch=8, epochs=10, file_name="live-adapt-IMU",
                                                          calc_test_set=False)
                     cnn_adapt_collect = False
     hub.stop()
-
-
-def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
-    write_header = False
-    if not os.path.isdir(live_prediction_path + file_prefix):  # Collection dir
-        os.mkdir(live_prediction_path + file_prefix)
-    path = live_prediction_path + file_prefix + "/"
-    number_samples = len(predict)
-    sum_predict_dict = collections.OrderedDict(sorted(collections.Counter(predict).items()))
-    if y_true in sum_predict_dict.keys():
-        correct_samples = sum_predict_dict[y_true]
-    else:
-        correct_samples = 0
-    if classic:
-        index_max = max(sum_predict_dict, key=sum_predict_dict.get)
-
-        # Summary results
-        save_path = path + file_prefix + "_summary.csv"
-        if not os.path.isfile(save_path):
-            write_header = True
-        file = open(save_path, 'a', newline='')
-        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        if write_header:
-            writer.writerow(
-                ["Session", "seq", "y_true", "number_samples", "predicion_seq", "predicion_seq_number",
-                 "correct_samples", "correct_samples_precent"])
-        writer.writerow([session, seq, y_true, number_samples, index_max, sum_predict_dict[index_max], correct_samples,
-                         correct_samples / number_samples])
-        file.close()
-
-        # Detailed results
-        save_path = path + file_prefix + "_detail.csv"
-        if not os.path.isfile(save_path):
-            write_header = True
-        file = open(save_path, 'a', newline='')
-        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        if write_header:
-            writer.writerow(["prediction", "predict_percent", "predict_distribution", "y_true"])
-        writer.writerow([index_max, sum_predict_dict[index_max], [x for x in sum_predict_dict], y_true])
-        file.close()
-
-    else:
-        sum_proba = []
-        for i in range(Constant.classes):
-            sum_proba.append(np.mean([float(x[i]) for x in proba]))
-        index_max = np.argmax(sum_proba)
-
-        # Summary results
-        save_path = path + file_prefix + "_summary.csv"
-        if not os.path.isfile(save_path):
-            write_header = True
-        file = open(save_path, 'a', newline='')
-        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        if write_header:
-            writer.writerow(
-                ["session", "seq", "y_true", "number_samples", "best_probability", "prediction_seq", "correct_samples",
-                 "correct_samples_percent"])
-        writer.writerow([session, seq, y_true, number_samples, index_max, sum_proba[index_max], correct_samples,
-                         correct_samples / number_samples])
-        file.close()
-
-        # Detailed results
-        save_path = path + file_prefix + "_detail.csv"
-        if not os.path.isfile(save_path):
-            write_header = True
-        file = open(save_path, 'a', newline='')
-        writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        if write_header:
-            writer.writerow(["prediction", "probability_distribution", "y_true"])
-        for j in range(len(predict)):
-            writer.writerow([predict[j], [x for x in proba[j]], y_true])
-        file.close()
-
-    return True
-
-
-def evaluate_predictions(predict, proba, y_true, log_file_name, clf_names, classic=False):
-    save_path = live_prediction_path + log_file_name.split('/')[-1]
-    file = open(save_path, 'a', newline='')
-    writer = csv.writer(file, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    with file:
-        for n in range(len(predict)):
-            if classic:
-                writer.writerow([clf_names[n]])
-                sum_pred_classic_dict = collections.OrderedDict(sorted(collections.Counter(predict[n]).items()))
-                index_max_classic = max(sum_pred_classic_dict, key=sum_pred_classic_dict.get)
-                writer.writerow(["label", "predict_sum"])
-                for key in sum_pred_classic_dict.keys():
-                    writer.writerow([key, sum_pred_classic_dict[key]])
-                writer.writerow(["best_label", ])
-                writer.writerow(
-                    [index_max_classic, sum_pred_classic_dict[index_max_classic], [x for x in sum_pred_classic_dict]])
-                writer.writerow([Constant.write_separater])
-
-            else:
-                sum_proba = []
-                for i in range(Constant.classes):
-                    sum_proba.append(np.mean([float(x[i]) for x in proba[n]]))
-                writer.writerow([clf_names[n]])
-                writer.writerow(["predict", "probabilities", "true_label"])
-                for j in range(len(predict[n])):
-                    writer.writerow([predict[n][j], [x for x in proba[n][j]], y_true])
-                    index_max_emg = np.argmax(sum_proba)
-                writer.writerow([index_max_emg, [x for x in sum_proba]])
-                writer.writerow([Constant.write_separater])
-    file.close()
-
-
-def feature_extraction_live(w_emg, w_imu, mode=Constant.mantena):
-    feature_emg, feature_imu = [], []
-    for x in w_emg:
-        feature = []
-        for n in range(8):
-            if mode == Constant.georgi:
-                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.EMG))
-            if mode == Constant.rehman:
-                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
-            else:
-                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
-        feature_emg.append(feature)
-    for x in w_imu:
-        feature = []
-        for n in range(9):
-            if mode == Constant.georgi:
-                feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.IMU))
-            if mode == Constant.rehman:
-                feature.extend(Feature_extraction.rehman([y[n] for y in x]))
-            else:
-                feature.extend(Feature_extraction.mantena([y[n] for y in x]))
-        feature_imu.append(feature)
-
-    features = []
-    for i in range(len(feature_imu)):
-        f = []
-        for x in np.asarray([feature_emg[i], feature_imu[i]]).flatten('F'):
-            f.extend(x)
-        features.append(f)
-    return features
-
-
-def pair_devices():
-    global DEVICE_R
-    global DEVICE_L
-    print("Pair devices - Start")
-    with hub.run_in_background(device_listener):
-        Helper_functions.wait(.5)
-        for i in range(3):  # Three trials to pair
-            devices = device_listener.devices
-            for device in devices:
-                if device.arm == Constant.LEFT:
-                    DEVICE_L = device
-                    DEVICE_L.stream_emg(True)
-                elif device.arm == Constant.RIGHT:
-                    DEVICE_R = device
-                    DEVICE_R.stream_emg(True)
-            if not (DEVICE_L is None) and not (DEVICE_R is None):
-                DEVICE_R.vibrate(libmyo.VibrationType.short)
-                DEVICE_L.vibrate(libmyo.VibrationType.short)
-                print("paired")
-                log.info("Devices paired")
-                return DEVICE_L, DEVICE_R
-            Helper_functions.wait(2)
-    hub.stop()
-    print("Pair devices - Done")
-    return None, None
-
-
-def reformat_raw_data(emg=[], ori=[], acc=[], gyr=[]):
-    o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
-    a = [[f.x, f.y, f.z] for f in [e[0] for e in [d[1:] for d in acc]]]
-    g = [[j.x, j.y, j.z] for j in [h[0] for h in [g[1:] for g in gyr]]]
-
-    length = len(o)
-    if any(len(lst) != length for lst in [a, g]):
-        length = min(len(o), len(a), len(g))
-        o = o[:length]
-        a = a[:length]
-        g = g[:length]
-    # at least one list has a different length
-
-    imu = []
-    for i in range(len(o)):
-        # todo check warum teilweise nicht gleichlang
-        tmp = o[i]
-        tmp.extend([x for x in a[i]])
-        tmp.extend([x for x in g[i]])
-        imu.append(tmp)
-
-    emg = [y[0] for y in [x[1:] for x in emg]]
-    return emg, imu
-
-
-def collect_raw_data(record_time):
-    global EMG
-    global ORI
-    global ACC
-    global GYR
-    global status
-
-    EMG, ORI, ACC, GYR = [], [], [], []
-    dif, status = 0, 0
-    start = time.time()
-    while dif <= record_time:
-        status = 1
-        end = time.time()
-        dif = end - start
-    status = 0
-    # print("EMG %d", len(EMG))
-    # print("IMU %d", len(ORI))
-
-    # Only for count length
-    # emg_count_list.append(len(EMG))
-    # imu_count_list.append(len(ORI))
-    return EMG, ORI, ACC, GYR
-
-
-def window_live_classic(emg, imu, window, overlap):
-    window_imu = int(window / (len(emg) / len(imu)))
-    offset_imu = window_imu * overlap
-    offset_emg = window * overlap
-    blocks = int((len(emg) / abs(window - offset_emg)))
-
-    first_emg, first_imu = 0, 0
-    w_emg, w_imu = [], []
-    for i in range(blocks):
-        last_emg = first_emg + window
-        last_imu = int(first_imu + window_imu)
-        d_emg = emg[first_emg:last_emg]
-        d_imu = imu[first_imu:last_imu]
-
-        if not len(d_emg) == window:
-            # print("first/last", first_emg, last_emg)
-            continue
-        if not len(d_imu) == window_imu:
-            # print("first/last", first_imu, last_imu)
-            continue
-        first_emg += int(window - offset_emg)
-        first_imu += int(window_imu - offset_imu)
-        w_emg.append(np.asarray(d_emg))
-        w_imu.append(np.asarray(d_imu))
-    return w_emg, w_imu
-
-
-def window_live_separate(raw_data, window, overlap):
-    window_data = []
-    # window EMG data
-    length = len(raw_data)
-    offset = window * overlap
-    blocks = int(length / abs(window - offset))
-
-    first = 0
-    for i in range(blocks):
-        data = []
-        last = int(first + window)
-        data = raw_data[first:last]
-        if not len(data) == window:
-            # print("first/last", first, last)
-            continue
-        first += int(window - offset)
-        window_data.append(np.asarray(data))
-        first += int(window - offset)
-    return window_data
 
 
 if __name__ == '__main__':

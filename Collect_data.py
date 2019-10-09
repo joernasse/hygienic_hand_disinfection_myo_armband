@@ -6,14 +6,12 @@ import Constant
 import logging as log
 import Live_prototype
 import myo as libmyo
-from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL, \
-    DISABLED, NORMAL
+from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, DISABLED, NORMAL
 from tkinter.ttk import Progressbar, Separator, Frame
 from PIL import Image, ImageTk
-from myo import init, Hub, StreamEmg
+from myo import init, Hub
 from Helper_functions import wait
 from Save_Load import save_raw_data, create_directories_for_data_collection
-
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # Emg
@@ -278,9 +276,9 @@ class IntroductionScreen(Frame):
 
     def countdown(self, t=5):
         """
-
-        :param introduction_screen:
-        :param t:
+        Countdown from a given value t. Also display the current time at the UI
+        :param introduction_screen: instance of introduction screen from Gui.py. Set countdown text
+        :param t: int, countdown time
         :return:
         """
         while t:

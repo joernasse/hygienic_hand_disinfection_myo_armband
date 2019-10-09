@@ -2,8 +2,8 @@ import csv
 import pickle
 import matplotlib.pyplot as plt
 import numpy
-from sklearn import metrics, clone
-from sklearn.model_selection import train_test_split, GridSearchCV, cross_val_score, KFold
+from sklearn import clone
+from sklearn.model_selection import train_test_split, GridSearchCV
 import sklearn
 from sklearn.metrics import accuracy_score
 import Constant
@@ -71,7 +71,7 @@ def train_user_independent_cross_validation(data, classifier, classifier_name, n
 def train_user_independent(training_data, test_data, config, classifiers_name, classifiers, save_path,
                            save_model=False, norm=False, visualization=False):
     """
-
+    TODO
     :param training_data:
     :param test_data:
     :param config:
@@ -96,8 +96,7 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
             x_test = norm_data(x_test)
             config = config + "_norm"
 
-        print("Training number", len(x_train),
-              "\nTest number", len(x_test))
+        print("Training number", len(x_train), "\nTest number", len(x_test))
 
         classifiers[i].fit(x_train, y_train)
         y_predict = classifiers[i].predict(x_test)
@@ -151,10 +150,10 @@ def train_user_dependent_grid_search(classifier, training_data, test_data, norm)
     return classifier, accuracy, y_test, y_predict
 
 
-def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name, save_path, save_model=False,
-                         visualization=False, norm=False):
+def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name,
+                         save_path, save_model=False, visualization=False, norm=False):
     """
-
+    TODO
     :param user_data:
     :param config:
     :param user_name:
@@ -177,7 +176,7 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
             x_train = norm_data(x_train)
             x_test = norm_data(x_test)
 
-        clf=clone(classifiers[i])
+        clf = clone(classifiers[i])
         clf.fit(x_train, y_train)
         y_predict = clf.predict(x_test)
 

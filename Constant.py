@@ -67,13 +67,12 @@ threshold = 0.30 * MAX_EMG_VALUE
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 collections_path_default = 'G:/Masterarbeit/Collections/'
-test_set_size = 0.1
+test_set_size = 0.2
 validation_set_size = 0.1
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
 CONTINUES = "continues"
 classes = 12
-write_separater = "#----------------------------------------#"
 
 # Save_Load_CSV
 emg_headline = ["timestamp",
@@ -108,49 +107,52 @@ filter_ = "filter"
 z_norm = "z-normalization"
 no_pre_processing = "no_pre_pro"
 
-# ----------------------------------Top user dependent configurations-----------------------------------------------#
-
-top_ten_user_dependent_configs = ["no_pre_pro-separate-EMGIMU-100-0.9-georgi",
-                                  "no_pre_pro-separate-EMGIMU-100-0.9-rehman",
-                                  "no_pre_pro-separate-EMGIMU-100-0.9-robinson",
-                                  "no_pre_pro-separate-IMU-100-0.9-rehman",
-                                  "no_pre_pro-separate-EMGIMU-100-0.9-mantena",
-                                  "no_pre_pro-separate-IMU-100-0.9-georgi",
-                                  "no_pre_pro-separate-IMU-100-0.9-robinson",
-                                  "no_pre_pro-separate-IMU-100-0.9-mantena",
-                                  "no_pre_pro-continues-EMGIMU-100-0.9-georgi",
-                                  "no_pre_pro-separatecontinues-EMGIMU-100-0.9-georgi"]
-
-top_five_emg_user_dependent_configs = ["no_pre_pro-separate-EMG-100-0.9-rehman",
-                                       "no_pre_pro-separate-EMG-100-0.9-robinson",
-                                       "no_pre_pro-continues-EMG-100-0.9-robinson",
-                                       "no_pre_pro-separatecontinues-EMG-100-0.9-rehman",
-                                       "no_pre_pro-separatecontinues-EMG-100-0.9-robinson"]
-
-top_five_imu_user_dependent_configs = ["no_pre_pro-separate-IMU-100-0.9-rehman",
-                                       "no_pre_pro-separate-IMU-100-0.9-georgi",
-                                       "no_pre_pro-separate-IMU-100-0.9-robinson",
-                                       "no_pre_pro-separate-IMU-100-0.9-mantena",
-                                       "no_pre_pro-separatecontinues-IMU-100-0.9-rehman"]
-
-top_five_filter_user_dependent_configs = ["filter-separate-EMGIMU-100-0.9-rehman",
-                                          "filter-continues-EMGIMU-100-0.9-rehman",
-                                          "filter-separate-IMU-100-0.9-georgi",
-                                          "filter-separatecontinues-EMGIMU-100-0.9-rehman",
-                                          "filter-separate-IMU-100-0.9-rehman"]
-
-top_five_z_norm_user_dependent_configs = ["z_normalization-separate-EMGIMU-100-0.9-mantena",
-                                          "z_normalization-separate-EMGIMU-100-0.9-rehman",
-                                          "z_normalization-continues-EMGIMU-100-0.9-rehman",
-                                          "z_normalization-separatecontinues-EMGIMU-100-0.9-rehman",
-                                          "z_normalization-separatecontinues-EMGIMU-100-0.9-mantena"]
+# # ----------------------------------Top user dependent configurations-----------------------------------------------#
+#
+# top_ten_user_dependent_configs = ["no_pre_pro-separate-EMGIMU-100-0.9-georgi",
+#                                   "no_pre_pro-separate-EMGIMU-100-0.9-rehman",
+#                                   "no_pre_pro-separate-EMGIMU-100-0.9-robinson",
+#                                   "no_pre_pro-separate-IMU-100-0.9-rehman",
+#                                   "no_pre_pro-separate-EMGIMU-100-0.9-mantena",
+#                                   "no_pre_pro-separate-IMU-100-0.9-georgi",
+#                                   "no_pre_pro-separate-IMU-100-0.9-robinson",
+#                                   "no_pre_pro-separate-IMU-100-0.9-mantena",
+#                                   "no_pre_pro-continues-EMGIMU-100-0.9-georgi",
+#                                   "no_pre_pro-separatecontinues-EMGIMU-100-0.9-georgi"]
+#
+# top_five_emg_user_dependent_configs = ["no_pre_pro-separate-EMG-100-0.9-rehman",
+#                                        "no_pre_pro-separate-EMG-100-0.9-robinson",
+#                                        "no_pre_pro-continues-EMG-100-0.9-robinson",
+#                                        "no_pre_pro-separatecontinues-EMG-100-0.9-rehman",
+#                                        "no_pre_pro-separatecontinues-EMG-100-0.9-robinson"]
+#
+# top_five_imu_user_dependent_configs = ["no_pre_pro-separate-IMU-100-0.9-rehman",
+#                                        "no_pre_pro-separate-IMU-100-0.9-georgi",
+#                                        "no_pre_pro-separate-IMU-100-0.9-robinson",
+#                                        "no_pre_pro-separate-IMU-100-0.9-mantena",
+#                                        "no_pre_pro-separatecontinues-IMU-100-0.9-rehman"]
+#
+# top_five_filter_user_dependent_configs = ["filter-separate-EMGIMU-100-0.9-rehman",
+#                                           "filter-continues-EMGIMU-100-0.9-rehman",
+#                                           "filter-separate-IMU-100-0.9-georgi",
+#                                           "filter-separatecontinues-EMGIMU-100-0.9-rehman",
+#                                           "filter-separate-IMU-100-0.9-rehman"]
+#
+# top_five_z_norm_user_dependent_configs = ["z_normalization-separate-EMGIMU-100-0.9-mantena",
+#                                           "z_normalization-separate-EMGIMU-100-0.9-rehman",
+#                                           "z_normalization-continues-EMGIMU-100-0.9-rehman",
+#                                           "z_normalization-separatecontinues-EMGIMU-100-0.9-rehman",
+#                                           "z_normalization-separatecontinues-EMGIMU-100-0.9-mantena"]
 
 # Standard Varianten
 USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
-USERS_SUB = ["User001", "User005", "User009", "User013"]
+USERS_SUB = ["User002", "User003", "User004",
+             "User006", "User002", "User008",
+             "User010", "User011", "User012",
+             "User014", "User015"]
 
 # Without user007
 USERS_cross = ["User001", "User002", "User003", "User004",
@@ -196,8 +198,8 @@ lda_parameter = {'solver': ['lsqr', 'eigen'],
                  'n_components': [1, 2, 5, 10, 20],
                  'shrinkage': ['auto', 0.1, 0.5, 0.9]}
 qda = QDA()
-classifiers = [random_forest, lda, qda, gauss, knn]
-classifier_names = ["Random Forest", "LDA", "QDA", "Bayers", "KNN"]
+classifiers = [random_forest, lda, qda, gauss, knn, svc]
+classifier_names = ["Random_Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
 
 # ----------------------------------Pre processing with Filter and normalization---------------------------------------#
 count_devices = 2
@@ -221,148 +223,3 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 
 CNN_1 = "CNN_1"
 CNN_KAGGLE = "CNN_Kaggle"
-
-missing_config_calc = ["z_normalization-continues-EMG-50-0.5-rehman",
-                       "z_normalization-continues-EMG-50-0.5-georgi",
-                       "z_normalization-continues-EMG-50-0.5-robinson",
-                       "z_normalization-continues-EMG-50-0.5-mantena",
-                       "z_normalization-continues-EMG-50-0-rehman",
-                       "z_normalization-continues-EMG-50-0-georgi",
-                       "z_normalization-continues-EMG-50-0-robinson",
-                       "z_normalization-continues-EMG-50-0-mantena",
-                       "z_normalization-continues-EMG-50-0.9-rehman",
-                       "z_normalization-continues-EMG-50-0.9-georgi",
-                       "z_normalization-continues-EMG-50-0.9-robinson",
-                       "z_normalization-continues-EMG-50-0.9-mantena",
-                       "z_normalization-continues-EMG-50-0.75-rehman",
-                       "z_normalization-continues-EMG-50-0.75-georgi",
-                       "z_normalization-continues-EMG-50-0.75-robinson",
-                       "z_normalization-continues-EMG-50-0.75-mantena",
-                       "z_normalization-continues-IMU-50-0.5-rehman",
-                       "z_normalization-continues-IMU-50-0.5-georgi",
-                       "z_normalization-continues-IMU-50-0.5-robinson",
-                       "z_normalization-continues-IMU-50-0.5-mantena",
-                       "z_normalization-continues-IMU-50-0-rehman",
-                       "z_normalization-continues-IMU-50-0-georgi",
-                       "z_normalization-continues-IMU-50-0-robinson",
-                       "z_normalization-continues-IMU-50-0-mantena",
-                       "z_normalization-continues-IMU-50-0.9-rehman",
-                       "z_normalization-continues-IMU-50-0.9-georgi",
-                       "z_normalization-continues-IMU-50-0.9-robinson",
-                       "z_normalization-continues-IMU-50-0.9-mantena",
-                       "z_normalization-continues-IMU-50-0.75-rehman",
-                       "z_normalization-continues-IMU-50-0.75-georgi",
-                       "z_normalization-continues-IMU-50-0.75-robinson",
-                       "z_normalization-continues-IMU-50-0.75-mantena",
-                       "z_normalization-continues-EMGIMU-50-0.5-rehman",
-                       "z_normalization-continues-EMGIMU-50-0.5-georgi",
-                       "z_normalization-continues-EMGIMU-50-0.5-robinson",
-                       "z_normalization-continues-EMGIMU-50-0.5-mantena",
-                       "z_normalization-continues-EMGIMU-50-0-rehman",
-                       "z_normalization-continues-EMGIMU-50-0-georgi",
-                       "z_normalization-continues-EMGIMU-50-0-robinson",
-                       "z_normalization-continues-EMGIMU-50-0-mantena",
-                       "z_normalization-continues-EMGIMU-50-0.9-rehman",
-                       "z_normalization-continues-EMGIMU-50-0.9-georgi",
-                       "z_normalization-continues-EMGIMU-50-0.9-robinson",
-                       "z_normalization-continues-EMGIMU-50-0.9-mantena",
-                       "z_normalization-continues-EMGIMU-50-0.75-rehman",
-                       "z_normalization-continues-EMGIMU-50-0.75-georgi",
-                       "z_normalization-continues-EMGIMU-50-0.75-robinson",
-                       "z_normalization-continues-EMGIMU-50-0.75-mantena",
-                       "z_normalization-separate-EMG-50-0.5-rehman",
-                       "z_normalization-separate-EMG-50-0.5-georgi",
-                       "z_normalization-separate-EMG-50-0.5-robinson",
-                       "z_normalization-separate-EMG-50-0.5-mantena",
-                       "z_normalization-separate-EMG-50-0-rehman",
-                       "z_normalization-separate-EMG-50-0-georgi",
-                       "z_normalization-separate-EMG-50-0-robinson",
-                       "z_normalization-separate-EMG-50-0-mantena",
-                       "z_normalization-separate-EMG-50-0.9-rehman",
-                       "z_normalization-separate-EMG-50-0.9-georgi",
-                       "z_normalization-separate-EMG-50-0.9-robinson",
-                       "z_normalization-separate-EMG-50-0.9-mantena",
-                       "z_normalization-separate-EMG-50-0.75-rehman",
-                       "z_normalization-separate-EMG-50-0.75-georgi",
-                       "z_normalization-separate-EMG-50-0.75-robinson",
-                       "z_normalization-separate-EMG-50-0.75-mantena",
-                       "z_normalization-separate-IMU-50-0.5-rehman",
-                       "z_normalization-separate-IMU-50-0.5-georgi",
-                       "z_normalization-separate-IMU-50-0.5-robinson",
-                       "z_normalization-separate-IMU-50-0.5-mantena",
-                       "z_normalization-separate-IMU-50-0-rehman",
-                       "z_normalization-separate-IMU-50-0-georgi",
-                       "z_normalization-separate-IMU-50-0-robinson",
-                       "z_normalization-separate-IMU-50-0-mantena",
-                       "z_normalization-separate-IMU-50-0.9-rehman",
-                       "z_normalization-separate-IMU-50-0.9-georgi",
-                       "z_normalization-separate-IMU-50-0.9-robinson",
-                       "z_normalization-separate-IMU-50-0.9-mantena",
-                       "z_normalization-separate-IMU-50-0.75-rehman",
-                       "z_normalization-separate-IMU-50-0.75-georgi",
-                       "z_normalization-separate-IMU-50-0.75-robinson",
-                       "z_normalization-separate-IMU-50-0.75-mantena",
-                       "z_normalization-separate-EMGIMU-50-0.5-rehman",
-                       "z_normalization-separate-EMGIMU-50-0.5-georgi",
-                       "z_normalization-separate-EMGIMU-50-0.5-robinson",
-                       "z_normalization-separate-EMGIMU-50-0.5-mantena",
-                       "z_normalization-separate-EMGIMU-50-0-rehman",
-                       "z_normalization-separate-EMGIMU-50-0-georgi",
-                       "z_normalization-separate-EMGIMU-50-0-robinson",
-                       "z_normalization-separate-EMGIMU-50-0-mantena",
-                       "z_normalization-separate-EMGIMU-50-0.9-rehman",
-                       "z_normalization-separate-EMGIMU-50-0.9-georgi",
-                       "z_normalization-separate-EMGIMU-50-0.9-robinson",
-                       "z_normalization-separate-EMGIMU-50-0.9-mantena",
-                       "z_normalization-separate-EMGIMU-50-0.75-rehman",
-                       "z_normalization-separate-EMGIMU-50-0.75-georgi",
-                       "z_normalization-separate-EMGIMU-50-0.75-robinson",
-                       "z_normalization-separate-EMGIMU-50-0.75-mantena",
-                       "z_normalization-separatecontinues-EMG-50-0.5-rehman",
-                       "z_normalization-separatecontinues-EMG-50-0.5-georgi",
-                       "z_normalization-separatecontinues-EMG-50-0.5-robinson",
-                       "z_normalization-separatecontinues-EMG-50-0.5-mantena",
-                       "z_normalization-separatecontinues-EMG-50-0-rehman",
-                       "z_normalization-separatecontinues-EMG-50-0-georgi",
-                       "z_normalization-separatecontinues-EMG-50-0-robinson",
-                       "z_normalization-separatecontinues-EMG-50-0-mantena",
-                       "z_normalization-separatecontinues-EMG-50-0.9-rehman",
-                       "z_normalization-separatecontinues-EMG-50-0.9-georgi",
-                       "z_normalization-separatecontinues-EMG-50-0.9-robinson",
-                       "z_normalization-separatecontinues-EMG-50-0.9-mantena",
-                       "z_normalization-separatecontinues-EMG-50-0.75-rehman",
-                       "z_normalization-separatecontinues-EMG-50-0.75-georgi",
-                       "z_normalization-separatecontinues-EMG-50-0.75-robinson",
-                       "z_normalization-separatecontinues-EMG-50-0.75-mantena",
-                       "z_normalization-separatecontinues-IMU-50-0.5-rehman",
-                       "z_normalization-separatecontinues-IMU-50-0.5-georgi",
-                       "z_normalization-separatecontinues-IMU-50-0.5-robinson",
-                       "z_normalization-separatecontinues-IMU-50-0.5-mantena",
-                       "z_normalization-separatecontinues-IMU-50-0-rehman",
-                       "z_normalization-separatecontinues-IMU-50-0-georgi",
-                       "z_normalization-separatecontinues-IMU-50-0-robinson",
-                       "z_normalization-separatecontinues-IMU-50-0-mantena",
-                       "z_normalization-separatecontinues-IMU-50-0.9-rehman",
-                       "z_normalization-separatecontinues-IMU-50-0.9-georgi",
-                       "z_normalization-separatecontinues-IMU-50-0.9-robinson",
-                       "z_normalization-separatecontinues-IMU-50-0.9-mantena",
-                       "z_normalization-separatecontinues-IMU-50-0.75-rehman",
-                       "z_normalization-separatecontinues-IMU-50-0.75-georgi",
-                       "z_normalization-separatecontinues-IMU-50-0.75-robinson",
-                       "z_normalization-separatecontinues-IMU-50-0.75-mantena",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.5-rehman",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.5-georgi",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.5-robinson",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.5-mantena",
-                       "z_normalization-separatecontinues-EMGIMU-50-0-rehman",
-                       "z_normalization-separatecontinues-EMGIMU-50-0-georgi",
-                       "z_normalization-separatecontinues-EMGIMU-50-0-robinson",
-                       "z_normalization-separatecontinues-EMGIMU-50-0-mantena",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.9-rehman",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.9-georgi",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.9-robinson",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.9-mantena",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.75-rehman",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.75-georgi",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.75-robinson",
-                       "z_normalization-separatecontinues-EMGIMU-50-0.75-mantena"]
