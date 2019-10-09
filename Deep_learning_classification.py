@@ -73,7 +73,7 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
                         use_multiprocessing=True)
     print("Training for", cnn_pattern, " - Done")
     if visualization:
-        Helper_functions.visualization_history(history, save_path=save_path, config=config, show_results=visualization)
+        Helper_functions.history_visualization(history, save_path=save_path, config=config, show_results=visualization)
 
     if perform_test:
         print("Prediction for", cnn_pattern, " - Start")
@@ -242,7 +242,7 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
 #     return "CNN_1", acc
 
 
-def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_test_in, y_test_in, model,
+def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, file_name, x_test_in, y_test_in, model,
                          calc_test_set=False, cnn_pattern=Constant.CNN_KAGGLE):
     """
 
@@ -251,7 +251,7 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
     :param save_path:
     :param batch:
     :param epochs:
-    :param config:
+    :param file_name:
     :param x_test_in:
     :param y_test_in:
     :param model:
@@ -274,10 +274,14 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
             monitor='val_acc', patience=5,
             mode='max', verbose=0),
         keras.callbacks.ModelCheckpoint(
-            save_path + "/" + config + "_cnn_" + cnn_pattern + "_adapt.h5", verbose=0,
+            save_path + "/" + file_name + "_cnn_" + cnn_pattern + "_adapt.h5", verbose=0,
             monitor='val_acc', save_best_only=True, mode='max')]
 
     start = time()
+    model.compile(loss=keras.losses.categorical_crossentropy,
+                  optimizer=keras.optimizers.RMSprop(),
+                  metrics=['accuracy'])
+
     history = model.fit(x_train, y_train,
                         batch_size=batch,
                         epochs=epochs,
@@ -287,8 +291,8 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, config, x_t
     print("--- %s seconds ---" % (time() - start))
     if len(x_test_in) > 0:
         y_predict = model.predict_classes(x_test, batch)
-        Helper_functions.visualization_history(history, "./", config, True)
-        Helper_functions.result_visualization(y_test_in, y_predict, True, Constant.label_display_without_rest, config,
+        Helper_functions.history_visualization(history, "./", file_name, True)
+        Helper_functions.result_visualization(y_test_in, y_predict, True, Constant.label_display_without_rest, file_name,
                                               "./")
     print("finish")
     return model

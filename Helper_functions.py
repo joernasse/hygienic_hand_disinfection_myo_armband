@@ -134,7 +134,7 @@ def result_visualization(y_true, y_predict, show_figures=False, labels=Constant.
           "\nClassification report", sklearn.metrics.classification_report(y_true, y_predict),
           "\nMean absolute error", sklearn.metrics.mean_absolute_error(y_true, y_predict))
 
-    f = open(save_path + config + "Results" + config + ".txt", 'a', newline='')
+    f = open(save_path + config + "Results.txt", 'a', newline='')
     with f:
         for txt in ["Accuracy score " + str(acc_score),
                     "Classification report " + str(sklearn.metrics.classification_report(y_true, y_predict)),
@@ -145,7 +145,7 @@ def result_visualization(y_true, y_predict, show_figures=False, labels=Constant.
     return acc_score
 
 
-def visualization_history(history, save_path="./", config="", show_results=False):
+def history_visualization(history, save_path="./", config="", show_results=False):
     """
     Visualization of the training history. The diagrams can optional be saved and hide
     :param history:

@@ -6,6 +6,10 @@ import time
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
+import tensorflow as tf
+
+from sklearn import clone
+
 import Constant
 import Feature_extraction
 import Helper_functions
@@ -22,6 +26,9 @@ cnn_emg_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-E
 cnn_imu_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
 classic_ud_path = "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
 classic_ui_path = "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
+
+cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
 
 headline_summary = ["Session", "seq", "y_true", "number_samples", "prediction_seq",
                     "prediction_seq_number", "correct_samples", "correct_samples_percent"]
@@ -120,6 +127,7 @@ def check_samples_rate(n=5, record_time=1):
     print("Check samples rate - Done")
     return
 
+
 def load_models_for_validation():
     """
 
@@ -134,6 +142,7 @@ def load_models_for_validation():
     with open(classic_ui_path, 'rb') as pickle_file:
         classic_ui = pickle.load(pickle_file)
     return cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
+
 
 def init(live_prediction_path="./Live_Prediction"):
     """
@@ -151,7 +160,6 @@ def init(live_prediction_path="./Live_Prediction"):
     pair_devices()
     status = 0
     print("Initialization - Done")
-
 
 
 def preprocess_data(w_emg, w_imu, preprocess):
@@ -175,12 +183,15 @@ def main():
 
     :return:
     """
+
+    cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+    cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
     # validate_models(session=2)
-    live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9",
-                    cnn_emg=load_model(cnn_emg_ud_path),
-                    cnn_imu=load_model(cnn_imu_ud_path),
+    live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
+                    cnn_emg=load_model(cnn_emg_user001_path),
+                    cnn_imu=load_model(cnn_imu_user001_path),
                     clf_type='cnn',
-                    record_time=1)
+                    record_time=2)
 
 
 def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
@@ -461,18 +472,22 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
     :param record_time:
     :return:
     """
+    pair_devices()
     config_split = config.split('-')
     preprocess = config_split[0]
     window = int(config_split[3])
     overlap = float(config_split[4])
     feature_set = config_split[5]
+    w_emg=100
+    w_imu=25
+
     if len(config_split) > 5 and 'norm' in config[6]:
         norm = True
     else:
         norm = False
 
     with hub.run_in_background(gesture_listener.on_event):
-        check_samples_rate()
+        # check_samples_rate()
         Helper_functions.wait(2)
         Helper_functions.countdown(3)
         while 1:
@@ -487,10 +502,10 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
                     features = norm_data(features)
                 prediction = clf_classic.predict(features)
             elif "cnn" in clf_type:
-                w_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
-                w_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
-                x_emg = np.array(w_emg)[:, :, :, np.newaxis]
-                x_imu = np.array(w_imu)[:, :, :, np.newaxis]
+                img_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
+                img_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+                x_emg = np.array(img_emg)[:, :, :, np.newaxis]
+                x_imu = np.array(img_imu)[:, :, :, np.newaxis]
 
                 prediction = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg),
                                                         cnn_imu.predict_proba(x_imu))
@@ -535,12 +550,13 @@ def validate_models(session=2):
     :param session:
     :return:
     """
+    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
+    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
     cnn_adapt_collect, classic_live_collect = True, True
     classic_live = None
     datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
-    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_model()
-    classic_ud.verbose,classic_ui.verbose = 0,0
+    classic_ud.verbose, classic_ui.verbose = 0, 0
     preprocess = Constant.no_pre_processing
     w_emg = 100
     w_imu = 25
@@ -553,6 +569,7 @@ def validate_models(session=2):
         Helper_functions.wait(2)
         for s in range(session):
             for n in range(len(seq_duration)):
+                input("Press enter to start")
                 Helper_functions.cls()
                 print(
                     "Start with sequence. \nThe recording time of the gesture is " + str(seq_duration[n]) + " seconds.")
@@ -664,14 +681,16 @@ def validate_models(session=2):
 
                 if cnn_adapt_collect:
                     print("Train Adapt CNN EMG")
-                    cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_ui, x_train=adapt_cnn_emg_train,
+                    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+                    cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_adapt, x_train=adapt_cnn_emg_train,
                                                          y_train=y_train_emg, x_test_in=[], y_test_in=[],
-                                                         save_path="./", batch=8, epochs=10, config="live-adapt-EMG",
+                                                         save_path="./", batch=8, epochs=10, file_name="live-adapt-EMG",
                                                          calc_test_set=False)
                     print("Train Adapt CNN IMU")
-                    cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_ui, x_train=adapt_cnn_imu_train,
+                    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
+                    cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_adapt, x_train=adapt_cnn_imu_train,
                                                          y_train=y_train_imu, x_test_in=[], y_test_in=[],
-                                                         save_path="./", batch=8, epochs=10, config="live-adapt-IMU",
+                                                         save_path="./", batch=8, epochs=10, file_name="live-adapt-IMU",
                                                          calc_test_set=False)
                     cnn_adapt_collect = False
     hub.stop()

@@ -44,8 +44,8 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-collections_path_default = '//192.168.2.101/g/Masterarbeit/Collections/'
-test_set_size = 0.1
+collections_path_default = 'G:/Masterarbeit/Collections/'
+test_set_size = 0.2
 validation_set_size = 0.1
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
@@ -120,8 +120,8 @@ no_pre_processing = "no_pre_pro"
 USERS = ["User001", "User002", "User003", "User004", "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012", "User013", "User014", "User015"]
 
-USERS_SUB = ["User002", "User003", "User004", "User006", "User002", "User008",
-             "User010", "User011", "User012", "User014", "User015"]
+USERS_SUB = ["User001", "User003", "User004", "User005", "User006", "User007", "User008",
+             "User009", "User010", "User011", "User012", "User013", "User014", "User015"]
 
 # Without user007
 USERS_cross = ["User001", "User002", "User003", "User004", "User005", "User006", "User008",
@@ -154,8 +154,8 @@ knn = KNeighborsClassifier(n_jobs=-1, n_neighbors=5)
 lda = LDA(solver='lsqr', shrinkage='auto', n_components=1)
 lda_parameter = {'solver': ['lsqr', 'eigen'], 'n_components': [1, 2, 5, 10, 20], 'shrinkage': ['auto', 0.1, 0.5, 0.9]}
 qda = QDA()
-classifiers = [random_forest, lda, qda, gauss, knn, svc, one_vs_Rest]
-classifier_names = ["Random Forest", "LDA", "QDA", "Bayers", "KNN", "SVM", "One_vs_Rest"]
+classifiers = [random_forest, lda, qda, gauss, knn, svc]
+classifier_names = ["Random_Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
 
 # ----------------------------------Pre processing with Filter and normalization---------------------------------------#
 count_devices = 2
