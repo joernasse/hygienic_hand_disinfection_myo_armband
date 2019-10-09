@@ -177,15 +177,16 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
             x_train = norm_data(x_train)
             x_test = norm_data(x_test)
 
-        classifiers[i].fit(x_train, y_train)
-        y_predict = classifiers[i].predict(x_test)
+        clf=clone(classifiers[i])
+        clf.fit(x_train, y_train)
+        y_predict = clf.predict(x_test)
 
         accuracy = accuracy_score(y_test, y_predict)
         mae = sklearn.metrics.mean_absolute_error(y_test, y_predict)
         print([user_name, classifiers_name[i], accuracy, mae, config])
 
         if accuracy > best:
-            best_clf = classifiers[i]
+            best_clf = clf
             best = accuracy
             name = classifiers_name[i]
 
