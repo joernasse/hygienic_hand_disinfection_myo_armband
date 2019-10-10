@@ -20,12 +20,12 @@ import collections
 from Classic_classification import norm_data
 from Deep_learning_classification import adapt_model_for_user
 
-cnn_emg_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
-cnn_imu_ud_path = "./Live_Prediction/Load_model/User001_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
-cnn_emg_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-EMG-100-0.9-norm-NA_cnn_kaggle.h5"
-cnn_imu_ui_path = "./Live_Prediction/Load_model/User001_UI_no_pre_pro-separate-IMU-25-0.9-norm-NA_cnn_kaggle.h5"
-classic_ud_path = "./Live_Prediction/Load_model/User001_UD_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
-classic_ui_path = "./Live_Prediction/Load_model/User001_UI_Random Forest_no_pre_pro-separate-EMGIMU-100-0.9-rehman_norm.joblib"
+cnn_emg_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+cnn_imu_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
+cnn_emg_ui_path = "./Live_Prediction/Load_model/User002_UI_no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+cnn_imu_ui_path = "./Live_Prediction/Load_model/User002_UI_no_pre_pro-separatecontinues-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
+classic_ud_path = "./Live_Prediction/Load_model/User002_UD_random_forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
+classic_ui_path = "./Live_Prediction/Load_model/User002_UI_Random_Forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
 
 cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
 cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
@@ -184,14 +184,14 @@ def main():
     :return:
     """
 
-    cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
-    cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
-    # validate_models(session=2)
-    live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
-                    cnn_emg=load_model(cnn_emg_user001_path),
-                    cnn_imu=load_model(cnn_imu_user001_path),
-                    clf_type='cnn',
-                    record_time=2)
+    validate_models(session=2)
+    # cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+    # cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+    # live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
+    #                 cnn_emg=load_model(cnn_emg_user001_path),
+    #                 cnn_imu=load_model(cnn_imu_user001_path),
+    #                 clf_type='cnn',
+    #                 record_time=2)
 
 
 def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
@@ -288,20 +288,28 @@ def feature_extraction_live(w_emg, w_imu, feature_set=Constant.rehman):
         for n in range(8):
             if feature_set == Constant.georgi:
                 feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.EMG))
-            if feature_set == Constant.rehman:
+            elif feature_set == Constant.rehman:
                 feature.extend(Feature_extraction.rehman([y[n] for y in x]))
-            else:
+            elif feature_set == Constant.robinson:
+                feature.extend(Feature_extraction.robinson([y[n] for y in x]))
+            elif feature_set == Constant.mantena:
                 feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+            else:
+                print("Could not match given feature set")
         feature_emg.append(feature)
     for x in w_imu:
         feature = []
         for n in range(9):
             if feature_set == Constant.georgi:
                 feature.extend(Feature_extraction.georgi([y[n] for y in x], sensor=Constant.IMU))
-            if feature_set == Constant.rehman:
+            elif feature_set == Constant.rehman:
                 feature.extend(Feature_extraction.rehman([y[n] for y in x]))
-            else:
+            elif feature_set == Constant.robinson:
+                feature.extend(Feature_extraction.robinson([y[n] for y in x]))
+            elif feature_set == Constant.mantena:
                 feature.extend(Feature_extraction.mantena([y[n] for y in x]))
+            else:
+                print("Could not match given feature set")
         feature_imu.append(feature)
 
     features = []
@@ -551,18 +559,27 @@ def validate_models(session=2):
     :return:
     """
     cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
+    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
     cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+    # cnn_imu_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User002_Live/User002_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
+    # cnn_emg_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User002_Live/User002_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
+
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
     cnn_adapt_collect, classic_live_collect = True, True
+    # cnn_adapt_collect, classic_live_collect = False,False
     classic_live = None
     datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
     classic_ud.verbose, classic_ui.verbose = 0, 0
+
     preprocess = Constant.no_pre_processing
+    feature_set = Constant.georgi
+    norm = False
     w_emg = 100
     w_imu = 25
     w_classic = 100
     overlap = 0.9
     init()
+
 
     with hub.run_in_background(gesture_listener.on_event):
         check_samples_rate()
@@ -586,6 +603,7 @@ def validate_models(session=2):
                     print("Stop")
 
                     emg, imu = reformat_raw_data(emg, ori, acc, gyr)
+
                     # ----------------------------------Perform classic prediction-------------------------------------#
                     # Classic windowing, EMG and IMU together
                     image_emg, image_imu = window_live_classic(emg, imu, w_classic, overlap)
@@ -594,12 +612,9 @@ def validate_models(session=2):
                     image_emg, image_imu = preprocess_data(image_emg, image_imu, preprocess)
 
                     # Feature extraction
-                    mode = Constant.rehman
-                    features = feature_extraction_live(w_emg=image_emg, w_imu=image_imu, feature_set=mode)
+                    features = feature_extraction_live(w_emg=image_emg, w_imu=image_imu, feature_set=feature_set)
                     datum_classic_number += len(features)
 
-                    # Norm
-                    norm = True
                     if norm:
                         features = norm_data(features)
 
@@ -649,6 +664,7 @@ def validate_models(session=2):
                         predict_imu_adapt = cnn_imu_adapt.predict_classes(x_imu)
 
                     # ----------------------------------Evaluate results-----------------------------------------------#
+                    print("EVAL...")
                     eval_predictions(predict=predict_emg_ud, proba=proba_emg_ud, y_true=label, file_prefix="cnn_emg_ud",
                                      session=s, seq=n, classic=False)
                     eval_predictions(predict=predict_imu_ud, proba=proba_imu_ud, y_true=label, file_prefix="cnn_imu_ud",
@@ -681,13 +697,11 @@ def validate_models(session=2):
 
                 if cnn_adapt_collect:
                     print("Train Adapt CNN EMG")
-                    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
                     cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_adapt, x_train=adapt_cnn_emg_train,
                                                          y_train=y_train_emg, x_test_in=[], y_test_in=[],
                                                          save_path="./", batch=8, epochs=10, file_name="live-adapt-EMG",
                                                          calc_test_set=False)
                     print("Train Adapt CNN IMU")
-                    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
                     cnn_imu_adapt = adapt_model_for_user(model=cnn_imu_adapt, x_train=adapt_cnn_imu_train,
                                                          y_train=y_train_imu, x_test_in=[], y_test_in=[],
                                                          save_path="./", batch=8, epochs=10, file_name="live-adapt-IMU",

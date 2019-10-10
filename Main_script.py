@@ -165,24 +165,26 @@ def main():
     #     p.start()
     # for p in processes:
     #     p.join()
-
-    train_user_dependent_classic(user_list=Constant.USERS,
+    # --------------------------------------------Train user dependent classic - START---------------------------------#
+    train_user_dependent_classic(user_list=["User002"],
                                  feature_set_path="G:/Masterarbeit/feature_sets_filter/",
                                  ignore_rest_gesture=True,
                                  predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
                                  model_save_path="./",
-                                 save_model=False,
+                                 save_model=True,
                                  visualization=False,
                                  classifiers=[Constant.random_forest],
                                  classifier_names=["Random_Forest"],
                                  norm=False)
     return True
+    # --------------------------------------------Train user dependent classic - END-----------------------------------#
+
 
     # --------------------------------------------Train user independent classic - START-------------------------------#
-    # config = "no_pre_pro-separate-EMG-100-0.9-robinson"
+    # config = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
     # base_path="G:/Masterarbeit/"
     # train_user_independent_classic(config, True, base_path+"/feature_sets_filter/", Constant.USERS_SUB, "User002",
-    #                                "./", [Constant.random_forest], ["Random Forest"], True, True, True)
+    #                                "./", [Constant.random_forest], ["Random Forest"], False, True, True)
     # return True
     # --------------------------------------------Train user independent classic - END---------------------------------#
 
