@@ -7,9 +7,6 @@ from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
 import tensorflow as tf
-
-from sklearn import clone
-
 import Constant
 import Feature_extraction
 import Helper_functions
@@ -95,33 +92,35 @@ device_listener = libmyo.ApiDeviceListener()
 gesture_listener = GestureListener()
 
 
-def check_samples_rate(n=5, record_time=1):
+def check_samples_rate(warm_up_iteration=5, record_time=1):
     """
-
-    :param n:
-    :param record_time:
-    :return:
+    Check the sample rat of the myo armbands. Should be run before  collecting data.
+    :param warm_up_iteration:int, default 5
+                            The iterations fo processing the warmup
+    :param record_time:int, default 1
+                        The record time
+    :return: None
     """
     print("Check samples rate - Start")
     sum_emg, sum_imu = 0, 0
     print("Warm up")
     Helper_functions.wait(2)
-    for i in range(n):
+    for i in range(warm_up_iteration):
         emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
         sum_emg += len(emg)
         sum_imu += len(ori)
         print("EMG length", len(emg),
               "\nIMU length", len(ori))
-    max_emg = (n * 2 * record_time * 200)
-    max_imu = (n * 2 * record_time * 50)
+    max_emg = (warm_up_iteration * 2 * record_time * 200)
+    max_imu = (warm_up_iteration * 2 * record_time * 50)
     sr_emg = (sum_emg / max_emg) * 100
     sr_imu = (sum_imu / max_imu) * 100
     print("DS EMG", sr_emg,
           "\nDS_IMU", sr_imu)
-    if (n * 2 * 200) * 0.85 > sum_emg:
+    if (warm_up_iteration * 2 * 200) * 0.85 > sum_emg:
         print("EMG sample rate is under 85%")
 
-    if (n * 2 * 50) * 0.85 > sum_imu:
+    if (warm_up_iteration * 2 * 50) * 0.85 > sum_imu:
         print("IMU sample rate is under 85%")
 
     print("Check samples rate - Done")
@@ -130,8 +129,13 @@ def check_samples_rate(n=5, record_time=1):
 
 def load_models_for_validation():
     """
+    Load the models from the global paths.
+    Std. load cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
+    ud: user dependent
+    ui: user independent
 
-    :return:
+    :return: cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
+                    returns the loaded models
     """
     cnn_emg_ud = load_model(cnn_emg_ud_path)
     cnn_imu_ud = load_model(cnn_imu_ud_path)
@@ -146,9 +150,11 @@ def load_models_for_validation():
 
 def init(live_prediction_path="./Live_Prediction"):
     """
-
-    :param live_prediction_path:
-    :return:
+    Initialization for the communication with the Myo Armbands. Also pair devices.
+    Waiting time is required to ensure correct streaming rate
+    :param live_prediction_path:string, default "./Live_Prediction"
+            the path to the live prediction folder
+    :return: None
     """
     global status
     if not os.path.isdir(live_prediction_path):  # Collection dir
@@ -162,20 +168,25 @@ def init(live_prediction_path="./Live_Prediction"):
     print("Initialization - Done")
 
 
-def preprocess_data(w_emg, w_imu, preprocess):
+def preprocess_data(w_emg, w_imu, filter_type):
     """
-
-    :param w_emg:
-    :param w_imu:
-    :param preprocess:
-    :return:
+    Preprocess the windowed raw data. Apply the filter or z-normalization
+    :param w_emg: list
+                    List of windowed EMG data
+    :param w_imu: list
+                List of windowed IMU data
+    :param filter_type: string,
+                        Specifies which filter is to be used.
+    :return: list,list
+                return the preprocessed windowed list of EMG and IMU data
     """
-    if preprocess == Constant.filter_:
-        return Process_data.filter_emg_data(w_emg, preprocess)
-    elif preprocess == Constant.z_norm:
-        return Process_data.z_norm(w_emg, w_imu)
+    if filter_type == Constant.filter_:
+        p_emg,p_imu= Process_data.filter_emg_data(w_emg, filter_type)
+    elif filter_type == Constant.z_norm:
+        p_emg,p_imu=  Process_data.z_norm(w_emg, w_imu)
     else:
-        return w_emg, w_imu
+        p_emg,p_imu=  w_emg, w_imu
+    return p_emg,p_imu
 
 
 def main():
@@ -196,14 +207,15 @@ def main():
 
 def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
     """
+    Evaluation of the live predictio
+    :param predict:list,
+    :param proba:list,
+    :param y_true:list,
+    :param file_prefix:string,
+    :param session:int,
+    :param seq:int,
+    :param classic:boolean,
 
-    :param predict:
-    :param proba:
-    :param y_true:
-    :param file_prefix:
-    :param session:
-    :param seq:
-    :param classic:
     :return:
     """
     write_header = False
@@ -276,7 +288,7 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
 
 def feature_extraction_live(w_emg, w_imu, feature_set=Constant.rehman):
     """
-
+    TODO
     :param w_emg:
     :param w_imu:
     :param feature_set:
@@ -323,7 +335,7 @@ def feature_extraction_live(w_emg, w_imu, feature_set=Constant.rehman):
 
 def pair_devices():
     """
-
+    Pair the two Myo Armbands
     :return:
     """
     global DEVICE_R
@@ -354,7 +366,7 @@ def pair_devices():
 
 def reformat_raw_data(emg, ori, acc, gyr):
     """
-
+    TODO
     :param emg:
     :param ori:
     :param acc:
@@ -387,7 +399,7 @@ def reformat_raw_data(emg, ori, acc, gyr):
 
 def collect_raw_data(record_time):
     """
-
+    TODO
     :param record_time:
     :return:
     """
@@ -410,7 +422,7 @@ def collect_raw_data(record_time):
 
 def window_live_classic(emg, imu, window, overlap):
     """
-
+    TODO
     :param emg:
     :param imu:
     :param window:
@@ -443,7 +455,7 @@ def window_live_classic(emg, imu, window, overlap):
 
 def window_live_separate(raw_data, window, overlap):
     """
-
+    TODO
     :param raw_data:
     :param window:
     :param overlap:
@@ -471,7 +483,7 @@ def window_live_separate(raw_data, window, overlap):
 
 def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_type="cnn", record_time=1):
     """
-
+    TODO
     :param config:
     :param cnn_emg:
     :param cnn_imu:
@@ -523,7 +535,7 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
 
 def prediction_calculation_cnn(emg_prediction, imu_prediction):
     """
-
+    TODO
     :param emg_prediction:
     :param imu_prediction:
     :return:
@@ -542,7 +554,7 @@ def prediction_calculation_cnn(emg_prediction, imu_prediction):
 
 def sum_sequence_proba(proba):
     """
-
+    TODO
     :param proba:
     :return:
     """
@@ -554,7 +566,7 @@ def sum_sequence_proba(proba):
 
 def validate_models(session=2):
     """
-
+    TODO
     :param session:
     :return:
     """
