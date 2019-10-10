@@ -573,7 +573,6 @@ def validate_models(session=2):
 
     preprocess = Constant.no_pre_processing
     feature_set = Constant.georgi
-    norm = False
     w_emg = 100
     w_imu = 25
     w_classic = 100
@@ -614,9 +613,6 @@ def validate_models(session=2):
                     # Feature extraction
                     features = feature_extraction_live(w_emg=image_emg, w_imu=image_imu, feature_set=feature_set)
                     datum_classic_number += len(features)
-
-                    if norm:
-                        features = norm_data(features)
 
                     if classic_live_collect:
                         x_train_classic.extend(features)
