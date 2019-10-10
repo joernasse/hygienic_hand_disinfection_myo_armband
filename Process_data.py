@@ -10,7 +10,8 @@ np.seterr(divide='ignore')
 
 
 def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
-                     save_path_for_featureset="./", load_path=Constant.collections_path_default):
+                     save_path_for_featureset="./", load_path=Constant.collections_path_default,
+                     summary_path=None):
     """
     Load raw data for user, window the data, pre process the data,
     extract  features from data, save extracted features to file
@@ -58,7 +59,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                                                            skip_timestamp=1)
 
                 # Preprocess each window
-                if pre == Constant.filter_:
+                if pre == Constant.filter_ and Constant.EMG in sensor:
                     w_emg = filter_emg_data(emg=w_emg, filter_type=feature)
                 elif pre == Constant.z_norm:
                     w_emg, w_imu = z_norm(w_emg, w_imu)
@@ -84,6 +85,11 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
             save_path_for_featureset = save_path_for_featureset + "_filter"
         if not os.path.isdir(save_path_for_featureset):
             os.mkdir(save_path_for_featureset)
+
+        #todo remove lines
+        if summary_path is not None:
+            save_path_for_featureset=summary_path
+        #todo  end
         filename = user + "-" + pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
             overlap) + "-" + feature
         Save_Load.save_features(features, save_path_for_featureset + "/" + filename + ".csv")
