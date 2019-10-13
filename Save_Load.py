@@ -3,35 +3,38 @@ import os
 import shutil
 import sys
 import numpy
-import logging as log
 from Constant import *
 
 
-def save_raw_data(data, label, file_emg, file_imu):
+def save_raw_data(data, label_value, emg_file_path, imu_file_path):
     """
-    TODO:
-    :param data:
-    :param label:
-    :param file_emg:
-    :param file_imu:
+    Save the collected raw data into a two files. EMG data in emg.csv, IMU data into imu.csv
+    :param data: dict
+
+    :param label_value:int
+            Label for given data
+    :param emg_file_path:string
+            Path where the emg.csv should be saved
+    :param imu_file_path:string
+            Path where the imu.csv should be saved
     :return:
     """
-    file_exist = os.path.isfile(file_emg)
-    f = open(file_emg, 'a', newline='')
+    file_exist = os.path.isfile(emg_file_path)
+    f = open(emg_file_path, 'a', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         if not file_exist:
             writer.writerow(emg_headline)
-        for emg in data['EMG']:
+        for emg in data[EMG]:
             tmp = [emg[0]]
             for i in emg[1]:
                 tmp.append(i)
-            tmp.append(label)
+            tmp.append(label_value)
             writer.writerow(tmp)
     f.close()
 
-    file_exist = os.path.isfile(file_imu)
-    g = open(file_imu, 'a', newline='')
+    file_exist = os.path.isfile(imu_file_path)
+    g = open(imu_file_path, 'a', newline='')
     with g:
         writer = csv.writer(g, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         if not file_exist:
@@ -46,20 +49,22 @@ def save_raw_data(data, label, file_emg, file_imu):
                    ori[i][1].x, ori[i][1].y, ori[i][1].z,
                    gyr[i][1].x, gyr[i][1].y, gyr[i][1].z,
                    acc[i][1].x, acc[i][1].y, acc[i][1].z,
-                   label]
+                   label_value]
             writer.writerow(tmp)
     g.close()
     return
 
 
-def save_features(features, file_name):
+def save_features(features, file_name_path):
     """
-    TODO:
-    :param features:
-    :param file_name:
+    Save the calculated features into a file
+    :param features:list
+            List of calculated features
+    :param file_name_path:string
+            path to the file where the features should be saved
     :return:
     """
-    f = open(file_name, 'w', newline='')
+    f = open(file_name_path, 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for entry in features:
@@ -184,32 +189,29 @@ def create_directories_for_data_collection(user, delete_old, raw_path, raw_con, 
     user_path = COLLECTION_DIR + "/" + user
     if not os.path.isdir(COLLECTION_DIR):  # Collection dir
         os.mkdir(COLLECTION_DIR)
-        log.info("Create directory" + COLLECTION_DIR)
     if not os.path.isdir(user_path):  # User dir
         os.mkdir(user_path)
-        log.info("Create directory" + user_path)
     if os.path.isdir(raw_sep) and os.path.isdir(raw_con):  # Raw dir
         if delete_old:
             shutil.rmtree(raw_sep)
             shutil.rmtree(raw_con)
-            log.info("Remove directory" + raw_path)
             os.mkdir(raw_sep)
             os.mkdir(raw_con)
-            log.info("Create directory" + raw_path)
     else:
         os.mkdir(raw_sep)
         os.mkdir(raw_con)
-        log.info("Create directory" + raw_path)
 
 
-def load_prediction_summary(path):
+def load_prediction_summary(result_overview_path):
     """
-    TODO
-    :param path:
-    :return:
+    Load the Results for every classic classifier by config by user from a CSV file.
+    :param result_overview_path:string
+            Path to the CSV file which contains the overview of the results
+    :return:list
+            return a list of entries from file
     """
     summary = []
-    file = open(path)
+    file = open(result_overview_path)
     reader = csv.reader(file, delimiter=';')
     for column in reader:
         summary.append(column)

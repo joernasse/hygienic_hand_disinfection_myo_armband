@@ -475,7 +475,7 @@ def calculation_config_statistics(load_path):
     :return:
     """
     config_mean = []
-    overview = Save_Load.load_prediction_summary(path=load_path)
+    overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
     for pre in Constant.level_0:
         for data_set in Constant.level_1:
             for sensor in Constant.level_2:
@@ -518,7 +518,7 @@ def calculation_config_statistics(load_path):
 
 def calc_missing_config(load_path):
     missing_config = []
-    overview = Save_Load.load_prediction_summary(path=load_path)
+    overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
     for pre in Constant.level_0:
         for data_set in Constant.level_1:
             for sensor in Constant.level_2:
