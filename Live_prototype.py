@@ -181,12 +181,12 @@ def preprocess_data(w_emg, w_imu, filter_type):
                 return the preprocessed windowed list of EMG and IMU data
     """
     if filter_type == Constant.filter_:
-        p_emg,p_imu= Process_data.filter_emg_data(w_emg, filter_type)
+        p_emg, p_imu = Process_data.filter_emg_data(w_emg, filter_type)
     elif filter_type == Constant.z_norm:
-        p_emg,p_imu=  Process_data.z_norm(w_emg, w_imu)
+        p_emg, p_imu = Process_data.z_norm(w_emg, w_imu)
     else:
-        p_emg,p_imu=  w_emg, w_imu
-    return p_emg,p_imu
+        p_emg, p_imu = w_emg, w_imu
+    return p_emg, p_imu
 
 
 def main():
@@ -498,8 +498,8 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
     window = int(config_split[3])
     overlap = float(config_split[4])
     feature_set = config_split[5]
-    w_emg=100
-    w_imu=25
+    w_emg = 100
+    w_imu = 25
 
     if len(config_split) > 5 and 'norm' in config[6]:
         norm = True
@@ -571,14 +571,16 @@ def validate_models(session=2):
     :return:
     """
     cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
-    # cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
-    # cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
-    cnn_imu_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
-    cnn_emg_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
+    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
+    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+    # cnn_imu_adapt = load_model(
+    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
+    # cnn_emg_adapt = load_model(
+    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
 
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
-    # cnn_adapt_collect, classic_live_collect = True, True
-    cnn_adapt_collect, classic_live_collect = False,False
+    cnn_adapt_collect, classic_live_collect = True, True
+    # cnn_adapt_collect, classic_live_collect = False, False
     classic_live = None
     datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
     classic_ud.verbose, classic_ui.verbose = 0, 0
@@ -633,8 +635,8 @@ def validate_models(session=2):
                     predict_classic_ui = classic_ui.predict(features)
 
                     # # If live classifier is trained
-                    # if not classic_live_collect and classic_live is not None:
-                    #     predict_classic_live = classic_live.predict(features)
+                    if not classic_live_collect and classic_live is not None:
+                        predict_classic_live = classic_live.predict(features)
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
@@ -691,10 +693,10 @@ def validate_models(session=2):
                         eval_predictions(predict=predict_imu_adapt, proba=proba_imu_adapt, y_true=label,
                                          file_prefix="cnn_imu_adapt", session=s, seq=n, classic=False)
 
-                    # if not classic_live_collect:
-                    #     eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
-                    #                      file_prefix="classic_live",
-                    #                      session=s, seq=n, classic=True)
+                    if not classic_live_collect:
+                        eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
+                                         file_prefix="classic_live",
+                                         session=s, seq=n, classic=True)
 
                 if classic_live_collect:
                     print("Train classic")
@@ -715,6 +717,7 @@ def validate_models(session=2):
                                                          calc_test_set=False)
                     cnn_adapt_collect = False
     hub.stop()
+
 
 if __name__ == '__main__':
     main()

@@ -82,7 +82,7 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
                                      normalize_by_rest=False, collection_path=Constant.collections_path_default,
                                      data_set=Constant.SEPARATE + Constant.CONTINUES):
     """
-# TODO überdenken
+     TODO überdenken
     :param window:
     :param overlap:
     :param user:
@@ -176,69 +176,69 @@ def main():
     # --------------------------------------------Calculate Result statistics - END------------------------------------#
 
     # --------------------------------------------Train user dependent classic - START---------------------------------#
-    train_user_dependent_classic(user_list=["User001"],
-                                 feature_set_path="G:/Masterarbeit/feature_sets_filter/",
-                                 ignore_rest_gesture=True,
-                                 predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
-                                 model_save_path="./",
-                                 save_model=True,
-                                 visualization=False,
-                                 classifiers=[Constant.random_forest],
-                                 classifier_names=["Random_Forest"])
+    # train_user_dependent_classic(user_list=["User001"],
+    #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
+    #                              ignore_rest_gesture=True,
+    #                              predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
+    #                              model_save_path="./",
+    #                              save_model=True,
+    #                              visualization=False,
+    #                              classifiers=[Constant.random_forest],
+    #                              classifier_names=["Random_Forest"])
     # return True
     # --------------------------------------------Train user dependent classic - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
-    save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
-    for user in [Constant.USERS]:
-        train_user_dependent_cnn(config="no_pre_pro-separate-EMG-100-0.9-NA", user=user, save_path=save_path,
-                                 perform_test=True, cnn_pattern=Constant.CNN_KAGGLE, ignore_rest_gesture=True)
+    # save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
+    # for user in [Constant.USERS]:
+    #     train_user_dependent_cnn(config="no_pre_pro-separate-EMG-100-0.9-NA", user=user, save_path=save_path,
+    #                              perform_test=True, cnn_pattern=Constant.CNN_KAGGLE, ignore_rest_gesture=True)
     # return True
     # --------------------------------------------Train user dependent CNN - END---------------------------------------#
 
     # --------------------------------------------Train user independent classic - START-------------------------------#
-    config = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
-    base_path = "G:/Masterarbeit/"
-    train_user_independent_classic(config, True, base_path + "/feature_sets_filter/", Constant.USERS_SUB, "User001",
-                                   "./", [Constant.random_forest], ["Random Forest"], False, True)
+    # config = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
+    # base_path = "G:/Masterarbeit/"
+    # train_user_independent_classic(config, True, base_path + "/feature_sets_filter/", Constant.USERS_SUB, "User001",
+    #                                "./", [Constant.random_forest], ["Random Forest"], False, True)
     # return True
     # --------------------------------------------Train user independent classic - END---------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-continues-IMU-25-0.9-NA",
-                               user="User002", perform_test=True, save_path="./", ignore_rest_gesture=False,
-                               cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=50, early_stopping=2)
+    # train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-continues-IMU-25-0.9-NA",
+    #                            user="User002", perform_test=True, save_path="./", ignore_rest_gesture=False,
+    #                            cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=50, early_stopping=2)
     # return True
     # --------------------------------------------Train user independent CNN - END-------------------------------------#
 
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#
-    base_path = "G:/Masterarbeit"
-    model_path = base_path + "/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
-    config = "no_pre_pro-separatecontinues-EMG-100-0.9-NA"
-    user = "User002"
-    config_split = config.split('-')
-    sensor = config_split[2]
-    data_set = config_split[1]
-    window = int(config_split[3])
-    overlap = float(config_split[4])
-
-    x_train, y_train, x_test, y_test = pre_process_raw_data_adapt_model(window=window, overlap=overlap, user=user,
-                                                                        sensor=sensor, data_set=data_set,
-                                                                        collection_path=base_path + "/Collections/")
-    model = load_model(model_path)
-
-    adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10, x_test_in=x_test,
-                         y_test_in=y_test, model=model, file_name=user + config)
+    # base_path = "G:/Masterarbeit"
+    # model_path = base_path + "/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    # config = "no_pre_pro-separatecontinues-EMG-100-0.9-NA"
+    # user = "User002"
+    # config_split = config.split('-')
+    # sensor = config_split[2]
+    # data_set = config_split[1]
+    # window = int(config_split[3])
+    # overlap = float(config_split[4])
+    #
+    # x_train, y_train, x_test, y_test = pre_process_raw_data_adapt_model(window=window, overlap=overlap, user=user,
+    #                                                                     sensor=sensor, data_set=data_set,
+    #                                                                     collection_path=base_path + "/Collections/")
+    # model = load_model(model_path)
+    #
+    # adapt_model_for_user(x_train=x_train, y_train=y_train, save_path="./", batch=32, epochs=10, x_test_in=x_test,
+    #                      y_test_in=y_test, model=model, file_name=user + config)
     # return True
     # --------------------------------------------Adapt CNN for Unknown User END---------------------------------------#
 
     # --------------------------------------------Plot CNN structure START---------------------------------------------#
-    tensorflow.keras.utils.plot_model(create_cnn_1_model(8, 100, 12), to_file='G:/Masterarbeit/CNN_1_structure.svg',
-                                      show_shapes=True, show_layer_names=True)
+    # tensorflow.keras.utils.plot_model(create_cnn_1_model(8, 100, 12), to_file='G:/Masterarbeit/CNN_1_structure.svg',
+    #                                   show_shapes=True, show_layer_names=True)
     # --------------------------------------------Plot CNN structure END-----------------------------------------------#
 
     # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User002_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User003_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
     predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
     # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
