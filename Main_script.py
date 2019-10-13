@@ -171,44 +171,44 @@ def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
 
 def main():
     # --------------------------------------------Calculate Result statistics - START----------------------------------#
-    calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
+    # calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
     # return True
     # --------------------------------------------Calculate Result statistics - END------------------------------------#
 
     # --------------------------------------------Train user dependent classic - START---------------------------------#
-    train_user_dependent_classic(user_list=["User001"],
-                                 feature_set_path="G:/Masterarbeit/feature_sets_filter/",
-                                 ignore_rest_gesture=True,
-                                 predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
-                                 model_save_path="./",
-                                 save_model=True,
-                                 visualization=False,
-                                 classifiers=[Constant.random_forest],
-                                 classifier_names=["Random_Forest"])
+    # train_user_dependent_classic(user_list=["User001"],
+    #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
+    #                              ignore_rest_gesture=True,
+    #                              predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
+    #                              model_save_path="./",
+    #                              save_model=True,
+    #                              visualization=False,
+    #                              classifiers=[Constant.random_forest],
+    #                              classifier_names=["Random_Forest"])
     # return True
     # --------------------------------------------Train user dependent classic - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
-    save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
-    for user in [Constant.USERS]:
-        train_user_dependent_cnn(config="no_pre_pro-separate-EMG-100-0.9-NA", user=user, save_path=save_path,
-                                 perform_test=True, cnn_pattern=Constant.CNN_KAGGLE, ignore_rest_gesture=True)
+    # save_path = "G:/Masterarbeit/Results/User_dependent_cnn/"
+    # for user in [Constant.USERS]:
+    #     train_user_dependent_cnn(config="no_pre_pro-separate-EMG-100-0.9-NA", user=user, save_path=save_path,
+    #                              perform_test=True, cnn_pattern=Constant.CNN_KAGGLE, ignore_rest_gesture=True)
     # return True
     # --------------------------------------------Train user dependent CNN - END---------------------------------------#
 
     # --------------------------------------------Train user independent classic - START-------------------------------#
-    config = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
-    base_path = "G:/Masterarbeit/"
-    train_user_independent_classic(config, True, base_path + "/feature_sets_filter/", Constant.USERS_SUB, "User001",
-                                   "./", [Constant.random_forest], ["Random Forest"], False, True)
+    # config = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
+    # base_path = "G:/Masterarbeit/"
+    # train_user_independent_classic(config, True, base_path + "/feature_sets_filter/", Constant.USERS_SUB, "User001",
+    #                                "./", [Constant.random_forest], ["Random Forest"], False, True)
     # return True
     # --------------------------------------------Train user independent classic - END---------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-continues-IMU-25-0.9-NA",
+    train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-separate-EMG-100-0.9-NA",
                                user="User002", perform_test=True, save_path="./", ignore_rest_gesture=False,
-                               cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=50, early_stopping=2)
-    # return True
+                               cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=10, early_stopping=2)
+    return True
     # --------------------------------------------Train user independent CNN - END-------------------------------------#
 
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#
