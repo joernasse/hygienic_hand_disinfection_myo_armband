@@ -1,7 +1,20 @@
+#!/usr/bin/env python
+"""
+
+"""
+
 from UliEngineering.SignalProcessing.Utils import zero_crossings
 import Constant
 import numpy as np
 
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 def rms(x):
     """

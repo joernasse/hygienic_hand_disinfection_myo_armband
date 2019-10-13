@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+"""
+This script contains all functions about the classic classification algorithms.
+Includes user dependent, user independent, calculations
+Includes grid Search for given classifier and parameter set
+"""
+
 import csv
 import pickle
 import matplotlib.pyplot as plt
@@ -9,6 +16,15 @@ from sklearn.metrics import accuracy_score
 import Constant
 import Helper_functions
 from Helper_functions import flat_users_data
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 
 def train_user_independent_cross_validation(data, classifier, classifier_name, save_path, config):

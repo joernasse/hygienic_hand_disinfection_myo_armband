@@ -1,10 +1,9 @@
 from __future__ import print_function
 import matplotlib.pyplot as plt
 import tensorflow
-
 import Classic_classification
 import Constant
-from Deep_learning_classification import calculate_cnn, predict_for_load_model, adapt_model_for_user, create_cnn_1_model
+from Deep_learning_classification import calculate_cnn, predict_for_model, adapt_model_for_user, create_cnn_1_model
 import Helper_functions
 import Process_data
 import Save_Load
@@ -13,6 +12,16 @@ import csv
 import multiprocessing as mp
 import os
 from tensorflow.python.keras.models import load_model
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 path_add = [Constant.SEPARATE_PATH, Constant.CONTINUES_PATH]
@@ -234,7 +243,7 @@ def main():
     # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
-    # --------------------------------------------Grid search ---------------------------------------------------------#
+    # --------------------------------------------Grid search START----------------------------------------------------#
     user_independent_grid_search(classifier=Constant.random_forest, classifier_name="Random_Forest", save_path="./",
                                  config="no_pre_pro-separate-EMGIMU-100-0.9-georgi", visualization=False,
                                  save_model=True,
@@ -242,134 +251,7 @@ def main():
                                  feature_sets_path="G:/Masterarbeit/feature_sets_filter/", test_user="User001",
                                  ignore_rest_gesture=True)
 
-    # --------------------------------------------Grid search ---------------------------------------------------------#
-
-
-    #
-
-    # train_user_independent("no_pre_pro-separate-IMU-100-0.9-rehman",trainings_data=Constant.USERS,feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
-    # train_user_dependent(Constant.USERS, skip_rest=True)  # feature_extraction_complete()
-    # calculation_config_statistics()
-    # return True
-
-    # calculation_config_statistics()
-    # path = os.getcwd()
-    # for config in Constant.top_ten_user_dependent_configs[1:]:
-    #     train_user_independent(config=config, ignore_rest_gesture=True,
-    #                            trainings_data=Constant.USERS, feature_sets_path="G:/Masterarbeit/feature_sets_filter/")
-    # return True
-    # load_model_from = "G:/Masterarbeit/deep_learning/CNN_final_results/training_kaggle_imu_0"
-
-    # --------------------------------------------Train CNN 1----------------------------------------------#
-    # save_path = save_path + "/CNN_1/"
-    # if not os.path.isdir(save_path):  # Collection dir
-    #     os.mkdir(save_path)
-    # # name, acc = Deep_learning.cnn_1(x, labels, save_path, batch=50, epochs=500, config=config)
-    #
-    # f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
-    # with f:
-    #     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    #     writer.writerow([user, name, str(acc), config])
-    # f.close()
-    # del x
-    # del labels
-
-    # --------------------------------------------Train CNN kaggle-----------------------------------------------------#
-
-    # save_path = "G:/Masterarbeit/deep_learning_filter/" + "User007_Unknown"
-    # if not os.path.isdir(save_path):  # Collection dir
-    #     os.mkdir(save_path)
-    # save_path = save_path + "/CNN_Kaggle"
-    # if not os.path.isdir(save_path):  # Collection dir
-    #     os.mkdir(save_path)
-    # # For all Users, can be changed
-    # x_train, y_train = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-    #                                        user_list=USERS_cross, preprocess=config_split[0],
-    #                                        data_set=config_split[1],
-    #                                        sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
-    #
-    # x_test, y_test = preprocess_raw_data(window=int(config_split[3]), overlap=float(config_split[4]),
-    #                                      user_list=["User007"], preprocess=config_split[0], data_set=config_split[1],
-    #                                      sensor=config_split[2], ignore_rest_gesture=True, norm_by_rest=False)
-    #
-    # Deep_learning.predict_for_load_model(x_test, y_test, load_model(
-    #     "G:/Masterarbeit/deep_learning_filter/User007_Unknown/CNN_Kaggle/no_pre_pro-separate-EMG-100-0.9-NA_cnn_model.h5"),
-    #                                      batch_size=32)
-    # return True
-    #
-    # model_name, acc = Deep_learning.calculate_cnn(x_train, y_train, save_path, batch=32, epochs=10, config=config,
-    #                                               x_test_in=x_test, y_test_in=y_test, early_stopping=3)
-    #
-    # f = open("G:/Masterarbeit/deep_learning_filter/Overview_CNN.csv", 'a', newline='')
-    # with f:
-    #     writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-    #     writer.writerow(["User007_unknown", model_name, str(acc), config])
-    # f.close()
-
-    # --------------------------------------------Predict from loaded model for unknown user---------------------------#
-    # Deep_learning.predict_for_load_model(x, labels, load_model(load_model_from + "/cnn_kaggle_model.h5"),
-    #                                      batch_size=200)
-
-    # --------------------------------------------Adapt model for User-------------------------------------------------#
-    # skip_s0_rest = False
-    # x_train_window, y_train, x_test_window, y_test = pre_process_raw_data_adapt_model(25, 0.75, ["User007"], sensor,
-    #                                                                                   skip_s0_rest=skip_s0_rest)
-    # if skip_s0_rest:
-    #     labels = sub_label
-    # else:
-    #     labels = save_label
-    #
-    # # x_test_window= [t.transpose() for t in x_test_window]
-    # # x_train_window = [t.transpose() for t in x_train_window]
-    #
-    # model = load_model(load_model_from + "/cnn_kaggle_model.h5")
-    # Deep_learning.adapt_model_for_user(x_train_window, y_train,
-    #                                    save_path, 200, 100, "User007",
-    #                                    x_test_window, y_test, save_label=labels, model=model)
-
-    # --------------------------------------------Train DNN with feature extraction data-------------------------------#
-    # users_data = load_feature_csv_all_user(best_config_rf)
-    # Deep_learning.dnn(save_path=save_path, batch=50, epochs=10, users_data=users_data)
-
-    # ----------------------------------Train user independent classic-------------------------------------------------#
-    # config = best_emg_rf
-    # users_data = load_feature_from_many_users(config, USERS_cross)
-    # Classification.train_user_independent(users_data=users_data,
-    #                                       config=config,
-    #                                       mixed_user_data=True,
-    #                                       clf_name="OneVsRest",
-    #                                       clf=Constant.one_vs_Rest,
-    #                                       cv=False)
-    # return True
-
-    # ----------------------------------Train user dependent classic--------------------------------------------------#
-    # config_split = best_config_rf
-    # print("Config", config_split)
-    # # Predict for all Users
-    # for user in USERS:
-    #     print(user)
-    #     users_data = load_feature_for_user(config_split, user)
-    #     Classification.train_user_independent(training_data=users_data,
-    #                                           config=config_split,
-    #                                           mixed_user_data=True,
-    #                                           classifiers_name="Random_Forest_User_dependent",
-    #                                           classifiers=Constant.random_forest,
-    #                                           cv=False,
-    #                                           user_name=user)
-
-    # print("All done")
-    # return True
-
-    # ----------------------------------Predict classic ML against User007-------------------------------------------#
-    # config = "separate-EMG-100-0.75-georgi"
-    # classic_clf = "G:/Masterarbeit/classic_clf/"
-    # users_data = load_feature_csv_one_user(config, "User007")
-    # with open(classic_clf + 'SVM_Only_EMGseparate-EMG-100-0.75-georgi.joblib', 'rb') as pickle_file:
-    #     model = pickle.load(pickle_file)
-    # Classification.predict_for_unknown(model=model,
-    #                                    data=users_data)
-    #
-    # return True
+    # --------------------------------------------Grid search END------------------------------------------------------#
 
 
 def train_user_independent_classic(config, ignore_rest_gesture=True, feature_sets_path="",
@@ -387,14 +269,13 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
     :param save_path:
     :param classifier:
     :param classifier_names:
-
     :param save_model:
     :param visualization:
     :return:
     """
     print("Current config", config)
-    training_data = Save_Load.load_raw_data(config=config, user_list=training_users, path=feature_sets_path)
-    test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+    training_data = Save_Load.load_feature_data(config=config, user_list=training_users, path=feature_sets_path)
+    test_data = Save_Load.load_feature_data(config=config, user_list=[test_user], path=feature_sets_path)
     print(len(training_data))
 
     if ignore_rest_gesture:
@@ -410,6 +291,15 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
 
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
                                                     collection_path=Constant.collections_path_default, session='s0'):
+    """
+    TODO
+    :param user:
+    :param sensor:
+    :param data_set:
+    :param collection_path:
+    :param session:
+    :return:
+    """
     global path_add
 
     training_dict = {'Step0': [], 'Step1': [], 'Step1_1': [], 'Step1_2': [], 'Step2': [], 'Step2_1': [], 'Step3': [],
@@ -434,14 +324,14 @@ def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
 
             if sensor == Constant.IMU:
                 if steps.__contains__(session):
-                    training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
+                    training_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/imu.csv"))
                 else:
-                    test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
+                    test_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/imu.csv"))
             else:
                 if steps.__contains__(session):
-                    training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
+                    training_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/emg.csv"))
                 else:
-                    test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
+                    test_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/emg.csv"))
 
     print(user, "done")
     return training_dict, test_dict
@@ -472,54 +362,52 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
 
     :return:
     """
-    for config in predefine_configs:
-        if predefine_configs is not None:
-            for user in user_list:
-                print(user)
-                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path, user_list=[user])
+    if predefine_configs is not None:
+        for config in predefine_configs:
+            if predefine_configs is not None:
+                for user in user_list:
+                    print(user)
+                    users_data = Save_Load.load_feature_data(config=config, path=feature_set_path, user_list=[user])
 
-                if not users_data:
-                    continue
+                    if not users_data:
+                        continue
 
-                if ignore_rest_gesture:
-                    users_data = Process_data.remove_rest_gesture_data(users_data[0])
+                    if ignore_rest_gesture:
+                        users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                Classic_classification.train_user_dependent(user_data=users_data, config=config, user_name=user,
-                                                            classifiers=classifiers, classifiers_name=classifier_names,
-                                                            save_path=model_save_path, save_model=save_model,
-                                                            visualization=visualization)
+                    Classic_classification.train_user_dependent(user_data=users_data, config=config, user_name=user,
+                                                                classifiers=classifiers,
+                                                                classifiers_name=classifier_names,
+                                                                save_path=model_save_path, save_model=save_model,
+                                                                visualization=visualization)
+        return True
+    for user in user_list:
+        for pre in Constant.level_0:
+            for data_set in Constant.level_1:
+                for sensor in Constant.level_2:
+                    for window in Constant.level_3:
+                        for overlap in Constant.level_4:
+                            for feature in Constant.level_5:
+                                config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + \
+                                         "-" + str(overlap) + "-" + feature
+                                if predefine_configs:
+                                    config = predefine_configs
 
-        #     TODO remove after use
-    return True
+                                users_data = Save_Load.load_feature_data(config=config, path=feature_set_path,
+                                                                         user_list=[user])
 
-    for pre in Constant.level_0:
-        for data_set in Constant.level_1:
-            for sensor in Constant.level_2:
-                for window in Constant.level_3:
-                    for overlap in Constant.level_4:
-                        for feature in Constant.level_5:
-                            config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + \
-                                     "-" + str(overlap) + "-" + feature
-                            if predefine_configs:
-                                config = predefine_configs
+                                if not users_data:
+                                    continue
 
-                            users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
-                                                                 user_list=[user])
+                                if ignore_rest_gesture:
+                                    users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                            if not users_data:
-                                continue
-
-                            if ignore_rest_gesture:
-                                users_data = Process_data.remove_rest_gesture_data(users_data[0])
-
-                            Classic_classification.train_user_dependent(user_data=users_data,
-                                                                        config=config,
-                                                                        user_name=user,
-                                                                        classifiers=classifiers,
-                                                                        classifiers_name=classifier_names,
-                                                                        save_path=model_save_path,
-                                                                        save_model=save_model,
-                                                                        visualization=visualization)
+                                Classic_classification.train_user_dependent(user_data=users_data, config=config,
+                                                                            user_name=user, classifiers=classifiers,
+                                                                            classifiers_name=classifier_names,
+                                                                            save_path=model_save_path,
+                                                                            save_model=save_model,
+                                                                            visualization=visualization)
     return True
 
 
@@ -587,7 +475,7 @@ def calculation_config_statistics(load_path):
     :return:
     """
     config_mean = []
-    overview = Save_Load.load_prediction_summary(path=load_path)
+    overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
     for pre in Constant.level_0:
         for data_set in Constant.level_1:
             for sensor in Constant.level_2:
@@ -630,7 +518,7 @@ def calculation_config_statistics(load_path):
 
 def calc_missing_config(load_path):
     missing_config = []
-    overview = Save_Load.load_prediction_summary(path=load_path)
+    overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
     for pre in Constant.level_0:
         for data_set in Constant.level_1:
             for sensor in Constant.level_2:
@@ -777,7 +665,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
                                  preprocess=preprocess,
                                  sensor=sensor, ignore_rest_gesture=True, norm_by_rest=False)
 
-    evaluation, accuracy_score = predict_for_load_model(x, labels, model, batch_size=32)
+    evaluation, accuracy_score = predict_for_model(x, labels, model, batch=32)
 
 
 def user_independent_grid_search(classifier, classifier_name, save_path, config, visualization, save_model,
@@ -808,8 +696,8 @@ def user_independent_grid_search(classifier, classifier_name, save_path, config,
             Indicates whether the "pause" gesture should be removed from the loaded data
     :return:
     """
-    training_data = Save_Load.load_raw_data(config=config, user_list=training_user_list, path=feature_sets_path)
-    test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+    training_data = Save_Load.load_feature_data(config=config, user_list=training_user_list, path=feature_sets_path)
+    test_data = Save_Load.load_feature_data(config=config, user_list=[test_user], path=feature_sets_path)
 
     if ignore_rest_gesture:
         test_data[0] = Process_data.remove_rest_gesture_data(user_data=test_data[0])

@@ -1,3 +1,11 @@
+#!/usr/bin/env python
+"""
+GestureListener class for communication with myo gesture control armband
+IntroductionScreen and CollectDataWindow for the GUI
+This script contains the GUI for the user study.
+The script also includes functions to collect raw data from Myo wristbands and store it in the file systems.
+"""
+
 import collections
 import os
 import threading
@@ -12,6 +20,15 @@ from PIL import Image, ImageTk
 from myo import init, Hub
 from Helper_functions import wait
 from Save_Load import save_raw_data, create_directories_for_data_collection
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # Emg
@@ -32,8 +49,6 @@ g_raw_path, g_img_path = "", ""
 g_trial = False
 emg_count_list, imu_count_list = [], []
 img_w, img_h = 450, 400
-raw_separate = "/raw_separate"
-raw_continues = "/raw_continues"
 
 log.basicConfig(filename='app.log', filemode='w', format='%(name)s - %(levelname)s - %(message)s')
 
@@ -155,19 +170,19 @@ class CollectDataWindow(Frame):
 
         user_path = "Collections/" + self.test_person_val.get()
         raw_path = user_path + "/raw"
-        create_directories_for_data_collection(proband=self.test_person_val.get(), delete_old=False, raw_path=raw_path,
-                                               raw_sep=user_path + raw_separate,
-                                               raw_con=user_path + raw_continues)
+        create_directories_for_data_collection(user=self.test_person_val.get(), delete_old=False, raw_path=raw_path,
+                                               raw_sep=user_path + Constant.SEPARATE_PATH,
+                                               raw_con=user_path + Constant.CONTINUES_PATH)
 
         sessions = self.session_val.get()
         record_time = self.record_time_val.get()
 
         if mode == Constant.SEPARATE:
             title = "Collect separate data"
-            raw_path = user_path + raw_separate
+            raw_path = user_path + Constant.SEPARATE_PATH
         else:
             title = "Collect continues data"
-            raw_path = user_path + raw_continues
+            raw_path = user_path + Constant.CONTINUES_PATH
         if trial:
             sessions = 1
             record_time = 5

@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""
+This script contains all Constants for the EMG_Recognition Project
+"""
+
 from scipy import signal
 from sklearn.ensemble import RandomForestClassifier, BaggingClassifier
 from sklearn.multiclass import OneVsRestClassifier
@@ -6,6 +11,15 @@ from sklearn.svm import SVC
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis as QDA
 from sklearn.naive_bayes import GaussianNB as GAUSS
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 label_display_with_rest = ['Step 0',
                            'Step 1', 'St    ep 1.1', 'Step 1.2',
@@ -107,43 +121,6 @@ filter_ = "filter"
 z_norm = "z-normalization"
 no_pre_processing = "no_pre_pro"
 
-# # ----------------------------------Top user dependent configurations-----------------------------------------------#
-#
-# top_ten_user_dependent_configs = ["no_pre_pro-separate-EMGIMU-100-0.9-georgi",
-#                                   "no_pre_pro-separate-EMGIMU-100-0.9-rehman",
-#                                   "no_pre_pro-separate-EMGIMU-100-0.9-robinson",
-#                                   "no_pre_pro-separate-IMU-100-0.9-rehman",
-#                                   "no_pre_pro-separate-EMGIMU-100-0.9-mantena",
-#                                   "no_pre_pro-separate-IMU-100-0.9-georgi",
-#                                   "no_pre_pro-separate-IMU-100-0.9-robinson",
-#                                   "no_pre_pro-separate-IMU-100-0.9-mantena",
-#                                   "no_pre_pro-continues-EMGIMU-100-0.9-georgi",
-#                                   "no_pre_pro-separatecontinues-EMGIMU-100-0.9-georgi"]
-#
-# top_five_emg_user_dependent_configs = ["no_pre_pro-separate-EMG-100-0.9-rehman",
-#                                        "no_pre_pro-separate-EMG-100-0.9-robinson",
-#                                        "no_pre_pro-continues-EMG-100-0.9-robinson",
-#                                        "no_pre_pro-separatecontinues-EMG-100-0.9-rehman",
-#                                        "no_pre_pro-separatecontinues-EMG-100-0.9-robinson"]
-#
-# top_five_imu_user_dependent_configs = ["no_pre_pro-separate-IMU-100-0.9-rehman",
-#                                        "no_pre_pro-separate-IMU-100-0.9-georgi",
-#                                        "no_pre_pro-separate-IMU-100-0.9-robinson",
-#                                        "no_pre_pro-separate-IMU-100-0.9-mantena",
-#                                        "no_pre_pro-separatecontinues-IMU-100-0.9-rehman"]
-#
-# top_five_filter_user_dependent_configs = ["filter-separate-EMGIMU-100-0.9-rehman",
-#                                           "filter-continues-EMGIMU-100-0.9-rehman",
-#                                           "filter-separate-IMU-100-0.9-georgi",
-#                                           "filter-separatecontinues-EMGIMU-100-0.9-rehman",
-#                                           "filter-separate-IMU-100-0.9-rehman"]
-#
-# top_five_z_norm_user_dependent_configs = ["z_normalization-separate-EMGIMU-100-0.9-mantena",
-#                                           "z_normalization-separate-EMGIMU-100-0.9-rehman",
-#                                           "z_normalization-continues-EMGIMU-100-0.9-rehman",
-#                                           "z_normalization-separatecontinues-EMGIMU-100-0.9-rehman",
-#                                           "z_normalization-separatecontinues-EMGIMU-100-0.9-mantena"]
-
 # Standard Varianten
 USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
@@ -218,3 +195,7 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 
 CNN_1 = "CNN_1"
 CNN_KAGGLE = "CNN_Kaggle"
+
+
+rest_mean="rest_mean"
+max_value_channel="max_value_channel"
