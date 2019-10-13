@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""
+This script contains all Constants for the EMG_Recognition Project
+"""
+
 import collections
 import os
 import threading
@@ -12,6 +17,15 @@ from PIL import Image, ImageTk
 from myo import init, Hub
 from Helper_functions import wait
 from Save_Load import save_raw_data, create_directories_for_data_collection
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 DEVICE_L, DEVICE_R = None, None
 EMG = []  # Emg

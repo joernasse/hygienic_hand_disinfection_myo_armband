@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+"""
+This script contains all Constants for the EMG_Recognition Project
+"""
+
 import os
 import time
 import numpy as np
@@ -5,6 +10,15 @@ import matplotlib.pyplot as plt
 import sklearn
 import Constant
 from sklearn.metrics import confusion_matrix
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 
 def cls():
@@ -198,12 +212,15 @@ def flat_users_data(dict_data):
     return x, y
 
 
-def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
+def normalize_by_rest_gesture(data, sensor, mode=Constant.rest_mean):
     """
-    TODO
-    :param data:
-    :param sensor:
-    :param mode:
+    Normalize the given data by the mean or max value of the rest gesture. The normalization will performed for each channel separately
+    :param data:list
+            Input data which should be normed
+    :param sensor:string
+            Sensor Type, "EMG" or "IMU"
+    :param mode:string
+            determines which type of normalization is used. Average or maximum value
     :return:
     """
     print("Normalization by Rest gesture - Start")
@@ -213,7 +230,7 @@ def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
         element = 9
     rest_data = data['Rest']
     channel, mean = [], []
-    if mode == 'rest_mean':
+    if mode == Constant.rest_mean:
         for ch in range(1, element):
             for i in range(len(rest_data)):
                 channel.append(rest_data[i][ch])
@@ -230,7 +247,7 @@ def normalize_by_rest_gesture(data, sensor, mode='rest_mean'):
             print("Not expected exception in normalization by rest function")
             raise
 
-    if mode == 'max_value_channel':
+    if mode == Constant.max_value_channel:
         for d in data:
             items = []
             for ch in range(1, element):

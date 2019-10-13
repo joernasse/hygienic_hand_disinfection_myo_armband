@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-
+This script contains all Constants for the EMG_Recognition Project
 """
 
 from scipy import signal
@@ -195,3 +195,7 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 
 CNN_1 = "CNN_1"
 CNN_KAGGLE = "CNN_Kaggle"
+
+
+rest_mean="rest_mean"
+max_value_channel="max_value_channel"
