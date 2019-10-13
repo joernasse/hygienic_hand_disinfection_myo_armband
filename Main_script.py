@@ -1,7 +1,6 @@
 from __future__ import print_function
 import matplotlib.pyplot as plt
 import tensorflow
-
 import Classic_classification
 import Constant
 from Deep_learning_classification import calculate_cnn, predict_for_model, adapt_model_for_user, create_cnn_1_model
@@ -13,6 +12,16 @@ import csv
 import multiprocessing as mp
 import os
 from tensorflow.python.keras.models import load_model
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
+
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 path_add = [Constant.SEPARATE_PATH, Constant.CONTINUES_PATH]
@@ -265,8 +274,8 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
     :return:
     """
     print("Current config", config)
-    training_data = Save_Load.load_raw_data(config=config, user_list=training_users, path=feature_sets_path)
-    test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+    training_data = Save_Load.load_feature_data(config=config, user_list=training_users, path=feature_sets_path)
+    test_data = Save_Load.load_feature_data(config=config, user_list=[test_user], path=feature_sets_path)
     print(len(training_data))
 
     if ignore_rest_gesture:
@@ -315,14 +324,14 @@ def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
 
             if sensor == Constant.IMU:
                 if steps.__contains__(session):
-                    training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
+                    training_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/imu.csv"))
                 else:
-                    test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/imu.csv"))
+                    test_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/imu.csv"))
             else:
                 if steps.__contains__(session):
-                    training_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
+                    training_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/emg.csv"))
                 else:
-                    test_dict[index].extend(Save_Load.load_raw_for_single_sensor(path_data + "/emg.csv"))
+                    test_dict[index].extend(Save_Load.load_raw_for_one_sensor(path_data + "/emg.csv"))
 
     print(user, "done")
     return training_dict, test_dict
@@ -358,7 +367,7 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
             if predefine_configs is not None:
                 for user in user_list:
                     print(user)
-                    users_data = Save_Load.load_raw_data(config=config, path=feature_set_path, user_list=[user])
+                    users_data = Save_Load.load_feature_data(config=config, path=feature_set_path, user_list=[user])
 
                     if not users_data:
                         continue
@@ -384,8 +393,8 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                                 if predefine_configs:
                                     config = predefine_configs
 
-                                users_data = Save_Load.load_raw_data(config=config, path=feature_set_path,
-                                                                     user_list=[user])
+                                users_data = Save_Load.load_feature_data(config=config, path=feature_set_path,
+                                                                         user_list=[user])
 
                                 if not users_data:
                                     continue
@@ -687,8 +696,8 @@ def user_independent_grid_search(classifier, classifier_name, save_path, config,
             Indicates whether the "pause" gesture should be removed from the loaded data
     :return:
     """
-    training_data = Save_Load.load_raw_data(config=config, user_list=training_user_list, path=feature_sets_path)
-    test_data = Save_Load.load_raw_data(config=config, user_list=[test_user], path=feature_sets_path)
+    training_data = Save_Load.load_feature_data(config=config, user_list=training_user_list, path=feature_sets_path)
+    test_data = Save_Load.load_feature_data(config=config, user_list=[test_user], path=feature_sets_path)
 
     if ignore_rest_gesture:
         test_data[0] = Process_data.remove_rest_gesture_data(user_data=test_data[0])

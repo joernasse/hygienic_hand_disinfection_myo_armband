@@ -1,3 +1,7 @@
+#!/usr/bin/env python
+"""
+
+"""
 import os
 import scipy.signal as signal
 from scipy.stats import zscore
@@ -6,12 +10,20 @@ import Feature_extraction as fe
 import Save_Load
 import numpy as np
 
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
+
 np.seterr(divide='ignore')
 
 
 def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
-                     save_path_for_featureset="./", load_path=Constant.collections_path_default,
-                     summary_path=None):
+                     save_path_for_featureset="./", load_path=Constant.collections_path_default):
     """
     Load raw data for user, window the data, pre process the data,
     extract  features from data, save extracted features to file
@@ -86,10 +98,6 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
         if not os.path.isdir(save_path_for_featureset):
             os.mkdir(save_path_for_featureset)
 
-        #todo remove lines
-        if summary_path is not None:
-            save_path_for_featureset=summary_path
-        #todo  end
         filename = user + "-" + pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
             overlap) + "-" + feature
         Save_Load.save_features(features, save_path_for_featureset + "/" + filename + ".csv")
@@ -100,16 +108,19 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
         raise
 
 
-def window_for_one_sensor(input_data, window, degree_of_overlap=0):
+def window_for_one_sensor(input_data, window, overlap=0):
     """
-    TODO
-    :param input_data:
-    :param window:
-    :param degree_of_overlap:
+    Window the raw data only for one sensor. Takes no account of the other sensor.
+    :param input_data:list
+            List of the input raw data
+    :param window:int
+            Window size
+    :param overlap:float
+            Overlap of the windows
     :return:
     """
     try:
-        offset = window * degree_of_overlap
+        offset = window * overlap
         data_cutted = [np.asarray(x[1:-1]) for x in input_data]
         w_data, labels = [], []
         label = input_data[0][-1]
@@ -135,9 +146,7 @@ def window_data_for_both_sensor(emg_data, imu_data, window, degree_of_overlap, s
     Window the EMG and IMU data, that the time interval is equal
     Window size will be different for IMU and EMG data
     :param emg_data: dict{}
-    TODO:
     :param imu_data: dict{}
-    TODO
     :param window: int
             Descibes the windows size
     :param degree_of_overlap: float
@@ -276,8 +285,8 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
         for i in range(len(directories)):
             for steps in directories[i]:
                 index = steps[2:]
-                raw_data[index].extend(Save_Load.load_raw_for_single_sensor(path + path_add[i] + "/" + steps + "/"
-                                                                            + sensor + ".csv"))
+                raw_data[index].extend(Save_Load.load_raw_for_one_sensor(path + path_add[i] + "/" + steps + "/"
+                                                                         + sensor + ".csv"))
 
         print("Load raw data for", user, " - Done")
     print("Raw data length", len(raw_data['Step0']))
@@ -301,7 +310,7 @@ def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     for key in label:
         raw += len(raw_data[key])
         print(raw)
-        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window, degree_of_overlap=overlap)
+        window_tmp, label = window_for_one_sensor(input_data=raw_data[key], window=window, overlap=overlap)
         window_data.extend(window_tmp)
         np.vstack((window_data, window_tmp))
         labels.extend(np.asarray(label))

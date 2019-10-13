@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-This script contains all Constants for the EMG_Recognition Project
+This script contains different helper functions for visualization, normalization, display a edit the structure of raw data
 """
 
 import os

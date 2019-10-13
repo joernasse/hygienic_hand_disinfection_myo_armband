@@ -70,12 +70,13 @@ def save_features(features, file_name):
     return f
 
 
-# TODO: besserer Name
-def load_raw_for_single_sensor(path):
+def load_raw_for_one_sensor(path):
     """
-    TODO
-    :param path:
-    :return:
+    Load the Data for one sensor from a given file
+    :param path:string
+            Path to the raw data (folder)
+    :return:array
+            Return an array of the loaded data.
     """
     data = []
     try:
@@ -91,7 +92,7 @@ def load_raw_for_single_sensor(path):
 
 def load_raw_data_for_both_sensors(emg_path, imu_path):
     """
-    TODO
+    Load the data for both sensors (EMG and IMU) from a file
     :param emg_path: string
             The path to the emg.csv to open the file
     :param imu_path: string
@@ -105,15 +106,11 @@ def load_raw_data_for_both_sensors(emg_path, imu_path):
                          "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
                          "label": []}
     """
-    imu_load_data = {"timestamp": [],
-                     "x_ori": [], "y_ori": [], "z_ori": [],
-                     "x_gyr": [], "y_gyr": [], "z_gyr": [],
-                     "x_acc": [], "y_acc": [], "z_acc": [],
-                     "label": []}
+    imu_load_data = {"timestamp": [], "x_ori": [], "y_ori": [], "z_ori": [], "x_gyr": [], "y_gyr": [], "z_gyr": [],
+                     "x_acc": [], "y_acc": [], "z_acc": [], "label": []}
 
-    emg_load_data = {"timestamp": [],
-                     "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
-                     "label": []}
+    emg_load_data = {"timestamp": [], "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [],
+                     "ch7": [], "label": []}
     load_data, identifier = [], []
     try:
         imu_file, emg_file = open(imu_path), open(emg_path)
@@ -141,9 +138,9 @@ def load_raw_data_for_both_sensors(emg_path, imu_path):
         raise
 
 
-def load_raw_data(config, path, user_list=USERS):
+def load_feature_data(config, path, user_list=USERS):
     """
-    TODO
+    Load the preprocessed data (after windowing, preprocessing  and features extraction) from a file
     :param config: string
             Describes the configuration for the features
     :param user_list: array
@@ -169,35 +166,22 @@ def load_raw_data(config, path, user_list=USERS):
     return users_data
 
 
-# def load_feature_csv(file):
-#     label, data = [], []
-#     reader = csv.reader(file, delimiter=';')
-#     for column in reader:
-#         tmp = []
-#         for x in column[:-1]:
-#             if x == "inf":
-#                 tmp.append(sys.float_info.max)
-#             try:
-#                 tmp.append(numpy.float64(x))
-#             except:
-#                 tmp.append(numpy.abs(complex(x)))
-#         data.append(tmp)
-#         label.append(int(column[-1]))
-#
-#     return data, label
-
-
-def create_directories_for_data_collection(proband, delete_old, raw_path, raw_con, raw_sep):
+def create_directories_for_data_collection(user, delete_old, raw_path, raw_con, raw_sep):
     """
-    TODO
-    :param proband:
-    :param delete_old:
-    :param raw_path:
-    :param raw_con:
-    :param raw_sep:
+    Create al necessary directories to save the collected data (user study, GUI)
+    :param user:string
+            The user for which the directories will be created
+    :param delete_old:boolean
+            If True, delete all old directories for the given user
+    :param raw_path:string
+            Path for the raw data directory
+    :param raw_con:string
+            Path for the continues collected data
+    :param raw_sep: string
+            Path for the continues collected data
     :return:
     """
-    user_path = COLLECTION_DIR + "/" + proband
+    user_path = COLLECTION_DIR + "/" + user
     if not os.path.isdir(COLLECTION_DIR):  # Collection dir
         os.mkdir(COLLECTION_DIR)
         log.info("Create directory" + COLLECTION_DIR)
