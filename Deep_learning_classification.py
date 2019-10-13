@@ -1,36 +1,59 @@
+#!/usr/bin/env python
+"""
+
+"""
+
 from collections import Counter
 from time import time
-
 import numpy as np
 import keras
-from keras import layers
 from keras.utils import to_categorical
 from sklearn.model_selection import train_test_split
 from tensorflow.python import keras
 from tensorflow.python.keras import Sequential
 from tensorflow.python.keras.layers import Conv2D, Flatten, Dense, MaxPooling2D, Dropout
-import tensorflow as tf
 import Constant
 import Helper_functions
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 
 def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_stopping=20, cnn_pattern=Constant.CNN_1,
                   validation_size=Constant.validation_set_size, test_size=Constant.test_set_size, perform_test=False,
                   visualization=False):
     """
-
-    :param x:
-    :param y:
-    :param save_path:
-    :param batch:
-    :param epochs:
-    :param config:
-    :param early_stopping:
-    :param cnn_pattern:
-    :param test_size:
-    :param validation_size:
-    :param perform_test:
-    :param visualization:
+    Train a CNN with given training data and save the model
+    :param x: list
+            The training data
+    :param y:list
+            The label for training data
+    :param save_path:string
+            The save path
+    :param batch:int
+            Batch size
+    :param epochs:int
+            Number of epochs
+    :param config:string
+            The configuration, indicates the CNN, will be added to model name
+    :param early_stopping:int
+            The parameter set the early stopping
+    :param cnn_pattern:string
+            Indicates which model structure will be used
+    :param test_size:float
+            Specifies the portion of data to be retained as test data
+    :param validation_size:float
+            Specifies the portion of data to be retained as validation data
+    :param perform_test:boolean
+            If True a prediction will performed on the test data
+    :param visualization: boolean
+            If True the results and history will be visualized
     :return:
     """
 
@@ -87,67 +110,24 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
     return model, cnn_pattern, acc
 
 
-def dnn(save_path, users_data, batch, epochs):
-    """
-
-    :param save_path:
-    :param users_data:
-    :param batch:
-    :param epochs:
-    :return:
-    """
-    test_user = users_data[0].copy()
-    train_users = users_data.copy()
-    train_users.pop(0)
-
-    x_train, y_train = Helper_functions.flat_users_data(train_users)
-    x_test, y_test = Helper_functions.flat_users_data([test_user])
-
-    classes = 13
-
-    # x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=TEST_SIZE)
-    model = tf.keras.Sequential()
-    model.add(layers.Dense(2048, activation='elu'))
-    model.add(layers.Dense(1024, activation='elu'))
-    model.add(layers.Dense(512, activation='elu'))
-    model.add(Dropout(0.5))
-    model.add(layers.Dense(classes, activation='softmax'))
-
-    model.compile(loss=keras.losses.categorical_crossentropy,
-                  optimizer='adam',
-                  metrics=['accuracy'])
-
-    cp_callback = tf.keras.callbacks.ModelCheckpoint(save_path + "/dnn_feature_extraction_model.h5",
-                                                     verbose=1, monitor='val_acc',
-                                                     save_best_only=True, mode='max')
-
-    print("batch_size", batch, "epochs", epochs)
-
-    history = model.fit(x_train, y_train,
-                        batch_size=batch, epochs=epochs,
-                        validation_data=(x_test, y_test), callbacks=[cp_callback], verbose=1)
-
-    y_predict = model.predict_classes(x_test, batch)
-    # model.save('myFirstCNN.model')
-
-    model.summary()
-    # visualization_history(history)
-
-    np.set_printoptions(precision=2)
-    print("finish")
-
-
 def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
                          test_size=Constant.test_set_size, calc_test_set=False):
     """
-
-    :param x:
-    :param y:
-    :param adapt_model:
-    :param validation_size:
-    :param calc_test_set:
-    :param test_size:
-    :return:
+    Prepare the preprocessed data for the usage in a CNN. Splits the data into test, training and validation data.
+    :param x:matrix
+            The windowed and preprocessed data
+    :param y: list
+            The labels for the input matrix x
+    :param test_size:float
+            Specifies the portion of data to be retained as test data
+    :param validation_size:float
+            Specifies the portion of data to be retained as validation data
+    :param calc_test_set:boolean
+            If True a test data set will be calculated from the input data set
+    :return: x_train, x_test, x_val, y_train, y_test, y_val, classes
+            Return the matrices of the test,training and validation data
+            Return the lists of the labels for the test, training and validation matrices
+            Return the number of classes
     """
     if test_size > 0 and calc_test_set:
         x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=42, test_size=test_size)
@@ -171,92 +151,30 @@ def prepare_data_for_cnn(x, y, validation_size=Constant.validation_set_size,
     return x_train, x_test, x_val, y_train, y_test, y_val, classes
 
 
-# def cnn_1(x, y, save_path, batch, epochs, config=""):
-#     """
-#
-#     :param x:
-#     :param y:
-#     :param save_path:
-#     :param batch:
-#     :param epochs:
-#     :param config:
-#     :return:
-#     """
-#     print("batch_size", batch, "epochs", epochs)
-#     x_train, x_test, y_train, y_test_one_hot, classes, y_test, x_val, y_val_one_hot = pre_process_cnn(x, y,
-#                                                                                                       validation_size=0.1)
-#
-#     # model = Sequential()
-#     #
-#     # # layer 1
-#     # model.add(Conv2D(32, kernel_size=3,
-#     #                  activation='relu',
-#     #                  input_shape=(x_train.shape[1],
-#     #                               x_train.shape[2], 1)))
-#     # model.add(MaxPooling2D(pool_size=(2, 2)))
-#     #
-#     # # Layer 2
-#     # model.add(Conv2D(32, kernel_size=3,
-#     #                  activation='relu'))
-#     # # model.add(MaxPooling2D(pool_size=(2, 2)))
-#     # #
-#     # # Layer 3
-#     # model.add(Flatten())
-#     # model.add(Dense(512, activation='elu'))
-#     # model.add(Dense(classes, activation='softmax'))
-#
-#     model.compile(loss=keras.losses.categorical_crossentropy,
-#                   optimizer='adam',
-#                   metrics=['accuracy'])
-#
-#     cp_callback = [
-#         keras.callbacks.EarlyStopping(
-#             monitor='val_acc',
-#             patience=20,
-#             mode='max',
-#             verbose=1),
-#         keras.callbacks.ModelCheckpoint(
-#             save_path + "/" + config + "_cnn_1.h5",
-#             verbose=1,
-#             monitor='val_acc',
-#             save_best_only=True,
-#             mode='max')]
-#
-#     history = model.fit(x_train, y_train,
-#                         batch_size=batch,
-#                         epochs=epochs,
-#                         validation_data=(x_val, y_val_one_hot),
-#                         callbacks=cp_callback,
-#                         verbose=1, shuffle=True)
-#
-#     y_predict = model.predict_classes(x_test, batch)
-#
-#     model.summary()
-#
-#     acc = Helper_functions.result_visualization(history, y_test, y_predict, save_path=save_path, config=config)
-#     print("Train and predict CNN1 done")
-#     del model
-#     keras.backend.clear_session()
-#     gc.collect()
-#     del x_train, y_train, x_val, x_test
-#     return "CNN_1", acc
-
-
 def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, file_name, x_test_in, y_test_in, model,
                          calc_test_set=False, cnn_pattern=Constant.CNN_KAGGLE):
     """
-
-    :param x_train:
-    :param y_train:
-    :param save_path:
-    :param batch:
-    :param epochs:
-    :param file_name:
-    :param x_test_in:
-    :param y_test_in:
+    Trains a generalized model with a data set of an unknown user
+    :param x_train:matrix
+            Data with which the CNN is to be trained
+    :param y_train:list
+            labels for the training data
+    :param save_path:string
+            The save path
+    :param batch:int
+            Batch size
+    :param epochs:int
+            Number of epochs
+    :param cnn_pattern:string
+            Indicates which model structure will be used
+    :param x_test_in: matrix
+             Data with which the CNN is to be tested
+    :param y_test_in: list
+            labels for the test data
     :param model:
-    :param calc_test_set:
-    :param cnn_pattern:
+            An existing CNN
+    :param calc_test_set:boolean
+            If True, perform a prediction on the test date
     :return:
     """
     x_train, x_test, x_val, y_train, y_test, y_val, classes = prepare_data_for_cnn(x_train, y=y_train,
@@ -298,17 +216,21 @@ def adapt_model_for_user(x_train, y_train, save_path, batch, epochs, file_name, 
     return model
 
 
-def predict_for_load_model(x_test, y_test, model, batch_size=32):
+def predict_for_model(x_test, y_test, model, batch=32):
     """
-
-    :param x_test:
-    :param y_test:
+    Perform a prediction for given data on the given model.
+    :param x_test: matrix
+             Data with which the CNN is to be tested
+    :param y_test: list
+            labels for the test data
     :param model:
-    :param batch_size:
+            An existing CNN
+    :param batch:int
+            The batch size
     :return:
     """
     x_test = np.array(x_test)[:, :, :, np.newaxis]
-    y_predict = model.predict_classes(x_test, batch_size)
+    y_predict = model.predict_classes(x_test, batch)
     evaluation = model.evaluate(x_test, to_categorical(y_test))
     print("EVAL", evaluation)
     accuracy_score = Helper_functions.result_visualization(y_test, y_predict, show_figures=True, save_path="./")
@@ -316,6 +238,16 @@ def predict_for_load_model(x_test, y_test, model, batch_size=32):
 
 
 def create_rehman_model(shape_x, shape_y, output):
+    """
+    Creates a CNN based on the structure of Rehman's scientific work.
+    :param shape_x:int
+            Input shape of y for the CNN
+    :param shape_y:int
+            Input shape of y for the CNN
+    :param output:int
+            Output of the CNN (normally the number of classes)
+    :return:
+    """
     model = Sequential()
     # layer 1
     model.add(Conv2D(32, kernel_size=3,
@@ -328,6 +260,15 @@ def create_rehman_model(shape_x, shape_y, output):
 
 
 def create_cnn_1_model(shape_x, shape_y, output):
+    """
+        Creates an CNN based on a simple structure
+    :param shape_x:int
+            Input shape of y for the CNN
+    :param shape_y:int
+            Input shape of y for the CNN
+    :param output:int
+            Output of the CNN (normally the number of classes)
+    """
     model = Sequential()
 
     # layer 1
@@ -350,9 +291,13 @@ def create_cnn_1_model(shape_x, shape_y, output):
 
 def create_kaggle_model(shape_x, shape_y, output):
     """
-    :param shape_x:
-    :param shape_y:
-    :param output:
+    Creates a CNN based on the structure of entry on kaggle.com.
+    :param shape_x:int
+            Input shape of y for the CNN
+    :param shape_y:int
+            Input shape of y for the CNN
+    :param output:int
+            Output of the CNN (normally the number of classes)
     :return:
     """
     model = keras.Sequential()
