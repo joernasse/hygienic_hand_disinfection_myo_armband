@@ -149,16 +149,10 @@ USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
          "User009", "User010", "User011", "User012",
          "User013", "User014", "User015"]
-USERS_SUB = ["User002", "User003", "User004",
-             "User006", "User002", "User008",
-             "User010", "User011", "User012",
-             "User014", "User015"]
-
-# Without user007
-USERS_cross = ["User001", "User002", "User003", "User004",
-               "User005", "User006", "User008",
-               "User009", "User010", "User011", "User012",
-               "User013", "User014", "User015"]
+USERS_SUB = ["User001", "User002", "User004",
+             "User005", "User006", "User007", "User008",
+             "User009", "User010", "User011", "User012",
+             "User013", "User014", "User015"]
 
 # ----------------------------------Configuration levels---------------------------------------------------------------#
 level_0 = [filter_, z_norm, no_pre_processing]
