@@ -3,34 +3,43 @@ import Constant
 import numpy as np
 
 
-def rms(array):  # root mean square
+def rms(x):
+    """
+    Root mean square
+    :param x: array
+            Array for which the feature is calculated
+    :return: float
+            Root mean square for input array
+    """
     sum = 0
-    n = len(array)
-    for i in array:
+    n = len(x)
+    for i in x:
         sum += i * i
     return np.sqrt(1 / n * sum)
 
 
-def mav(array):  # Mean Absolute Value
+def mav(x):
+    """
+    Mean Absolute Value
+    :param x:array
+            Array for which the feature is calculated
+    :return:float
+        Mean Absolute Value for input array
+    """
     sum = 0
-    n = len(array)
-    for i in array:
+    n = len(x)
+    for i in x:
         sum += np.abs(i)
     return 1 / n * sum
 
 
-# Variance
-def var(array):
-    n = len(array)
-    mean = mav(array)
-    sum = 0
-    for a in array:
-        sum += np.power(a - mean, 2)
-    return (1 / float(n - 1)) * sum
-
-
-# Zero Crossing
 def zc(x):
+    """
+    Zero Crossing
+    :param x:array
+            Array for which the feature is calculated
+    :return:
+    """
     n = len(x)
     sum = 0
     for i in range(n - 1):
@@ -39,34 +48,50 @@ def zc(x):
     return sum
 
 
-# integrated absolute value
-# IEMG
-def iemg(array):
+def iemg(x):
+    """
+    Integrated absolute value
+    :param x:array
+            Array for which the feature is calculated
+    :return:
+    """
     sum = 0
-    for i in array:
+    for i in x:
         sum += np.abs(i)
     return sum
 
 
-# Simple Square Integral
-def ssi(array):
+def ssi(x):
+    """
+    Simple Square Integral
+    :param x:array
+            Array for which the feature is calculated
+    :return:
+    """
     sum = 0
-    for i in array:
+    for i in x:
         sum += np.power(np.abs(i), 2)
     return sum
 
 
-def wl(array):  # Waveform length
+def wl(x):
+    """
+    Waveform length
+    :param x:array
+            Array for which the feature is calculated
+    :return:
+    """
     sum = 0
-    for i in range(0, len(array) - 1):
-        sum += abs(array[i + 1] - array[i])
+    for i in range(0, len(x) - 1):
+        sum += abs(x[i + 1] - x[i])
     return sum
 
 
 def cc(x):
     """
-    cepstral coeffcients
-    :param x:
+    Cepstral coeffcients
+    :param x:array
+            Array for which the feature is calculated
     :return:
     """
     try:
@@ -81,18 +106,18 @@ def cc(x):
         print(RuntimeWarning)
 
 
-def aac(array):
+def aac(x):
     """
     Average amplitude change
-    :param array:
+    :param x:
             data for which the Average amplitude change should be calculated
     :return: float
             flo
     """
-    n = len(array)
+    n = len(x)
     sum = 0
     for i in range(0, n - 1):
-        sum += array[i + 1] - array[i]
+        sum += x[i + 1] - x[i]
     return sum / float(n)
 
 
@@ -110,7 +135,7 @@ def rehman(data):
 
 def georgi(data, sensor):
     """
-    Feature set from geori
+    Feature set from georgi
     Paper: Recognizing Hand and Finger Gestures with IMU based Motion and EMG based Muscle Activity Sensing
     :param data:array
            Data from which features are to be extracted
@@ -127,7 +152,7 @@ def georgi(data, sensor):
 
 def feature_extraction(windows, mode, sensor):
     """
-
+    Handles the feature extraction for different feature sets
     :param windows: list
             The list of windows for which a feature extraction should be performed
     :param mode: string
@@ -163,7 +188,7 @@ def mantena(data):
     :return: list
             Feature vector
     """
-    return [rms(data), iemg(data), ssi(data), var(data), wl(data), aac(data)]
+    return [rms(data), iemg(data), ssi(data), np.var(data), wl(data), aac(data)]
 
 
 def ssc(x):
