@@ -11,7 +11,7 @@ import Helper_functions
 from Helper_functions import flat_users_data
 
 
-def train_user_independent_cross_validation(data, classifier, classifier_name, norm, save_path, config):
+def train_user_independent_cross_validation(data, classifier, classifier_name, save_path, config):
     """
     This function will cross validate a set of user data.
     Given is a set of Data ordered by users.
@@ -22,9 +22,6 @@ def train_user_independent_cross_validation(data, classifier, classifier_name, n
             Describe the classifierfor training
     :param classifier_name: string
             Describe the Name of the classifier
-    :param norm: boolean
-            If True, data will be normed
-            If False data will not be normed
     :param save_path: string
             Describe the path for saving, without the filename
     :param config: string
@@ -40,10 +37,6 @@ def train_user_independent_cross_validation(data, classifier, classifier_name, n
         reduced_data = data.copy()
         reduced_data.pop(n)
         x_train_cv, y_train_cv = flat_users_data(reduced_data)
-
-        if norm:
-            x_train_cv = norm_data(x_train_cv)
-            x_val = norm_data(x_val)
 
         print("Train length", len(x_train_cv),
               "\nValidation length", len(x_val))
@@ -69,7 +62,7 @@ def train_user_independent_cross_validation(data, classifier, classifier_name, n
 
 
 def train_user_independent(training_data, test_data, config, classifiers_name, classifiers, save_path,
-                           save_model=False, norm=False, visualization=False):
+                           save_model=False, visualization=False):
     """
     TODO
     :param training_data:
@@ -79,7 +72,6 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
     :param classifiers:
     :param save_path:
     :param save_model:
-    :param norm:
     :param visualization:
     :return:
     """
@@ -89,12 +81,6 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
         print("Start for", classifiers_name[i])
         x_train, y_train = flat_users_data(training_data)
         x_test, y_test = flat_users_data(test_data)
-
-        # Norm
-        if norm:
-            x_train = norm_data(x_train)
-            x_test = norm_data(x_test)
-            config = config + "_norm"
 
         print("Training number", len(x_train), "\nTest number", len(x_test))
 
@@ -130,14 +116,10 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
     return True
 
 
-def train_user_dependent_grid_search(classifier, training_data, test_data, norm):
+def train_user_dependent_grid_search(classifier, training_data, test_data):
     print("User dependent grid search - Start")
     x_train, y_train = flat_users_data(training_data)
     x_test, y_test = flat_users_data(test_data)
-
-    # Norm
-    if norm:
-        x_train = norm_data(x_train)
 
     print("Train length", len(x_train),
           "\nValidation length", len(x_test))
@@ -151,7 +133,7 @@ def train_user_dependent_grid_search(classifier, training_data, test_data, norm)
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name,
-                         save_path, save_model=False, visualization=False, norm=False):
+                         save_path, save_model=False, visualization=False):
     """
     TODO
     :param user_data:
@@ -168,14 +150,8 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
     best, best_clf, name = 0, None, "no_name"
     x_train, x_test, y_train, y_test = train_test_split(user_data['data'], user_data['label'],
                                                         test_size=Constant.test_set_size, random_state=42, shuffle=True)
-    if norm:
-        config += "_norm"
 
     for i in range(len(classifiers)):
-        if norm:
-            x_train = norm_data(x_train)
-            x_test = norm_data(x_test)
-
         clf = clone(classifiers[i])
         clf.fit(x_train, y_train)
         y_predict = clf.predict(x_test)
@@ -217,33 +193,15 @@ def save_classifier(classifier, path):
         pickle.dump(classifier, file)
 
 
-def predict_for_unknown_user(model, unknown_user_data, norm=False):
+def predict_for_unknown_user(model, unknown_user_data):
     """
     Predict results by a given trained model for unknown user (user independent category)
     :param model: Classifier
             Given (trained) classifier for prediction
     :param unknown_user_data:
-    :param norm: list of dict
-            dict:{'data':list,'label':list}
     :return: No returns
     """
     x, y = flat_users_data(unknown_user_data)
-    if norm:
-        x = norm_data(x)
     y_predict = model.predict(x)
     Helper_functions.result_visualization(y, y_predict)
     plt.show()
-
-
-def norm_data(data):
-    """
-    Norm the input data by the sciKit-Learn StdandardScaler function
-    :param data: array
-            Data which should be normed
-    :return: array
-            Normed data
-    """
-    print("Normed by sklearn.preprocessing.StandardScaler")
-    sc = sklearn.preprocessing.StandardScaler(copy=True, with_mean=True, with_std=True)
-    sc.fit(data)
-    return sc.transform(data)

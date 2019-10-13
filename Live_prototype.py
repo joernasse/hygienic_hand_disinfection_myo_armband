@@ -571,14 +571,14 @@ def validate_models(session=2):
     :return:
     """
     cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
-    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
-    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
-    # cnn_imu_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User002_Live/User002_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
-    # cnn_emg_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User002_Live/User002_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
+    # cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
+    # cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+    cnn_imu_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
+    cnn_emg_adapt = load_model("C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
 
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
-    cnn_adapt_collect, classic_live_collect = True, True
-    # cnn_adapt_collect, classic_live_collect = False,False
+    # cnn_adapt_collect, classic_live_collect = True, True
+    cnn_adapt_collect, classic_live_collect = False,False
     classic_live = None
     datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
     classic_ud.verbose, classic_ui.verbose = 0, 0
@@ -590,7 +590,6 @@ def validate_models(session=2):
     w_classic = 100
     overlap = 0.9
     init()
-
 
     with hub.run_in_background(gesture_listener.on_event):
         check_samples_rate()
@@ -633,9 +632,9 @@ def validate_models(session=2):
                     predict_classic_ud = classic_ud.predict(features)
                     predict_classic_ui = classic_ui.predict(features)
 
-                    # If live classifier is trained
-                    if not classic_live_collect and classic_live is not None:
-                        predict_classic_live = classic_live.predict(features)
+                    # # If live classifier is trained
+                    # if not classic_live_collect and classic_live is not None:
+                    #     predict_classic_live = classic_live.predict(features)
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
@@ -692,10 +691,10 @@ def validate_models(session=2):
                         eval_predictions(predict=predict_imu_adapt, proba=proba_imu_adapt, y_true=label,
                                          file_prefix="cnn_imu_adapt", session=s, seq=n, classic=False)
 
-                    if not classic_live_collect:
-                        eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
-                                         file_prefix="classic_live",
-                                         session=s, seq=n, classic=True)
+                    # if not classic_live_collect:
+                    #     eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
+                    #                      file_prefix="classic_live",
+                    #                      session=s, seq=n, classic=True)
 
                 if classic_live_collect:
                     print("Train classic")
@@ -716,7 +715,6 @@ def validate_models(session=2):
                                                          calc_test_set=False)
                     cnn_adapt_collect = False
     hub.stop()
-
 
 if __name__ == '__main__':
     main()
