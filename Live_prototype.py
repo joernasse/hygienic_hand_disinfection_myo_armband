@@ -1,3 +1,10 @@
+#!/usr/bin/env python
+"""
+Ths Script contains the functionality to perform a live validation for a given set of machine learning models.
+It´s also possible to run a live application to perform the gestures of hygienic hand disinfection and
+get direct feedback on how the data has been classified
+"""
+
 import csv
 import os
 import pickle
@@ -15,6 +22,15 @@ import numpy as np
 from tensorflow.python.keras.models import load_model
 import collections
 from Deep_learning_classification import adapt_model_for_user
+
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 cnn_emg_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
 cnn_imu_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
@@ -40,13 +56,9 @@ ACC = []  # accelerometer
 emg_l, emg_r = [], []
 tmp = []
 status = 0
-imu_load_data = {"timestamp": [],
-                 "x_ori": [], "y_ori": [], "z_ori": [],
-                 "x_gyr": [], "y_gyr": [], "z_gyr": [],
-                 "x_acc": [], "y_acc": [], "z_acc": [],
-                 "label": []}
-emg_dict = {"timestamp": [],
-            "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
+imu_load_data = {"timestamp": [], "x_ori": [], "y_ori": [], "z_ori": [], "x_gyr": [], "y_gyr": [], "z_gyr": [],
+                 "x_acc": [], "y_acc": [], "z_acc": [], "label": []}
+emg_dict = {"timestamp": [], "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
             "label": []}
 
 seq_duration = [5, 4, 3, 2]
@@ -132,7 +144,6 @@ def load_models_for_validation():
     Std. load cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
     ud: user dependent
     ui: user independent
-
     :return: cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
                     returns the loaded models
     """
@@ -171,13 +182,13 @@ def preprocess_data(w_emg, w_imu, filter_type):
     """
     Preprocess the windowed raw data. Apply the filter or z-normalization
     :param w_emg: list
-                    List of windowed EMG data
+                List of windowed EMG data
     :param w_imu: list
                 List of windowed IMU data
     :param filter_type: string,
-                        Specifies which filter is to be used.
+                Specifies which filter is to be used.
     :return: list,list
-                return the preprocessed windowed list of EMG and IMU data
+                Return the preprocessed windowed list of EMG and IMU data
     """
     if filter_type == Constant.filter_:
         p_emg, p_imu = Process_data.filter_emg_data(w_emg, filter_type)
@@ -194,7 +205,11 @@ def main():
     :return:
     """
 
+    # --------------------------------------------Model Validation START ----------------------------------------------#
     validate_models(session=2)
+    # --------------------------------------------Model Validation END ------------------------------------------------#
+
+    # --------------------------------------------Live application START ----------------------------------------------#
     # cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
     # cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
     # live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
@@ -202,19 +217,27 @@ def main():
     #                 cnn_imu=load_model(cnn_imu_user001_path),
     #                 clf_type='cnn',
     #                 record_time=2)
+    # --------------------------------------------Live application END ------------------------------------------------#
 
 
 def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
     """
-    Evaluation of the live predictio
-    :param predict:list,
+    Evaluation for a given prediction. Requires the predicted and correct labels.
+    Saved the detailed and summarised results in files
+    :param predict:list
+            The predicted classes(labels)
     :param proba:list,
+            The probability of the predicted classes (labels)
     :param y_true:list,
+            The correct labels
     :param file_prefix:string,
+            Indicates the model type. For example emg_cnn_ui means the user independent CNN for EMG data
     :param session:int,
+            Current recording session
     :param seq:int,
+            Current sequence, can also be considered as number of gesture
     :param classic:boolean,
-
+            If True the model used is one of the classic ML Classifier
     :return:
     """
     write_header = False
@@ -499,7 +522,6 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
     feature_set = config_split[5]
     w_emg = 100
     w_imu = 25
-
 
     with hub.run_in_background(gesture_listener.on_event):
         # check_samples_rate()
