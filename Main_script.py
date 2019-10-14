@@ -64,8 +64,8 @@ def process_raw_data(window, overlap, user_list, data_set, preprocess, sensor, i
     if ignore_rest_gesture:
         raw_data['Rest'] = []
 
-    w_data, labels = Process_data.window_raw_data_for_nn(window, overlap, raw_data=raw_data,
-                                                         ignore_rest_gesture=ignore_rest_gesture)
+    w_data, labels = Process_data.raw_data_segmentation_for_nn(window, overlap, raw_data=raw_data,
+                                                               ignore_rest_gesture=ignore_rest_gesture)
 
     if sensor == Constant.IMU:
         if preprocess == Constant.z_norm:
@@ -104,11 +104,11 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
         training_data = Helper_functions.normalize_by_rest_gesture(data=training_data, sensor=sensor)
         test_data = Helper_functions.normalize_by_rest_gesture(data=test_data, sensor=sensor)
 
-    window_data_train, labels_train = Process_data.window_raw_data_for_nn(window=window, overlap=overlap,
-                                                                          raw_data=training_data,
-                                                                          ignore_rest_gesture=ignore_rest_gesture)
-    window_data_test, labels_test = Process_data.window_raw_data_for_nn(window, overlap, raw_data=test_data,
-                                                                        ignore_rest_gesture=ignore_rest_gesture)
+    window_data_train, labels_train = Process_data.raw_data_segmentation_for_nn(window=window, overlap=overlap,
+                                                                                raw_data=training_data,
+                                                                                ignore_rest_gesture=ignore_rest_gesture)
+    window_data_test, labels_test = Process_data.raw_data_segmentation_for_nn(window, overlap, raw_data=test_data,
+                                                                              ignore_rest_gesture=ignore_rest_gesture)
 
     print("Training number", len(window_data_train),
           "\nTest length", len(window_data_test),

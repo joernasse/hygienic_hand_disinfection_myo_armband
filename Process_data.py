@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """
-
+This Script contains the functionality to process the raw data from the myo device
+The function process_raw_data contains the complete sequence of operatinos.
+Windowing, preprocessing and save the results in a file
+Functions filter_emg_data and z_norm are available for signal processing
 """
 import os
 import scipy.signal as signal
@@ -238,7 +241,6 @@ def z_norm(emg, imu):
     :return: array,array
             Z-normalized EMG data
             z-normalized IMU data
-
     """
 
     try:
@@ -259,12 +261,17 @@ def z_norm(emg, imu):
 
 def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=Constant.collections_path_default):
     """
-
-    :param user_list:
-    :param sensor:
-    :param data_set:
-    :param collection_path:
-    :return:
+    Load the raw data for one of the sensors (EMG or IMU) from a file.
+    :param user_list:list
+            List of users for which the data should be loaded
+    :param sensor:string
+            Sensortype, "EMG" or "IMU"
+    :param data_set:string
+            Specifies the data set to be loaded. "separate" and/or "continues"
+    :param collection_path:string
+            The path to the collections folder
+    :return:list
+            Return a list of raw data
     """
     path_add = []
     raw_data = {'Step0': [], 'Step1': [], 'Step1_1': [], 'Step1_2': [], 'Step2': [], 'Step2_1': [], 'Step3': [],
@@ -293,14 +300,20 @@ def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=
     return raw_data
 
 
-def window_raw_data_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
+def raw_data_segmentation_for_nn(window, overlap, raw_data, ignore_rest_gesture=True):
     """
-    TODO
-    :param window:
-    :param overlap:
-    :param raw_data:
-    :param ignore_rest_gesture:
-    :return:
+    Segment the raw data for the usage in a neural network.
+    :param window:int
+            The window size
+    :param overlap:float
+            The degree of (window) overlap
+    :param raw_data:list
+            The raw data
+    :param ignore_rest_gesture:boolean
+            If True the "Rest" gesture will be removed from dataset
+    :return:matrix, list
+            matrix: window_data, The windowed with size raw data n * window *#channel
+            list: labels, A list of labels which are assigned to windows
     """
     labels, window_data, emg_data, raw = [], [], [], 0
     if ignore_rest_gesture:
