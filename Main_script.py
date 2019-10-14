@@ -557,7 +557,7 @@ def train_user_independent_cnn(train_user_list, config, user, save_path="./", pe
     :param user: string
             User on which the CNN is to be tested (the user's data will not be used for training)
     :param save_path:sting
-            Path where the net and results are stored
+            Path where the CNN and results are stored
     :param perform_test: boolean, default False
             Indicates if the CNN should perform a test on the data from given (test)user
     :param cnn_pattern: string, default "kaggle"

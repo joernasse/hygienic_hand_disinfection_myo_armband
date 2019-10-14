@@ -80,15 +80,23 @@ def train_user_independent_cross_validation(data, classifier, classifier_name, s
 def train_user_independent(training_data, test_data, config, classifiers_name, classifiers, save_path,
                            save_model=False, visualization=False):
     """
-    TODO
-    :param training_data:
-    :param test_data:
-    :param config:
-    :param classifiers_name:
+    Training a user independent classic classifier by a given set of training_data. Also performs a prediction on given test set
+    :param training_data: list of dict
+            dict:{'data':list,'label':list}
+    :param test_data: list of dict
+            dict:{'data':list,'label':list}
+    :param config:string
+            Configuration to identifier the CNN
+    :param classifiers_name: string
+            Name of the classifier
     :param classifiers:
-    :param save_path:
-    :param save_model:
-    :param visualization:
+            The given classifier which should be trained
+    :param save_path:string
+            Path to the file where the classifier is stored
+    :param save_model:boolean
+            If True, the model will be saved
+    :param visualization: boolean
+            If True, the results are visualized
     :return:
     """
     print("User independent - Start")
@@ -133,6 +141,17 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
 
 
 def train_user_dependent_grid_search(classifier, training_data, test_data):
+    """
+    Training a user dependent classic classifier and perform a grid search to tune the hyperparameter.
+    :param classifier:
+            Classifier (LDA, QDA, SVM, KNN, Bayes, Random_Forest)
+    :param training_data: list of dict
+            dict:{'data':list,'label':list}
+    :param test_data: list of dict
+            dict:{'data':list,'label':list}
+    :return: classifier,float, list,list
+            Returns the classifier, the accuracy, the true label and predicted label
+    """
     print("User dependent grid search - Start")
     x_train, y_train = flat_users_data(training_data)
     x_test, y_test = flat_users_data(test_data)
@@ -151,15 +170,23 @@ def train_user_dependent_grid_search(classifier, training_data, test_data):
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name,
                          save_path, save_model=False, visualization=False):
     """
-    TODO
-    :param user_data:
-    :param config:
-    :param user_name:
+    Training a user dependent classic classifier with a given training set
+    :param user_data:list of dict
+            dict:{'data':list,'label':list}
+    :param config:string
+            The configuration to identify the classification
+    :param user_name: string
+            Name of the user for which the classifier will be trained
     :param classifiers:
-    :param classifiers_name:
-    :param save_path:
-    :param save_model:
-    :param visualization:
+            Classifier
+    :param classifiers_name: string
+            Name of the classifier
+    :param save_path:string
+            Path to the file where the results and the classifier will be saved
+    :param save_model:boolean
+            If True, the model will be saved
+    :param visualization:boolean
+            If True, the results are visualized
     :return:
     """
     print("User dependent - Start ")
