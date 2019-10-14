@@ -205,10 +205,10 @@ def main():
     # --------------------------------------------Train user independent classic - END---------------------------------#
 
     # --------------------------------------------Train user independent CNN - START-----------------------------------#
-    # train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-continues-IMU-25-0.9-NA",
-    #                            user="User002", perform_test=True, save_path="./", ignore_rest_gesture=False,
-    #                            cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=50, early_stopping=2)
-    # return True
+    train_user_independent_cnn(train_user_list=Constant.USERS_SUB, config="no_pre_pro-separate-EMG-100-0.9-NA",
+                               user="User002", perform_test=True, save_path="./", ignore_rest_gesture=False,
+                               cnn_pattern=Constant.CNN_KAGGLE, batch=32, epochs=10, early_stopping=2)
+    return True
     # --------------------------------------------Train user independent CNN - END-------------------------------------#
 
     # --------------------------------------------Adapt CNN for Unknown User START-------------------------------------#

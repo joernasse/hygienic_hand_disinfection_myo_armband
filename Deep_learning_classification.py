@@ -59,8 +59,7 @@ def calculate_cnn(x, y, save_path="./", batch=32, epochs=10, config="", early_st
 
     x_train, x_test, x_val, y_train, y_test, y_val_one_hot, classes = prepare_data_for_cnn(x, y,
                                                                                            validation_size=validation_size,
-                                                                                           test_size=test_size,
-                                                                                           calc_test_set=perform_test)
+                                                                                           test_size=test_size)
     acc = 0
     print("Training", len(x_train),
           "\nValidation", len(x_val),
