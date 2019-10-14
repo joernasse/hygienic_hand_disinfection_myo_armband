@@ -176,15 +176,15 @@ def main():
     # --------------------------------------------Calculate Result statistics - END------------------------------------#
 
     # --------------------------------------------Train user dependent classic - START---------------------------------#
-    train_user_dependent_classic(user_list=Constant.USERS,
-                                 feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
-                                 ignore_rest_gesture=True,
-                                 predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
-                                 model_save_path="./",
-                                 save_model=False,
-                                 visualization=False,
-                                 classifiers=[Constant.random_forest],
-                                 classifier_names=["Random_Forest"])
+    # train_user_dependent_classic(user_list=Constant.USERS,
+    #                              feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
+    #                              ignore_rest_gesture=True,
+    #                              predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
+    #                              model_save_path="./",
+    #                              save_model=False,
+    #                              visualization=False,
+    #                              classifiers=[Constant.random_forest],
+    #                              classifier_names=["Random_Forest"])
     return True
     # --------------------------------------------Train user dependent classic - END-----------------------------------#
 
