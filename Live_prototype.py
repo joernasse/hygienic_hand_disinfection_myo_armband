@@ -238,7 +238,7 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
             Current sequence, can also be considered as number of gesture
     :param classic:boolean,
             If True the model used is one of the classic ML Classifier
-    :return:
+    :return: None
     """
     write_header = False
     if not os.path.isdir(live_prediction_path + file_prefix):  # Collection dir
@@ -310,11 +310,15 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
 
 def feature_extraction_live(w_emg, w_imu, feature_set=Constant.rehman):
     """
-    TODO
-    :param w_emg:
-    :param w_imu:
-    :param feature_set:
-    :return:
+    Extracts the features of a given feature-set from the given raw data
+    :param w_emg:matrix
+            The matrix of the windowed raw data for the EMG signals
+    :param w_imu:matrix
+            The matrix of the windowed raw data for the IMU signals
+    :param feature_set:string
+            From this feature-set the features are extracted for extraction
+    :return:matrix
+            Matrix of extracted features. By default the features for EMG and IMU data will be combined
     """
     feature_emg, feature_imu = [], []
     for x in w_emg:
@@ -421,9 +425,14 @@ def reformat_raw_data(emg, ori, acc, gyr):
 
 def collect_raw_data(record_time):
     """
-    TODO
-    :param record_time:
-    :return:
+    Collect the raw data from the myo devices
+    :param record_time:int
+            Record time
+    :return:list<array>, list<array>, list<array>, list<array>
+            EMG: Contains the raw data for the emg sensors (ch0...ch7) (measurement data)
+            ORI: Contains the raw data for the orientation sensor (X,Y,Z) (measurement data)
+            ACC: Contains the raw data for the accelerometer sensor (X,Y,Z) (measurement data)
+            GYR: Contains the raw data for the gyroscope sensor (X,Y,Z) (measurement data)
     """
     global EMG
     global ORI
@@ -444,12 +453,19 @@ def collect_raw_data(record_time):
 
 def window_live_classic(emg, imu, window, overlap):
     """
-    TODO
-    :param emg:
-    :param imu:
-    :param window:
-    :param overlap:
-    :return:
+    Window the emg and imu raw data for a given window size and degree of overlap.
+    In this function the windows size is specified to the emg data, the window size for imu will be calculated in this function to ensure that the same timeframe is covered.
+    :param emg:list<array>
+            The emg raw data
+    :param imu:list<array>
+            The imu raw data
+    :param window:int
+            The window length
+    :param overlap:float
+            The degree of overlap
+    :return:matrix, matrix
+            w_emg: The windows emg raw data
+            w_imu: The windows imu raw data
     """
     window_imu = int(window / (len(emg) / len(imu)))
     offset_imu = window_imu * overlap
