@@ -171,21 +171,21 @@ def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
 
 def main():
     # --------------------------------------------Calculate Result statistics - START----------------------------------#
-    calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
+    # calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
     # return True
     # --------------------------------------------Calculate Result statistics - END------------------------------------#
 
     # --------------------------------------------Train user dependent classic - START---------------------------------#
-    # train_user_dependent_classic(user_list=["User001"],
-    #                              feature_set_path="G:/Masterarbeit/feature_sets_filter/",
-    #                              ignore_rest_gesture=True,
-    #                              predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
-    #                              model_save_path="./",
-    #                              save_model=True,
-    #                              visualization=False,
-    #                              classifiers=[Constant.random_forest],
-    #                              classifier_names=["Random_Forest"])
-    # return True
+    train_user_dependent_classic(user_list=Constant.USERS,
+                                 feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
+                                 ignore_rest_gesture=True,
+                                 predefine_configs=["no_pre_pro-separate-EMGIMU-100-0.9-georgi"],
+                                 model_save_path="./",
+                                 save_model=False,
+                                 visualization=False,
+                                 classifiers=[Constant.random_forest],
+                                 classifier_names=["Random_Forest"])
+    return True
     # --------------------------------------------Train user dependent classic - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
@@ -238,8 +238,8 @@ def main():
     # --------------------------------------------Plot CNN structure END-----------------------------------------------#
 
     # --------------------------------------------Predict user independent CNN - START---------------------------------#
-    load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User003_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
-    predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
+    # load_model_path = "G:/Masterarbeit/Results/User_independent_cnn/User003_Unknown/no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
+    # predict_for_unknown_user_cnn(load_model_path, "User002", "no_pre_pro-separatecontinues-EMG-100-0.9-NA")
     # return True
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 

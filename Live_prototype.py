@@ -14,7 +14,6 @@ import Process_data
 import numpy as np
 from tensorflow.python.keras.models import load_model
 import collections
-from Classic_classification import norm_data
 from Deep_learning_classification import adapt_model_for_user
 
 cnn_emg_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
@@ -501,10 +500,6 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
     w_emg = 100
     w_imu = 25
 
-    if len(config_split) > 5 and 'norm' in config[6]:
-        norm = True
-    else:
-        norm = False
 
     with hub.run_in_background(gesture_listener.on_event):
         # check_samples_rate()
@@ -518,8 +513,6 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
                 w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
                 features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, feature_set=feature_set)
 
-                if norm:
-                    features = norm_data(features)
                 prediction = clf_classic.predict(features)
             elif "cnn" in clf_type:
                 img_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
