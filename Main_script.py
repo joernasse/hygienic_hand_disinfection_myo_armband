@@ -73,20 +73,31 @@ def process_raw_data(window, overlap, user_list, data_set, preprocess, sensor, i
 
 
 def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_gesture=True,
-                                     normalize_by_rest=False, collection_path=Constant.collections_default_path,
+                                     norm_by_rest=False, collection_path=Constant.collections_default_path,
                                      data_set=Constant.SEPARATE + Constant.CONTINUES):
     """
-     TODO überdenken
-    :param window:
-    :param overlap:
-    :param user:
-    :param sensor:
+    Pre process raw data for the adaptive approach for a given user and a given configuration
+    1. load the data
+    2. Window the data
+    3. Preprocess data
+    :param window: int
+            Window size
+    :param overlap:float
+            Degree of overlap
+    :param user: string
+            User for which the data should be loaded
+    :param data_set: string
+            The dataset which should be loaded, in case of my master thesis "separate" or "continues"
+    :param sensor: string
+            Indicates which sensor data are to be loaded
     :param ignore_rest_gesture:boolean, default: False
             Indicates whether the "pause" gesture should be removed from the loaded data
-    :param normalize_by_rest:
-    :param collection_path:
-    :param data_set:
-    :return:
+    :param norm_by_rest:boolean, default:True
+            Indicates whether the signals should be normalized on the mean of the signals of the "pause" gesture
+    :param collection_path: string
+            Path to the Collection folder
+    :return: list,list
+            Returns a list of preprocessed and windowed emg and imu data
     """
     print("Preprocessing raw data for adapt model - Start")
     print("Window", window, "Overlap", overlap)
@@ -94,7 +105,7 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
                                                                                collection_path=collection_path,
                                                                                data_set=data_set)
 
-    if normalize_by_rest:
+    if norm_by_rest:
         training_data = Helper_functions.normalize_by_rest_gesture(data=training_data, sensor=sensor)
         test_data = Helper_functions.normalize_by_rest_gesture(data=test_data, sensor=sensor)
 
@@ -164,11 +175,6 @@ def calculate_total_raw_data(path="./Collections/"):
 
 
 def main():
-    # --------------------------------------------Calculate Result statistics - START----------------------------------#
-    # calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
-    # return True
-    # --------------------------------------------Calculate Result statistics - END------------------------------------#
-
     # --------------------------------------------Train user dependent classic - START---------------------------------#
     # train_user_dependent_classic(user_list=Constant.USERS,
     #                              feature_set_path="//192.168.2.101/g/Masterarbeit/feature_sets_filter/",
@@ -179,7 +185,7 @@ def main():
     #                              visualization=False,
     #                              classifiers=[Constant.random_forest],
     #                              classifier_names=["Random_Forest"])
-    return True
+    # return True
     # --------------------------------------------Train user dependent classic - END-----------------------------------#
 
     # --------------------------------------------Train user dependent CNN - START-------------------------------------#
@@ -244,9 +250,15 @@ def main():
     #                              training_user_list=Constant.USERS_SUB,
     #                              feature_sets_path="G:/Masterarbeit/feature_sets_filter/", test_user="User001",
     #                              ignore_rest_gesture=True)
-    return True
+    # return True
 
     # --------------------------------------------Grid search END------------------------------------------------------#
+
+    # --------------------------------------------Calculate Result statistics - START----------------------------------#
+    # calculation_config_statistics("G:/Masterarbeit/Results/User_dependent_classic/Overview_all_users_original.csv")
+    # return True
+    # --------------------------------------------Calculate Result statistics - END------------------------------------#
+
 
 
 def train_user_independent_classic(config, ignore_rest_gesture=True, feature_sets_path="",
@@ -470,55 +482,54 @@ def feature_extraction(user_list):
                                                               sensor=sensor, window=window, feature=feature,
                                                               pre=preprocessing)
 
-
-# TODO: Löschen?!
-def calculation_config_statistics(load_path):
-    """
-
-    :param load_path:
-    :return:
-    """
-    config_mean = []
-    overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
-    for pre in Constant.level_0:
-        for data_set in Constant.level_1:
-            for sensor in Constant.level_2:
-                for window in Constant.level_3:
-                    for overlap in Constant.level_4:
-                        for feature in Constant.level_5:
-                            config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
-                                overlap) + "-" + feature
-                            config_items = []
-
-                            for item in overview:
-                                if config == item[4]:
-                                    config_items.append(item)
-
-                            if not config_items:
-                                continue
-
-                            for clf_name in Constant.classifier_names:
-                                clf_list = []
-                                for user in Constant.USERS:
-                                    for item in config_items:
-                                        if user == item[0] and clf_name == item[1]:
-                                            if not user in [x for x in [config for config in clf_list]]:
-                                                clf_list.append(item)
-                                            else:
-                                                print("duplicate")
-                                if len(clf_list) == 15:
-                                    config_mean.append(
-                                        [config + "-" + clf_name, np.mean([float(x[2]) for x in clf_list]),
-                                         [x[2] for x in clf_list]])
-                                else:
-                                    print(clf_list)
-
-    f = open("./Overview_by_config_tmp.csv", 'w', newline='')
-    with f:
-        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        for item in config_mean:
-            writer.writerow(item)
-
+#
+# def calculation_config_statistics(load_path):
+#     """
+#
+#     :param load_path:
+#     :return:
+#     """
+#     config_mean = []
+#     overview = Save_Load.load_prediction_summary(result_overview_path=load_path)
+#     for pre in Constant.level_0:
+#         for data_set in Constant.level_1:
+#             for sensor in Constant.level_2:
+#                 for window in Constant.level_3:
+#                     for overlap in Constant.level_4:
+#                         for feature in Constant.level_5:
+#                             config = pre + "-" + data_set + "-" + sensor + "-" + str(window) + "-" + str(
+#                                 overlap) + "-" + feature
+#                             config_items = []
+#
+#                             for item in overview:
+#                                 if config == item[4]:
+#                                     config_items.append(item)
+#
+#                             if not config_items:
+#                                 continue
+#
+#                             for clf_name in Constant.classifier_names:
+#                                 clf_list = []
+#                                 for user in Constant.USERS:
+#                                     for item in config_items:
+#                                         if user == item[0] and clf_name == item[1]:
+#                                             if not user in [x for x in [config for config in clf_list]]:
+#                                                 clf_list.append(item)
+#                                             else:
+#                                                 print("duplicate")
+#                                 if len(clf_list) == 15:
+#                                     config_mean.append(
+#                                         [config + "-" + clf_name, np.mean([float(x[2]) for x in clf_list]),
+#                                          [x[2] for x in clf_list]])
+#                                 else:
+#                                     print(clf_list)
+#
+#     f = open("./Overview_by_config_tmp.csv", 'w', newline='')
+#     with f:
+#         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
+#         for item in config_mean:
+#             writer.writerow(item)
+#
 
 def calc_missing_config(load_path):
     missing_config = []
