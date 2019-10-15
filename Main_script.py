@@ -77,7 +77,7 @@ def process_raw_data(window, overlap, user_list, data_set, preprocess, sensor, i
 
 
 def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_gesture=True,
-                                     normalize_by_rest=False, collection_path=Constant.collections_path_default,
+                                     normalize_by_rest=False, collection_path=Constant.collections_default_path,
                                      data_set=Constant.SEPARATE + Constant.CONTINUES):
     """
      TODO überdenken
@@ -114,10 +114,10 @@ def pre_process_raw_data_adapt_model(window, overlap, user, sensor, ignore_rest_
     return window_data_train, labels_train, window_data_test, labels_test
 
 
-def calculate_total_raw_data(path="G:/Masterarbeit/Collections/"):
+def calculate_total_raw_data(path="./Collections/"):
     """
     Count the total number of raw data  for IMU and EMG sensors.
-    :param path: string, default "G:/Masterarbeit/Collections/"
+    :param path: string, default "./Collections/"
                 Path to the Collection folder
     :return:
     """
@@ -242,12 +242,13 @@ def main():
     # --------------------------------------------Predict user independent CNN - END-----------------------------------#
 
     # --------------------------------------------Grid search START----------------------------------------------------#
-    user_independent_grid_search(classifier=Constant.random_forest, classifier_name="Random_Forest", save_path="./",
-                                 config="no_pre_pro-separate-EMGIMU-100-0.9-georgi", visualization=False,
-                                 save_model=True,
-                                 training_user_list=Constant.USERS_SUB,
-                                 feature_sets_path="G:/Masterarbeit/feature_sets_filter/", test_user="User001",
-                                 ignore_rest_gesture=True)
+    # user_independent_grid_search(classifier=Constant.random_forest, classifier_name="Random_Forest", save_path="./",
+    #                              config="no_pre_pro-separate-EMGIMU-100-0.9-georgi", visualization=False,
+    #                              save_model=True,
+    #                              training_user_list=Constant.USERS_SUB,
+    #                              feature_sets_path="G:/Masterarbeit/feature_sets_filter/", test_user="User001",
+    #                              ignore_rest_gesture=True)
+    return True
 
     # --------------------------------------------Grid search END------------------------------------------------------#
 
@@ -282,13 +283,13 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
     train_user_independent(training_data=training_data, test_data=test_data,
-                                                  classifiers=classifier, classifiers_name=classifier_names,
-                                                  save_path=save_path, config=config, save_model=save_model,
-                                                  visualization=visualization)
+                           classifiers=classifier, classifiers_name=classifier_names,
+                           save_path=save_path, config=config, save_model=save_model,
+                           visualization=visualization)
 
 
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
-                                                    collection_path=Constant.collections_path_default, session='s0'):
+                                                    collection_path=Constant.collections_default_path, session='s0'):
     """
     TODO
     :param user:
@@ -507,7 +508,7 @@ def calculation_config_statistics(load_path):
                                 else:
                                     print(clf_list)
 
-    f = open("G:/Masterarbeit/Results/User_dependent_classic/Overview_by_config_tmp.csv", 'w', newline='')
+    f = open("./Overview_by_config_tmp.csv", 'w', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
         for item in config_mean:
@@ -702,8 +703,9 @@ def user_independent_grid_search(classifier, classifier_name, save_path, config,
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
     x_test, y_test = Helper_functions.flat_users_data(test_data)
     x_train, y_train = Helper_functions.flat_users_data(training_data)
-    classifier, acc_before_gs, acc_after_gs = grid_search(classifier=classifier, x_train=x_train, y_train=y_train,
-                                                          x_test=x_test, y_test=y_test)
+    classifier, acc_before_gs, acc_after_gs, y_predict = grid_search(classifier=classifier, x_train=x_train,
+                                                                     y_train=y_train,
+                                                                     x_test=x_test, y_test=y_test)
 
     f = open(save_path + "/Overview_grid_search" + test_user + "_" + config + ".csv", 'a', newline='')
     with f:

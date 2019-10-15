@@ -44,15 +44,7 @@ labels_without_rest = ['Step0',
                        'Step3',
                        'Step4',
                        'Step5', 'Step5_1',
-                       'Step6', 'Step6_1', ]
-label = ['Step0',
-         'Step1', 'Step1_1', 'Step1_2',
-         'Step2', 'Step2_1',
-         'Step3',
-         'Step4',
-         'Step5', 'Step5_1',
-         'Step6', 'Step6_1',
-         'Rest']
+                       'Step6', 'Step6_1']
 
 hand_disinfection_description = ['Step 0    - Take disinfectant',
                                  'Step 1    - Palm and wrist',
@@ -80,7 +72,7 @@ threshold = 0.30 * MAX_EMG_VALUE
 
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
-collections_path_default = './Collections/'
+collections_default_path = './Collections/'
 test_set_size = 0.2
 validation_set_size = 0.1
 SEPARATE_PATH = "/raw_separate"

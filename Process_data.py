@@ -26,7 +26,7 @@ np.seterr(divide='ignore')
 
 
 def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
-                     save_path_for_featureset="./", load_path=Constant.collections_path_default):
+                     save_path_for_featureset="./", load_path=Constant.collections_default_path):
     """
     Load raw data for user, window the data, pre process the data,
     extract  features from data, save extracted features to file
@@ -44,7 +44,7 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
         The set of features  to extract
     :param pre: string
         The pre processing setting: filter, z-normalization, no pre processing
-    :param save_path_for_featureset: string, default Constant.collection_path_default('G:/Masterarbeit/Collections/')
+    :param save_path_for_featureset: string, default Constant.collection_path_default('./Collections/')
             Describes the save path for features. If empty the default path "./" will be used
     :param load_path: string
             Path to the Collection folder which contains the raw data
@@ -259,7 +259,7 @@ def z_norm(emg, imu):
         raise
 
 
-def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=Constant.collections_path_default):
+def collect_data_for_single_sensor(user_list, sensor, data_set, collection_path=Constant.collections_default_path):
     """
     Load the raw data for one of the sensors (EMG or IMU) from a file.
     :param user_list:list

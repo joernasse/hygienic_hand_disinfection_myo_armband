@@ -164,7 +164,7 @@ def grid_search(classifier, x_train, y_train, x_test, y_test):
     classifier.fit(x_train, y_train)
     y_predict = classifier.predict(x_test, y_test)
     acc_after_gs = accuracy_score(y_test, y_predict)
-    return classifier, acc_before_gs,acc_after_gs
+    return classifier, acc_before_gs, acc_after_gs, y_predict
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name,
