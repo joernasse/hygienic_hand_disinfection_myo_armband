@@ -11,7 +11,6 @@ import pickle
 import threading
 import time
 from operator import add
-
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log

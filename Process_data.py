@@ -152,7 +152,7 @@ def window_data_for_both_sensor(emg_data, imu_data, window, degree_of_overlap, s
     :param emg_data: dict{}
     :param imu_data: dict{}
     :param window: int
-            Descibes the windows size
+            Describes the windows size
     :param degree_of_overlap: float
             Describes the degree of overlap. Example 0.5 means 50% of overlapping windows
     :param skip_timestamp: int 0 or 1
@@ -234,7 +234,7 @@ def filter_emg_data(emg, filter_type):
 
 def z_norm(data):
     """
-    Performs the Z-Normalization for EMG and IMU data
+    Performs the Z-Normalization for given data
     :param data: array
             Array of data to which the z-normalization should be applied
     :return: array,array

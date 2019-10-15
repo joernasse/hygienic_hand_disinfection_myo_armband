@@ -1,3 +1,9 @@
+#!/usr/bin/env python
+"""
+This Script contains the functionality to save and load different type of data
+Save and load classic classifier ans collected raw data
+Load raw data, featured data.
+"""
 import csv
 import os
 import pickle
@@ -5,6 +11,14 @@ import shutil
 import sys
 import numpy
 from Constant import *
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 
 def save_raw_data(data, label_value, emg_file_path, imu_file_path):
