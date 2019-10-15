@@ -287,13 +287,22 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
 def load_training_and_test_raw_data_for_adapt_model(user, sensor, data_set,
                                                     collection_path=Constant.collections_default_path, session='s0'):
     """
-    TODO
-    :param user:
-    :param sensor:
-    :param data_set:
-    :param collection_path:
-    :param session:
-    :return:
+    Load training and test data to train a adaptive model
+    By default session 0 from the user study will used as training data and the rest for testing.
+    If data set is separate and continues for both sets the session 0 data will be used for training
+    :param user:string
+            User name/number for which the adaptive model should be trained
+    :param sensor:sting
+            Sensor type ("EMG" or "IMU")
+    :param data_set:string
+            Data set which should be loaded ("separate" and/or "continues") See Constant.py
+    :param collection_path:sting
+            path to the Collection folder
+    :param session:string
+            The session which should be used for training. Example: 's0' for the first collection of data
+    :return:dict{},dict{}
+            training_dict: Directory of training data
+            test_dict: Directory of test data
     """
     global path_add
 

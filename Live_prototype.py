@@ -445,7 +445,6 @@ def reformat_raw_data(emg, ori, acc, gyr):
 
     imu = []
     for i in range(len(o)):
-        # todo check warum teilweise nicht gleichlang
         tmp = o[i]
         tmp.extend([x for x in a[i]])
         tmp.extend([x for x in g[i]])
