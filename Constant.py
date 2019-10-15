@@ -215,3 +215,4 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 # ---------------------------------- Liver Prototype constants---------------------------------------------------------#
 seq_duration = [5, 4, 3, 2]
 live_prediction_path = "./Live_Prediction/"
+delta=0.15

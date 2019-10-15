@@ -10,6 +10,8 @@ import os
 import pickle
 import threading
 import time
+from operator import add
+
 from myo import init, Hub, StreamEmg
 import myo as libmyo
 import logging as log
@@ -36,7 +38,7 @@ cnn_emg_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-E
 cnn_imu_ud_path = "./Live_Prediction/Load_model/User002_UD_no_pre_pro-separate-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
 cnn_emg_ui_path = "./Live_Prediction/Load_model/User002_UI_no_pre_pro-separatecontinues-EMG-100-0.9-NA_cnn_CNN_Kaggle.h5"
 cnn_imu_ui_path = "./Live_Prediction/Load_model/User002_UI_no_pre_pro-separatecontinues-IMU-25-0.9-NA_cnn_CNN_Kaggle.h5"
-classic_ud_path = "./Live_Prediction/Load_model/User002_UD_random_forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
+classic_ud_path = "./Live_Prediction/Load_model/User002_UD_Random_forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
 classic_ui_path = "./Live_Prediction/Load_model/User002_UI_Random_Forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
 
 cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
@@ -156,17 +158,17 @@ def load_models_for_validation():
     return cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui
 
 
-def init(live_prediction_path="./Live_Prediction"):
+def init(live_prediction_path=Constant.live_prediction_path):
     """
     Initialization for the communication with the Myo Armbands. Also pair devices.
     Waiting time is required to ensure correct streaming rate
-    :param Constant.live_prediction_path:string, default "./Live_Prediction"
+    :param live_prediction_path:string, default "./Live_Prediction"
             the path to the live prediction folder
     :return: None
     """
     global status
-    if not os.path.isdir(Constant.live_prediction_path):  # Collection dir
-        os.mkdir(Constant.live_prediction_path)
+    if not os.path.isdir(live_prediction_path):  # Collection dir
+        os.mkdir(live_prediction_path)
 
     status = 1
     print("Initialization - Start")
@@ -217,21 +219,31 @@ def main():
     config_cnn_imu = "no_pre_pro-separate-IMU-25-0.9-NA"
     config_classic = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
 
-    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
+    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic = load_models_for_validation()
     validate_models(cnn_emg_ud=cnn_emg_ud, cnn_imu_ud=cnn_imu_ud, cnn_emg_ui=cnn_emg_ui, cnn_imu_ui=cnn_imu_ui,
-                    classic_ud=classic_ud, classic_ui=classic_ui, config_cnn_emg=config_cnn_emg,
+                    classic_ud=classic_ud, classic_ui=classic, config_cnn_emg=config_cnn_emg,
                     config_cnn_imu=config_cnn_imu, config_classic=config_classic, session=2)
     # --------------------------------------------Model Validation END ------------------------------------------------#
 
-    # --------------------------------------------Live application START ----------------------------------------------#
-    # cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
-    # cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
-    # live_prediction(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
-    #                 cnn_emg=load_model(cnn_emg_user001_path),
-    #                 cnn_imu=load_model(cnn_imu_user001_path),
-    #                 clf_type='cnn',
-    #                 record_time=2)
-    # --------------------------------------------Live application END ------------------------------------------------#
+    # --------------------------------------------Live prediction for CNN START ---------------------------------------#
+    cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+    cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+
+    live_prediction_cnn(config_emg="no_pre_processing-separate-EMG-100-0.9-NA",
+                        config_imu="no_pre_processing-separate-IMU-25-0.9-NA",
+                        cnn_emg=load_model(cnn_emg_user001_path),
+                        cnn_imu=load_model(cnn_imu_user001_path),
+                        record_time=2)
+    # --------------------------------------------Live prediction for CNN END -----------------------------------------#
+
+    # --------------------------------------------Live prediction for classic START -----------------------------------#
+    with open(classic_ui_path, 'rb') as pickle_file:
+        classic_classifier = pickle.load(pickle_file)
+
+    live_prediction_classic(config="no_pre_processing-separate-EMGIMU-100-0.9-NA",
+                            classifier=classic_classifier,
+                            record_time=2)
+    # --------------------------------------------Live prediction for classic END -------------------------------------#
 
 
 def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=False):
@@ -406,12 +418,18 @@ def pair_devices():
 
 def reformat_raw_data(emg, ori, acc, gyr):
     """
-    TODO
-    :param emg:
-    :param ori:
-    :param acc:
-    :param gyr:
-    :return:
+    reformat the collected raw data for windowing, preprocessing, feature extractino
+    :param emg:dict{}
+            Dictionary of collected EMG data
+    :param ori:dict{}
+            Dictionary of collected orientation data
+    :param acc:dict{}
+            Dictionary of collected accelerometer data
+    :param gyr:dict{}
+            Dictionary of collected gyroscope data
+    :return:list,list
+            emg: List of EMG data
+            imu: List of IMU data
     """
     o = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in ori]]]
     a = [[c.x, c.y, c.z] for c in [b[0] for b in [a[1:] for a in acc]]]
@@ -505,24 +523,27 @@ def window_live_classic(emg, imu, window, overlap):
     return w_emg, w_imu
 
 
-def window_live_separate(raw_data, window, overlap):
+def window_live_for_one_sensor(data, window, overlap):
     """
-    TODO
-    :param raw_data:
-    :param window:
-    :param overlap:
-    :return:
+    Window the data for only one sensor. It´s not like the window_live_classic!
+    :param data:list
+            Data which should be windows
+    :param window:int
+            Window size
+    :param overlap:float
+            degree of overlap
+    :return:list
+            window_data: List of windowed data
     """
     window_data = []
-    # window EMG data
-    length = len(raw_data)
+    length = len(data)
     offset = window * overlap
     blocks = int(length / abs(window - offset))
 
     first = 0
     for i in range(blocks):
         last = int(first + window)
-        data = raw_data[first:last]
+        data = data[first:last]
         if not len(data) == window:
             continue
         first += int(window - offset)
@@ -531,86 +552,131 @@ def window_live_separate(raw_data, window, overlap):
     return window_data
 
 
-def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_type="cnn", record_time=1):
+def live_prediction_cnn(config_emg, config_imu, cnn_emg, cnn_imu, record_time=2):
     """
-    TODO
-    :param config:
+    Live prediction for two given CNNs (for EMG and IMU data)
+    This function perform a endless live prediction. To abort type Ctrl+C in command line.
+    :param config_emg:string
+            Configuration for the CNN_EMG
+    :param config_imu:string
+            Configuration for the CNN_IMU
     :param cnn_emg:
+            The CNN which predict the result for EMG data
     :param cnn_imu:
-    :param clf_classic:
-    :param clf_type:
-    :param record_time:
+            The CNN which predict the result for IMU data
+    :param record_time:int
+            Record time to collect raw data (EMG and IMU)
     :return:
     """
     pair_devices()
-    config_split = config.split('-')
-    preprocess = config_split[0]
-    window = int(config_split[3])
-    overlap = float(config_split[4])
-    feature_set = config_split[5]
-    w_emg = 100
-    w_imu = 25
 
+    # ------------- Configuration split for CNN EMG -------------
+    config_split = config_emg.split('-')
+    preprocess_emg = config_split[0]
+    w_emg = int(config_split[3])
+    overlap_emg = float(config_split[4])
+
+    # ------------- Configuration split for CNN IMU -------------
+    config_split = config_imu.split('-')
+    w_imu = int(config_split[3])
+    overlap_imu = float(config_split[4])
     with hub.run_in_background(gesture_listener.on_event):
         Helper_functions.wait(2)
         Helper_functions.countdown(3)
         while 1:
             emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
             emg, imu = reformat_raw_data(emg, ori, acc, gyr)
-            if "classic" in clf_type:
-                w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
-                w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
-                features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, feature_set=feature_set)
+            img_emg = window_live_for_one_sensor(emg, window=w_emg, overlap=overlap_emg)
+            img_imu = window_live_for_one_sensor(imu, window=w_imu, overlap=overlap_imu)
+            x_emg = np.array(img_emg)[:, :, :, np.newaxis]
+            x_imu = np.array(img_imu)[:, :, :, np.newaxis]
 
-                prediction = clf_classic.predict(features)
-            elif "cnn" in clf_type:
-                img_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
-                img_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
-                x_emg = np.array(img_emg)[:, :, :, np.newaxis]
-                x_imu = np.array(img_imu)[:, :, :, np.newaxis]
+            predict_emg = cnn_emg.predict(x_emg)
+            predict_imu = cnn_imu.predict(x_imu)
+            prediction_together = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg), cnn_imu.predict_proba(x_imu))
+            print("CNN EMG: ", predict_emg)
+            print("CNN IMU: ", predict_imu)
+            print("Both CNNs: ", prediction_together)
+            Helper_functions.wait(0.5)
 
-                prediction = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg),
-                                                        cnn_imu.predict_proba(x_imu))
+
+def live_prediction_classic(config, classifier, record_time=2):
+    """
+    Live prediction for a given classic classifier
+    This function perform a endless live prediction. To abort type Ctrl+C in command line.
+    :param config:
+    :param classifier:
+    :param record_time:
+    :return:
+    """
+
+    pair_devices()
+    # ------------- Configuration split for classic -------------
+    config_split = config.split('-')
+    preprocess = config_split[0]
+    window = int(config_split[3])
+    overlap = float(config_split[4])
+    feature_set = config_split[5]
+    with hub.run_in_background(gesture_listener.on_event):
+        Helper_functions.wait(2)
+        Helper_functions.countdown(3)
+        while 1:
+            emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
+            emg, imu = reformat_raw_data(emg, ori, acc, gyr)
+            w_emg, w_imu = window_live_classic(emg, imu, window, overlap)
+            w_emg, w_imu = preprocess_data(w_emg, w_imu, preprocess)
+            features = feature_extraction_live(w_emg=w_emg, w_imu=w_imu, feature_set=feature_set)
+            prediction = classifier.predict(features)
             print(prediction)
             Helper_functions.wait(0.5)
 
 
 def prediction_calculation_cnn(emg_prediction, imu_prediction):
     """
-    TODO
+    Calculation of the common prediction for two CNNs based on EMG and IMU data.
     :param emg_prediction:
     :param imu_prediction:
-    :return:
+    :return:string
+            Returns the common prediction
     """
     sum_emg, best_index_emg = sum_sequence_proba(emg_prediction)
     sum_imu, best_index_imu = sum_sequence_proba(imu_prediction)
     best_emg = sum_emg[best_index_emg]
     best_imu = sum_imu[best_index_imu]
 
-    if best_emg > best_imu:
+    if emg_prediction[best_index_emg] == imu_prediction[best_index_imu]:
         index = best_index_emg
+    elif best_emg > best_imu + Constant.delta:
+        index = best_index_emg
+    elif best_imu > best_emg + Constant.delta:
+        index = best_index_imu
     else:
-        index = best_imu
+        index = np.argmax(map(add, sum_emg, sum_imu))
     return Constant.label_display_without_rest[index]
 
 
 def sum_sequence_proba(proba):
     """
-    TODO
-    :param proba:
-    :return:
+    Sum the probabilities of the current sequence
+    :param proba:list<array>
+            List of probabilities for each class (label)
+    :return:list, int
+            sum_proba: Returns the summed probabilities
+            index: best prediction (index)
+
     """
     sum_proba = []
     for i in range(Constant.classes):
         sum_proba.append(np.mean([float(x[i]) for x in proba]))
-    return sum_proba, np.argmax(sum_proba)
+        index = np.argmax(sum_proba)
+    return sum_proba, index
 
 
 def validate_models(cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, config_cnn_emg, config_cnn_imu,
                     config_classic, classic_ui, cnn_imu_adapt=None,
                     cnn_emg_adapt=None, session=2):
     """
-This function perform a live validation on the given classifier. All gestures will record separately for 5 to 2 seconds.
+    This function perform a live validation on the given classifier. All gestures will record separately for 5 to 2 seconds.
     Record time can be changed in the Constant.py
     :param cnn_emg_ud:
             The user dependent CNN for EMG data
@@ -713,8 +779,8 @@ This function perform a live validation on the given classifier. All gestures wi
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
-                    image_emg = window_live_separate(emg, window=w_emg, overlap=overlap_emg)
-                    image_imu = window_live_separate(imu, window=w_imu, overlap=overlap_imu)
+                    image_emg = window_live_for_one_sensor(emg, window=w_emg, overlap=overlap_emg)
+                    image_imu = window_live_for_one_sensor(imu, window=w_imu, overlap=overlap_imu)
 
                     w_emg = preprocess_data(image_emg, preprocess_emg, preprocess_emg)
                     w_imu = preprocess_data(image_imu, preprocess_imu, preprocess_emg)
