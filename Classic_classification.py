@@ -16,6 +16,7 @@ from sklearn.metrics import accuracy_score
 import Constant
 import Helper_functions
 from Helper_functions import flat_users_data
+from Save_Load import save_classifier
 
 __author__ = "Joern Asse"
 __copyright__ = ""
@@ -140,31 +141,30 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
     return True
 
 
-def train_user_dependent_grid_search(classifier, training_data, test_data):
+def grid_search(classifier, x_train, y_train, x_test, y_test):
     """
     Training a user dependent classic classifier and perform a grid search to tune the hyperparameter.
     :param classifier:
-            Classifier (LDA, QDA, SVM, KNN, Bayes, Random_Forest)
+            Already trained classifier (LDA, QDA, SVM, KNN, Bayes, Random_Forest)
     :param training_data: list of dict
             dict:{'data':list,'label':list}
-    :param test_data: list of dict
-            dict:{'data':list,'label':list}
+    :param x_test
+    :param y_test
     :return: classifier,float, list,list
             Returns the classifier, the accuracy, the true label and predicted label
     """
-    print("User dependent grid search - Start")
-    x_train, y_train = flat_users_data(training_data)
-    x_test, y_test = flat_users_data(test_data)
-
-    print("Train length", len(x_train),
-          "\nValidation length", len(x_test))
-
-    classifier = GridSearchCV(estimator=classifier, param_grid=Constant.rf_parameter, n_jobs=-1, verbose=1, cv=10)
+    print("Grid search - Start")
 
     classifier.fit(x_train, y_train)
-    y_predict = classifier.predict(x_test)
-    accuracy = accuracy_score(y_test, y_predict)
-    return classifier, accuracy, y_test, y_predict
+    y_predict = classifier.predict(x_test, y_test)
+    acc_before_gs = accuracy_score(y_test, y_predict)
+
+    classifier = GridSearchCV(estimator=classifier, param_grid=Constant.rf_parameter, n_jobs=-1,
+                              verbose=1, cv=10)
+    classifier.fit(x_train, y_train)
+    y_predict = classifier.predict(x_test, y_test)
+    acc_after_gs = accuracy_score(y_test, y_predict)
+    return classifier, acc_before_gs,acc_after_gs
 
 
 def train_user_dependent(user_data, config, user_name, classifiers, classifiers_name,
@@ -221,19 +221,6 @@ def train_user_dependent(user_data, config, user_name, classifiers, classifiers_
     if save_model:
         save_classifier(best_clf, save_path + name + user_name + "-" + config + ".joblib")
     print("User dependent - Done")
-
-
-def save_classifier(classifier, path):
-    """
-    Save the given classifier at the given path
-    :param classifier: Classifier
-            Classifier to save
-    :param path: sting
-            Path at which the classifier should be saved
-    :return: No returns
-    """
-    with open(path, 'wb') as file:
-        pickle.dump(classifier, file)
 
 
 def predict_for_unknown_user(model, unknown_user_data):

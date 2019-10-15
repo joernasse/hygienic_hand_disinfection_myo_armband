@@ -1,7 +1,6 @@
 from __future__ import print_function
 import matplotlib.pyplot as plt
-import tensorflow
-import Classic_classification
+from Classic_classification import grid_search, train_user_dependent, train_user_independent
 import Constant
 from Deep_learning_classification import calculate_cnn, predict_for_model, adapt_model_for_user, create_cnn_1_model
 import Helper_functions
@@ -21,7 +20,6 @@ __version__ = "1.0"
 __maintainer__ = "Joern Asse"
 __email__ = "joernasse@yahoo.de"
 __status__ = "Production"
-
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 path_add = [Constant.SEPARATE_PATH, Constant.CONTINUES_PATH]
@@ -283,7 +281,7 @@ def train_user_independent_classic(config, ignore_rest_gesture=True, feature_set
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
 
-    Classic_classification.train_user_independent(training_data=training_data, test_data=test_data,
+    train_user_independent(training_data=training_data, test_data=test_data,
                                                   classifiers=classifier, classifiers_name=classifier_names,
                                                   save_path=save_path, config=config, save_model=save_model,
                                                   visualization=visualization)
@@ -375,11 +373,11 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                     if ignore_rest_gesture:
                         users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                    Classic_classification.train_user_dependent(user_data=users_data, config=config, user_name=user,
-                                                                classifiers=classifiers,
-                                                                classifiers_name=classifier_names,
-                                                                save_path=model_save_path, save_model=save_model,
-                                                                visualization=visualization)
+                    train_user_dependent(user_data=users_data, config=config, user_name=user,
+                                         classifiers=classifiers,
+                                         classifiers_name=classifier_names,
+                                         save_path=model_save_path, save_model=save_model,
+                                         visualization=visualization)
         return True
     for user in user_list:
         for pre in Constant.level_0:
@@ -402,12 +400,12 @@ def train_user_dependent_classic(user_list, feature_set_path, ignore_rest_gestur
                                 if ignore_rest_gesture:
                                     users_data = Process_data.remove_rest_gesture_data(users_data[0])
 
-                                Classic_classification.train_user_dependent(user_data=users_data, config=config,
-                                                                            user_name=user, classifiers=classifiers,
-                                                                            classifiers_name=classifier_names,
-                                                                            save_path=model_save_path,
-                                                                            save_model=save_model,
-                                                                            visualization=visualization)
+                                train_user_dependent(user_data=users_data, config=config,
+                                                     user_name=user, classifiers=classifiers,
+                                                     classifiers_name=classifier_names,
+                                                     save_path=model_save_path,
+                                                     save_model=save_model,
+                                                     visualization=visualization)
     return True
 
 
@@ -669,8 +667,7 @@ def predict_for_unknown_user_cnn(model_path, user, config):
 
 
 def user_independent_grid_search(classifier, classifier_name, save_path, config, visualization, save_model,
-                                 training_user_list,
-                                 feature_sets_path, test_user, ignore_rest_gesture):
+                                 training_user_list, feature_sets_path, test_user, ignore_rest_gesture):
     """
     Perform a Grid search for a given classifier and set of parameter.
     :param classifier:
@@ -703,17 +700,16 @@ def user_independent_grid_search(classifier, classifier_name, save_path, config,
         test_data[0] = Process_data.remove_rest_gesture_data(user_data=test_data[0])
         for i in range(len(training_data)):
             training_data[i] = Process_data.remove_rest_gesture_data(user_data=training_data[i])
+    x_test, y_test = Helper_functions.flat_users_data(test_data)
+    x_train, y_train = Helper_functions.flat_users_data(training_data)
+    classifier, acc_before_gs, acc_after_gs = grid_search(classifier=classifier, x_train=x_train, y_train=y_train,
+                                                          x_test=x_test, y_test=y_test)
 
-    classifier, accuracy, y_test, y_predict = Classic_classification.train_user_dependent_grid_search(
-        classifier=classifier,
-        training_data=training_data,
-        test_data=test_data)
-
-    f = open(save_path + "/Overview_user_independent_" + config + ".csv", 'a', newline='')
+    f = open(save_path + "/Overview_grid_search" + test_user + "_" + config + ".csv", 'a', newline='')
     with f:
         writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-
-    writer.writerow([classifier_name, str(accuracy), config])
+    writer.writerow(["classifier", "acc_before_grid_search", "acc_after_grid_search", "user", "config"])
+    writer.writerow([classifier_name, str(acc_before_gs), str(acc_after_gs), test_user, config])
     f.close()
 
     if visualization:
@@ -722,7 +718,7 @@ def user_independent_grid_search(classifier, classifier_name, save_path, config,
         plt.show()
     if save_model:
         save = save_path + "/" + classifier_name + config + '.joblib'
-        Classic_classification.save_classifier(classifier, save)
+        Save_Load.save_classifier(classifier, save)
     print("User independent - Done")
     print("User dependent grid search - Done")
 

@@ -1,5 +1,6 @@
 import csv
 import os
+import pickle
 import shutil
 import sys
 import numpy
@@ -216,3 +217,16 @@ def load_prediction_summary(result_overview_path):
     for column in reader:
         summary.append(column)
     return summary
+
+
+def save_classifier(classifier, path):
+    """
+    Save the given classifier at the given path
+    :param classifier: Classifier
+            Classifier to save
+    :param path: sting
+            Path at which the classifier should be saved
+    :return: No returns
+    """
+    with open(path, 'wb') as file:
+        pickle.dump(classifier, file)
