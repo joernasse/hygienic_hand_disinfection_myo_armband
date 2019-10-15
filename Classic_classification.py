@@ -6,7 +6,6 @@ Includes grid Search for given classifier and parameter set
 """
 
 import csv
-import pickle
 import matplotlib.pyplot as plt
 import numpy
 from sklearn import clone
@@ -26,56 +25,6 @@ __version__ = "1.0"
 __maintainer__ = "Joern Asse"
 __email__ = "joernasse@yahoo.de"
 __status__ = "Production"
-
-
-def train_user_independent_cross_validation(data, classifier, classifier_name, save_path, config):
-    """
-    This function will cross validate a set of user data.
-    Given is a set of Data ordered by users.
-    For each iteration another user is used as test data record. The training data is formed from the other users.
-    :param data: list of dict
-            dict:{'data':list,'label':list}
-    :param classifier: Classifier by Scikit
-            Describe the classifierfor training
-    :param classifier_name: string
-            Describe the Name of the classifier
-    :param save_path: string
-            Describe the path for saving, without the filename
-    :param config: string
-            Describe the used configuration
-    :return: No returns
-    """
-    print("Cross validation - Start")
-    offset = 1
-    scores = []
-    for n in range(len(data)):
-        clf_copy = clone(classifier)
-        x_val, y_val = flat_users_data([data[n]])
-        reduced_data = data.copy()
-        reduced_data.pop(n)
-        x_train_cv, y_train_cv = flat_users_data(reduced_data)
-
-        print("Train length", len(x_train_cv),
-              "\nValidation length", len(x_val))
-
-        clf_copy.fit(x_train_cv, y_train_cv)
-        accuracy = accuracy_score(y_val, clf_copy.predict(x_val))
-        scores.append(accuracy)
-        print("User" + str(n + offset), accuracy, classifier_name)
-        del clf_copy
-
-        f = open(save_path + "/Overview_CV_" + config + ".csv", 'a', newline='')
-        with f:
-            writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-            writer.writerow(["User" + str(n + offset), accuracy, classifier_name])
-        f.close()
-
-    f = open(save_path + "/Overview_CV_" + config + ".csv", 'a', newline='')
-    with f:
-        writer = csv.writer(f, delimiter=';', quotechar='"', quoting=csv.QUOTE_MINIMAL)
-        writer.writerow(["Mean", str(numpy.mean(scores)), "Std", str(numpy.std(scores)), classifier_name])
-    f.close()
-    print("Cross validation - Done")
 
 
 def train_user_independent(training_data, test_data, config, classifiers_name, classifiers, save_path,
@@ -144,13 +93,22 @@ def train_user_independent(training_data, test_data, config, classifiers_name, c
 def grid_search(classifier, x_train, y_train, x_test, y_test):
     """
     Training a user dependent classic classifier and perform a grid search to tune the hyperparameter.
+    After grid search perform another training and prediction
     :param classifier:
             Already trained classifier (LDA, QDA, SVM, KNN, Bayes, Random_Forest)
-    :param training_data: list of dict
-            dict:{'data':list,'label':list}
-    :param x_test
-    :param y_test
-    :return: classifier,float, list,list
+    :param x_train: list
+            List of training data
+    :param y_train:list
+            List of labels for training data
+    :param x_test: list
+            List of test data
+    :param y_test: list
+            List of label for test data
+    :return: classifier,float,float,,list
+            classifier: the result from the grid search,
+            acc_before_gs: The accuracy of the prediction before grid search,
+            acc_after_gs: The accuracy of the prediction after grid search,
+            y_predict: The predicted classes (labels) after grid search
             Returns the classifier, the accuracy, the true label and predicted label
     """
     print("Grid search - Start")

@@ -212,7 +212,7 @@ def flat_users_data(dict_data):
     return x, y
 
 
-def normalize_by_rest_gesture(data, sensor, mode=Constant.rest_mean):
+def normalize_by_rest_gesture(data, sensor, mode=Constant.REST_MEAN):
     """
     Normalize the given data by the mean or max value of the rest gesture. The normalization will performed for each channel separately
     :param data:list
@@ -230,7 +230,7 @@ def normalize_by_rest_gesture(data, sensor, mode=Constant.rest_mean):
         element = 9
     rest_data = data['Rest']
     channel, mean = [], []
-    if mode == Constant.rest_mean:
+    if mode == Constant.REST_MEAN:
         for ch in range(1, element):
             for i in range(len(rest_data)):
                 channel.append(rest_data[i][ch])
@@ -247,7 +247,7 @@ def normalize_by_rest_gesture(data, sensor, mode=Constant.rest_mean):
             print("Not expected exception in normalization by rest function")
             raise
 
-    if mode == Constant.max_value_channel:
+    if mode == Constant.MAX_VALUE_CHANNEL:
         for d in data:
             items = []
             for ch in range(1, element):

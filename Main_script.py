@@ -65,14 +65,10 @@ def process_raw_data(window, overlap, user_list, data_set, preprocess, sensor, i
     w_data, labels = Process_data.raw_data_segmentation_for_nn(window, overlap, raw_data=raw_data,
                                                                ignore_rest_gesture=ignore_rest_gesture)
 
-    if sensor == Constant.IMU:
-        if preprocess == Constant.z_norm:
-            ignore_return, w_data = Process_data.z_norm(emg=w_data, imu=w_data)
-    elif sensor == Constant.EMG:
-        if preprocess == Constant.filter_:
-            w_data = Process_data.filter_emg_data(emg=w_data, filter_type="")
-        elif preprocess == Constant.z_norm:
-            w_data, ignore_return = Process_data.z_norm(emg=w_data, imu=w_data)
+    if preprocess == Constant.z_norm:
+        w_data = Process_data.z_norm(data=w_data)
+    elif sensor == Constant.EMG and preprocess == Constant.filter_:
+        w_data = Process_data.filter_emg_data(emg=w_data, filter_type=preprocess)
     return w_data, labels
 
 

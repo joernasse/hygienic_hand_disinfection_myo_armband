@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-
+This Script contains all calculations for the feature extraction
+Also contains a "switch case" block for choose the correct feature set
 """
 
 from UliEngineering.SignalProcessing.Utils import zero_crossings
@@ -51,7 +52,8 @@ def zc(x):
     Zero Crossing
     :param x:array
             Array for which the feature is calculated
-    :return:
+    :return: float
+        Zero Crossing count
     """
     n = len(x)
     sum = 0
@@ -66,7 +68,8 @@ def iemg(x):
     Integrated absolute value
     :param x:array
             Array for which the feature is calculated
-    :return:
+    :return:float
+            Return the iEMG value
     """
     sum = 0
     for i in x:
@@ -79,7 +82,8 @@ def ssi(x):
     Simple Square Integral
     :param x:array
             Array for which the feature is calculated
-    :return:
+    :return: float
+            Return the ssi result
     """
     sum = 0
     for i in x:
@@ -92,7 +96,8 @@ def wl(x):
     Waveform length
     :param x:array
             Array for which the feature is calculated
-    :return:
+    :return:float
+            Return the sl result
     """
     sum = 0
     for i in range(0, len(x) - 1):
@@ -100,32 +105,13 @@ def wl(x):
     return sum
 
 
-def cc(x):
-    """
-    Cepstral coeffcients
-    :param x:array
-            Array for which the feature is calculated
-    :return:
-    """
-    try:
-        fft = np.fft.fft(x)
-        ab = np.abs(fft)
-        l = np.log(ab)
-        c = np.fft.ifft(l)
-        for i in range(len(c)):
-            y = +c[i]
-        return y
-    except RuntimeWarning:
-        print(RuntimeWarning)
-
-
 def aac(x):
     """
     Average amplitude change
-    :param x:
-            data for which the Average amplitude change should be calculated
+    :param x:array
+            Data for which the Average amplitude change should be calculated
     :return: float
-            flo
+            Returns the aac result
     """
     n = len(x)
     sum = 0
@@ -141,7 +127,7 @@ def rehman(data):
     :param data:array
            Data from which features are to be extracted
     :return: list
-            Feature vector
+            Feature vector for the feature-set of rehman
     """
     return [mav(data), wl(data), ssc(data), zero_crossings(data).size]
 
@@ -155,7 +141,7 @@ def georgi(data, sensor):
     :param sensor: string
             The sensor type (EMG or IMU)
     :return: list
-            Feature vector
+            Feature vector of the feature-set of georgi
     """
     if sensor == Constant.EMG:
         return [np.std(data)]
@@ -173,7 +159,7 @@ def feature_extraction(windows, mode, sensor):
     :param sensor: string
             Describes the sensor (EMG or IMU, from Constrant.py) Only necessary for Georgi
     :return: list
-        Returns a list of feature vectors
+        Returns a list of feature vectors for the given feature set
     """
     features = []
     for window in windows:
@@ -199,7 +185,7 @@ def mantena(data):
     :param data:array
            Data from which features are to be extracted
     :return: list
-            Feature vector
+            Feature vector for the feature set of mantena
     """
     return [rms(data), iemg(data), ssi(data), np.var(data), wl(data), aac(data)]
 
@@ -211,7 +197,7 @@ def ssc(x):
     :param x: array
            Data for which the slope sign changes should be calculated
     :return: float
-            result of calculation (slope sign changes)
+            Result of calculation (slope sign changes)
     """
     try:
         f = 0
@@ -224,7 +210,6 @@ def ssc(x):
         print("")
 
 
-# Robinson-PatternClassificationHand-2017.pdf
 def robinson(data):
     """
     Feature set from Robinson
@@ -232,6 +217,6 @@ def robinson(data):
     :param data:
             Data from which features are to be extracted
     :return: list
-            Feature vector
+            Return the feature vector of the feature set robinson
     """
     return [rms(data), wl(data), ssc(data)]

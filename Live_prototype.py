@@ -61,8 +61,6 @@ imu_load_data = {"timestamp": [], "x_ori": [], "y_ori": [], "z_ori": [], "x_gyr"
 emg_dict = {"timestamp": [], "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": [], "ch5": [], "ch6": [], "ch7": [],
             "label": []}
 
-seq_duration = [5, 4, 3, 2]
-live_prediction_path = "./Live_Prediction/"
 x_train_classic = []
 
 
@@ -107,7 +105,7 @@ def check_samples_rate(warm_up_iteration=5, record_time=1):
     """
     Check the sample rat of the myo armbands. Should be run before  collecting data.
     :param warm_up_iteration:int, default 5
-                            The iterations fo processing the warmup
+                            The iterations fo processing the warm up
     :param record_time:int, default 1
                         The record time
     :return: None
@@ -162,13 +160,13 @@ def init(live_prediction_path="./Live_Prediction"):
     """
     Initialization for the communication with the Myo Armbands. Also pair devices.
     Waiting time is required to ensure correct streaming rate
-    :param live_prediction_path:string, default "./Live_Prediction"
+    :param Constant.live_prediction_path:string, default "./Live_Prediction"
             the path to the live prediction folder
     :return: None
     """
     global status
-    if not os.path.isdir(live_prediction_path):  # Collection dir
-        os.mkdir(live_prediction_path)
+    if not os.path.isdir(Constant.live_prediction_path):  # Collection dir
+        os.mkdir(Constant.live_prediction_path)
 
     status = 1
     print("Initialization - Start")
@@ -193,7 +191,8 @@ def preprocess_data(w_emg, w_imu, filter_type):
     if filter_type == Constant.filter_:
         p_emg, p_imu = Process_data.filter_emg_data(w_emg, filter_type)
     elif filter_type == Constant.z_norm:
-        p_emg, p_imu = Process_data.z_norm(w_emg, w_imu)
+        p_emg = Process_data.z_norm(w_emg)
+        p_imu = Process_data.z_norm(w_imu)
     else:
         p_emg, p_imu = w_emg, w_imu
     return p_emg, p_imu
@@ -206,7 +205,22 @@ def main():
     """
 
     # --------------------------------------------Model Validation START ----------------------------------------------#
-    validate_models(session=2)
+    cnn_imu_adapt, cnn_emg_adapt = None, None
+    # OPTIONAL:
+    # Load models for the adaptive approach
+    # Edit path to the correct models
+    # cnn_imu_adapt = load_model(
+    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
+    # cnn_emg_adapt = load_model(
+    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
+    config_cnn_emg = "no_pre_pro-separate-EMG-100-0.9-NA"
+    config_cnn_imu = "no_pre_pro-separate-IMU-25-0.9-NA"
+    config_classic = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
+
+    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
+    validate_models(cnn_emg_ud=cnn_emg_ud, cnn_imu_ud=cnn_imu_ud, cnn_emg_ui=cnn_emg_ui, cnn_imu_ui=cnn_imu_ui,
+                    classic_ud=classic_ud, classic_ui=classic_ui, config_cnn_emg=config_cnn_emg,
+                    config_cnn_imu=config_cnn_imu, config_classic=config_classic, session=2)
     # --------------------------------------------Model Validation END ------------------------------------------------#
 
     # --------------------------------------------Live application START ----------------------------------------------#
@@ -241,10 +255,10 @@ def eval_predictions(predict, proba, y_true, file_prefix, session, seq, classic=
     :return: None
     """
     write_header = False
-    if not os.path.isdir(live_prediction_path + file_prefix):  # Collection dir
-        os.mkdir(live_prediction_path + file_prefix)
+    if not os.path.isdir(Constant.live_prediction_path + file_prefix):  # Collection dir
+        os.mkdir(Constant.live_prediction_path + file_prefix)
 
-    path = live_prediction_path + file_prefix + "/"
+    path = Constant.live_prediction_path + file_prefix + "/"
     number_samples = len(predict)
     sum_predict_dict = collections.OrderedDict(sorted(collections.Counter(predict).items()))
     if y_true in sum_predict_dict.keys():
@@ -507,11 +521,9 @@ def window_live_separate(raw_data, window, overlap):
 
     first = 0
     for i in range(blocks):
-        # data = []
         last = int(first + window)
         data = raw_data[first:last]
         if not len(data) == window:
-            # print("first/last", first, last)
             continue
         first += int(window - offset)
         window_data.append(np.asarray(data))
@@ -540,7 +552,6 @@ def live_prediction(config, cnn_emg=None, cnn_imu=None, clf_classic=None, clf_ty
     w_imu = 25
 
     with hub.run_in_background(gesture_listener.on_event):
-        # check_samples_rate()
         Helper_functions.wait(2)
         Helper_functions.countdown(3)
         while 1:
@@ -595,89 +606,123 @@ def sum_sequence_proba(proba):
     return sum_proba, np.argmax(sum_proba)
 
 
-def validate_models(session=2):
+def validate_models(cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, config_cnn_emg, config_cnn_imu,
+                    config_classic, classic_ui, cnn_imu_adapt=None,
+                    cnn_emg_adapt=None, session=2):
     """
-    TODO
-    :param session:
+This function perform a live validation on the given classifier. All gestures will record separately for 5 to 2 seconds.
+    Record time can be changed in the Constant.py
+    :param cnn_emg_ud:
+            The user dependent CNN for EMG data
+    :param cnn_imu_ud:
+            The user dependent CNN for IMU data
+    :param cnn_emg_ui:
+            The user independent CNN for EMG data
+    :param cnn_imu_ui:
+            The user independent CNN for IMU data
+    :param classic_ud:
+            Classic user dependent classifier
+    :param classic_ui:
+            Classic user independent classifier
+    :param config_cnn_emg:
+    :param config_cnn_imu:
+    :param config_classic:
+    :param cnn_imu_adapt:
+            Trained adaptive CNN (ideal based on UI CNN) for IMU data
+    :param cnn_emg_adapt:
+            Trained adaptive CNN (ideal based on UI CNN) for EMG data
+    :param session: int, default 2
+            Number of sessions
     :return:
     """
-    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic_ui = load_models_for_validation()
-    cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
-    cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
-    # cnn_imu_adapt = load_model(
-    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
-    # cnn_emg_adapt = load_model(
-    #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
+    if cnn_imu_adapt is not None and cnn_emg_adapt is not None:
+        collect_data_to_train_adapt, collect_data_to_train_classic_live = False, False
+    else:
+        cnn_imu_adapt = tf.keras.models.clone_model(cnn_imu_ui)
+        cnn_emg_adapt = tf.keras.models.clone_model(cnn_emg_ui)
+        collect_data_to_train_adapt, collect_data_to_train_classic_live = True, True
 
     adapt_cnn_emg_train, adapt_cnn_imu_train, y_train, y_train_emg, y_train_imu = [], [], [], [], []
-    cnn_adapt_collect, classic_live_collect = True, True
-    # cnn_adapt_collect, classic_live_collect = False, False
-    classic_live = None
     datum_cnn_emg_number, datum_cnn_imu_number, datum_classic_number, total_raw_emg, total_raw_imu = 0, 0, 0, 0, 0
     classic_ud.verbose, classic_ui.verbose = 0, 0
+    classic_live = None
 
-    preprocess = Constant.no_pre_processing
-    feature_set = Constant.georgi
-    w_emg = 100
-    w_imu = 25
-    w_classic = 100
-    overlap = 0.9
+    # ------------- Configuration split for CNN EMG -------------
+    config_split = config_cnn_emg.split('-')
+    preprocess_emg = config_split[0]
+    w_emg = int(config_split[3])
+    overlap_emg = float(config_split[4])
+
+    # ------------- Configuration split for CNN IMU -------------
+    config_split = config_cnn_imu.split('-')
+    preprocess_imu = config_split[0]
+    w_imu = int(config_split[3])
+    overlap_imu = float(config_split[4])
+
+    # ------------- Configuration split for classic -------------
+    config_split = config_classic.split('-')
+    preprocess_classic = config_split[0]
+    w_classic = int(config_split[3])
+    overlap_classic = float(config_split[4])
+    feature_set = config_split[5]
     init()
 
     with hub.run_in_background(gesture_listener.on_event):
         check_samples_rate()
         Helper_functions.wait(2)
         for s in range(session):
-            for n in range(len(seq_duration)):
+            for n in range(len(Constant.seq_duration)):
                 input("Press enter to start")
                 Helper_functions.cls()
                 print(
-                    "Start with sequence. \nThe recording time of the gesture is " + str(seq_duration[n]) + " seconds.")
+                    "Start with sequence. \nThe recording time of the gesture is " + str(
+                        Constant.seq_duration[n]) + " seconds.")
                 for label in range(len(Constant.label_display_without_rest)):
                     Helper_functions.countdown(3)
                     # ----------------------------------Record data----------------------------------------------------#
                     print(Constant.label_display_without_rest[label], "Start")
                     DEVICE_R.vibrate(libmyo.VibrationType.short)
-                    emg, ori, acc, gyr = collect_raw_data(record_time=seq_duration[n])
+                    emg, ori, acc, gyr = collect_raw_data(record_time=Constant.seq_duration[n])
                     total_raw_emg += len(emg)
                     total_raw_imu += len(ori)
-
                     DEVICE_L.vibrate(libmyo.VibrationType.short)
                     print("Stop")
-
                     emg, imu = reformat_raw_data(emg, ori, acc, gyr)
 
                     # ----------------------------------Perform classic prediction-------------------------------------#
                     # Classic windowing, EMG and IMU together
-                    image_emg, image_imu = window_live_classic(emg, imu, w_classic, overlap)
+                    image_emg, image_imu = window_live_classic(emg, imu, w_classic, overlap_classic)
 
                     # Preprocessing
-                    image_emg, image_imu = preprocess_data(image_emg, image_imu, preprocess)
+                    image_emg, image_imu = preprocess_data(image_emg, image_imu, preprocess_classic)
 
                     # Feature extraction
                     features = feature_extraction_live(w_emg=image_emg, w_imu=image_imu, feature_set=feature_set)
                     datum_classic_number += len(features)
 
-                    if classic_live_collect:
+                    if collect_data_to_train_classic_live:
                         x_train_classic.extend(features)
                         y_train.extend([label] * len(features))
 
                     predict_classic_ud = classic_ud.predict(features)
                     predict_classic_ui = classic_ui.predict(features)
 
-                    # # If live classifier is trained
-                    if not classic_live_collect and classic_live is not None:
+                    # If live classifier is trained
+                    if classic_live is not None:
                         predict_classic_live = classic_live.predict(features)
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
-                    image_emg = window_live_separate(emg, window=w_emg, overlap=overlap)
-                    image_imu = window_live_separate(imu, window=w_imu, overlap=overlap)
+                    image_emg = window_live_separate(emg, window=w_emg, overlap=overlap_emg)
+                    image_imu = window_live_separate(imu, window=w_imu, overlap=overlap_imu)
+
+                    w_emg = preprocess_data(image_emg, preprocess_emg, preprocess_emg)
+                    w_imu = preprocess_data(image_imu, preprocess_imu, preprocess_emg)
 
                     datum_cnn_emg_number += len(image_emg)
                     datum_cnn_imu_number += len(image_imu)
 
-                    if cnn_adapt_collect:
+                    if collect_data_to_train_adapt:
                         adapt_cnn_emg_train.extend(image_emg)
                         adapt_cnn_imu_train.extend(image_imu)
                         y_train_emg.extend([label] * len(image_emg))
@@ -696,7 +741,7 @@ def validate_models(session=2):
                     predict_emg_ui = cnn_emg_ui.predict_classes(x_emg)
                     predict_imu_ui = cnn_imu_ui.predict_classes(x_imu)
 
-                    if not cnn_adapt_collect:
+                    if cnn_imu_adapt is not None and cnn_emg_adapt is not None:
                         proba_emg_adapt = cnn_emg_adapt.predict_proba(x_emg)
                         proba_imu_adapt = cnn_imu_adapt.predict_proba(x_imu)
 
@@ -718,24 +763,24 @@ def validate_models(session=2):
                     eval_predictions(predict=predict_classic_ui, proba=[], y_true=label, file_prefix="classic_ui",
                                      session=s, seq=n, classic=True)
 
-                    if not cnn_adapt_collect:
+                    if not collect_data_to_train_adapt:
                         eval_predictions(predict=predict_emg_adapt, proba=proba_emg_adapt, y_true=label,
                                          file_prefix="cnn_emg_adapt", session=s, seq=n, classic=False)
                         eval_predictions(predict=predict_imu_adapt, proba=proba_imu_adapt, y_true=label,
                                          file_prefix="cnn_imu_adapt", session=s, seq=n, classic=False)
 
-                    if not classic_live_collect:
+                    if not collect_data_to_train_classic_live:
                         eval_predictions(predict=predict_classic_live, proba=[], y_true=label,
                                          file_prefix="classic_live",
                                          session=s, seq=n, classic=True)
 
-                if classic_live_collect:
+                if collect_data_to_train_classic_live:
                     print("Train classic")
                     print("Training Samples", len(x_train_classic))
                     classic_live = Constant.random_forest.fit(x_train_classic, y_train)
-                    classic_live_collect = False
+                    collect_data_to_train_classic_live = False
 
-                if cnn_adapt_collect:
+                if collect_data_to_train_adapt:
                     print("Train Adapt CNN EMG")
                     cnn_emg_adapt = adapt_model_for_user(model=cnn_emg_adapt, x_train=adapt_cnn_emg_train,
                                                          y_train=y_train_emg, x_test_in=[], y_test_in=[],
@@ -746,7 +791,7 @@ def validate_models(session=2):
                                                          y_train=y_train_imu, x_test_in=[], y_test_in=[],
                                                          save_path="./", batch=8, epochs=10, file_name="live-adapt-IMU",
                                                          calc_test_set=False)
-                    cnn_adapt_collect = False
+                    collect_data_to_train_adapt = False
     hub.stop()
 
 

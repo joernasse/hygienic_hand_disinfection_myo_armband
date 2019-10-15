@@ -1,10 +1,22 @@
+#!/usr/bin/env python
+"""
+This Script contains the classes CollectDataWindow and IntroductionScreen
+Setup the GUI for the user study
+"""
 from tkinter import BOTH, StringVar, Label, HORIZONTAL, Entry, Button, IntVar, W, E, Tk, Checkbutton, VERTICAL
 from tkinter.ttk import Progressbar, Separator, Frame
-
 from PIL import Image, ImageTk
 import Constant
 from Collect_data import collect_data, initialize_data_collection
 from Constant import *
+__author__ = "Joern Asse"
+__copyright__ = ""
+__credits__ = ["Joern Asse"]
+__license__ = ""
+__version__ = "1.0"
+__maintainer__ = "Joern Asse"
+__email__ = "joernasse@yahoo.de"
+__status__ = "Production"
 
 introduction_window = Tk()
 collect_window = Tk()

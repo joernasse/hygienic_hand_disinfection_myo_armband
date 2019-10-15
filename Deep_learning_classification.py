@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
 This script contains the creation, training and prediction of CNNs.
+Also contains the adaptive approach
 """
 
 from collections import Counter

@@ -21,6 +21,7 @@ __maintainer__ = "Joern Asse"
 __email__ = "joernasse@yahoo.de"
 __status__ = "Production"
 
+# --------------------------------------------List of labels ----------------------------------------------------------#
 label_display_with_rest = ['Step 0',
                            'Step 1', 'St    ep 1.1', 'Step 1.2',
                            'Step 2', 'Step 2.1',
@@ -59,25 +60,33 @@ hand_disinfection_description = ['Step 0    - Take disinfectant',
                                  'Step 6    - Circular movement of closed fingertips of the\n right hand on the left palm of the hand',
                                  'Step 6.1  - Circular movement of closed fingertips of the\n left hand on the right palm of the hand',
                                  'Rest      - Do nothing']
+# --------------------------------------------List of labels ----------------------------------------------------------#
 
-# Collect_data
+# --------------------------------------------Constants----------------------------------------------------------------#
 COLLECTION_DIR = "Collections"
 RIGHT = "right"
 LEFT = "left"
 SEPARATE = "separate"
+SEPARATE_PATH = "/raw_separate"
+CONTINUES_PATH = "/raw_continues"
+CONTINUES = "continues"
+MAX_EMG_VALUE =127
+EMG = "EMG"
+IMU = "IMU"
+CNN_1 = "CNN_1"
+CNN_KAGGLE = "CNN_Kaggle"
+
+REST_MEAN = "rest_mean"
+MAX_VALUE_CHANNEL = "max_value_channel"
+# --------------------------------------------Constants----------------------------------------------------------------#
 
 # Process_data
-MAX_EMG_VALUE = 127
 threshold = 0.30 * MAX_EMG_VALUE
-
 identifier_emg = "timestamp", "ch0", "ch1", "ch2", "ch3", "ch4", "ch5", "ch6", "ch7"
 identifier_imu = "timestamp", "x_ori", "y_ori", "z_ori", "x_gyr", "y_gyr", "z_gyr", "x_acc", "y_acc", "z_acc"
 collections_default_path = './Collections/'
 test_set_size = 0.2
 validation_set_size = 0.1
-SEPARATE_PATH = "/raw_separate"
-CONTINUES_PATH = "/raw_continues"
-CONTINUES = "continues"
 classes = 12
 
 # Save_Load_CSV
@@ -91,9 +100,7 @@ imu_headline = ["timestamp",
                 "label"]
 imu_identifier = ["x", "y", "z"]
 
-EMG = "EMG"
-IMU = "IMU"
-
+# --------------------------------------------Configuration layout-----------------------------------------------------#
 W_100 = 100
 W_50 = 50
 W_60 = 60
@@ -113,6 +120,18 @@ filter_ = "filter"
 z_norm = "z-normalization"
 no_pre_processing = "no_pre_pro"
 
+# ----------------------------------Configuration levels-----------------------------------------------------------#
+level_0 = [filter_, z_norm, no_pre_processing]
+level_1 = [CONTINUES, SEPARATE, SEPARATE + CONTINUES]
+level_2 = [EMG, IMU, EMG + IMU]
+level_3 = [W_100, W_50]
+level_4 = [O_50, O_0, O_90, O_75]
+level_5 = [rehman, georgi, robinson, mantena]
+# ----------------------------------Configuration levels-----------------------------------------------------------#
+
+# --------------------------------------------Configuration layout-----------------------------------------------------#
+
+# --------------------------------------------List of users from study-------------------------------------------------#
 # Standard Varianten
 USERS = ["User001", "User002", "User003", "User004",
          "User005", "User006", "User007", "User008",
@@ -134,14 +153,8 @@ USERS_SUB = ["User001",
              "User013",
              "User014",
              "User015"]
+# --------------------------------------------List of users from study-------------------------------------------------#
 
-# ----------------------------------Configuration levels---------------------------------------------------------------#
-level_0 = [filter_, z_norm, no_pre_processing]
-level_1 = [CONTINUES, SEPARATE, SEPARATE + CONTINUES]
-level_2 = [EMG, IMU, EMG + IMU]
-level_3 = [W_100, W_50]
-level_4 = [O_50, O_0, O_90, O_75]
-level_5 = [rehman, georgi, robinson, mantena]
 
 # ----------------------------------Classic Classifier-----------------------------------------------------------------#
 random_forest = RandomForestClassifier(n_jobs=-1,
@@ -175,6 +188,7 @@ lda_parameter = {'solver': ['lsqr', 'eigen'],
 qda = QDA()
 classifiers = [random_forest, lda, qda, gauss, knn, svc]
 classifier_names = ["Random_Forest", "LDA", "QDA", "Bayers", "KNN", "SVM"]
+# ----------------------------------Classic Classifier-----------------------------------------------------------------#
 
 # ----------------------------------Pre processing with Filter and normalization---------------------------------------#
 count_devices = 2
@@ -196,9 +210,8 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 # Georgi Normalization
 # Used no Filter only Z-normalization
 
-CNN_1 = "CNN_1"
-CNN_KAGGLE = "CNN_Kaggle"
+# ----------------------------------Pre processing with Filter and normalization---------------------------------------#
 
-
-rest_mean="rest_mean"
-max_value_channel="max_value_channel"
+# ---------------------------------- Liver Prototype constants---------------------------------------------------------#
+seq_duration = [5, 4, 3, 2]
+live_prediction_path = "./Live_Prediction/"

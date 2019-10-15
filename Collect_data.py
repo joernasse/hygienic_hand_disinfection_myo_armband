@@ -41,10 +41,9 @@ TIMESTAMP = str(TIME_NOW.tm_year) + str(TIME_NOW.tm_mon) + str(TIME_NOW.tm_mday)
 
 # data collection shared variables
 emg_l, emg_r = [], []
-status = 0
 g_introduction_screen = None
 g_files = []
-g_record_time, g_mode, g_break = 0, 0, 0
+g_record_time, g_mode, g_break,status =0, 0, 0, 0
 g_raw_path, g_img_path = "", ""
 g_trial = False
 emg_count_list, imu_count_list = [], []
@@ -63,7 +62,7 @@ class GestureListener(libmyo.DeviceListener):
         self.ori_data_queue = collections.deque(maxlen=queue_size)
 
     def on_connected(self, event):
-        event.device.stream_emg(StreamEmg.enabled)
+        event.device.stream_emg(libmyo.StreamEmg.enabled)
 
     def on_emg(self, event):
         with self.lock:
@@ -584,25 +583,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-import myo as libmyo
-from myo import init, Hub, StreamEmg
-
-DEVICE_R, DEVICE_L = None, None
-init()
-hub = Hub()
-device_listener = libmyo.ApiDeviceListener()
-
-with hub.run_in_background(device_listener):
-    devices = device_listener.devices
-    for d in devices:
-        if d.arm == "left":
-            DEVICE_L = d
-            DEVICE_L.stream_emg(True)
-        elif d.arm == "right":
-            DEVICE_R = d
-            DEVICE_R.stream_emg(True)
-    if not (DEVICE_L is None) and not (DEVICE_R is None):
-        DEVICE_R.vibrate(libmyo.VibrationType.short)
-        DEVICE_L.vibrate(libmyo.VibrationType.lon)
-hub.stop()

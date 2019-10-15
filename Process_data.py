@@ -77,7 +77,8 @@ def process_raw_data(user, overlap, window, data_set, sensor, feature, pre,
                 if pre == Constant.filter_ and Constant.EMG in sensor:
                     w_emg = filter_emg_data(emg=w_emg, filter_type=feature)
                 elif pre == Constant.z_norm:
-                    w_emg, w_imu = z_norm(w_emg, w_imu)
+                    w_emg = z_norm(w_emg)
+                    w_imu = z_norm(w_imu)
 
                 if Constant.EMG + Constant.IMU in sensor:
                     features.append(fe.feature_extraction(w_emg, mode=feature, sensor=Constant.EMG))
@@ -231,29 +232,22 @@ def filter_emg_data(emg, filter_type):
         raise
 
 
-def z_norm(emg, imu):
+def z_norm(data):
     """
     Performs the Z-Normalization for EMG and IMU data
-    :param emg: array
-            Array of EMG data
-    :param imu: array
-            Array of IMU data
+    :param data: array
+            Array of data to which the z-normalization should be applied
     :return: array,array
-            Z-normalized EMG data
-            z-normalized IMU data
+            Z-normalized data
     """
 
     try:
-        z_emg, z_imu = [], []
-        for item in emg:
+        z_data = []
+        for item in data:
             tmp = [zscore(x) for x in item[:-1]]
             tmp.append(item[-1])
-            z_emg.append(tmp)
-        for item in imu:
-            tmp = [zscore(x) for x in item[:-1]]
-            tmp.append(item[-1])
-            z_imu.append(tmp)
-        return z_emg, z_imu
+            z_data.append(tmp)
+        return z_data
     except:
         print("Error! Problem in Z normalization")
         raise
