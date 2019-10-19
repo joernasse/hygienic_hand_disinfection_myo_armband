@@ -70,7 +70,7 @@ SEPARATE = "separate"
 SEPARATE_PATH = "/raw_separate"
 CONTINUES_PATH = "/raw_continues"
 CONTINUES = "continues"
-MAX_EMG_VALUE =127
+MAX_EMG_VALUE = 127
 EMG = "EMG"
 IMU = "IMU"
 CNN_1 = "CNN_1"
@@ -215,4 +215,5 @@ benalcazar_b_emg, benalcazar_a_emg = signal.butter(N=4, Wn=cut_emg, output='ba',
 # ---------------------------------- Liver Prototype constants---------------------------------------------------------#
 seq_duration = [5, 4, 3, 2]
 live_prediction_path = "./Live_Prediction/"
-delta=0.15
+delta = 0.15
+delta2 = 0.05

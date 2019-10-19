@@ -40,8 +40,8 @@ cnn_imu_ui_path = "./Live_Prediction/Load_model/User002_UI_no_pre_pro-separateco
 classic_ud_path = "./Live_Prediction/Load_model/User002_UD_Random_forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
 classic_ui_path = "./Live_Prediction/Load_model/User002_UI_Random_Forest_no_pre_pro-separate-EMGIMU-100-0.9-georgi.joblib"
 
-cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
-cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+# cnn_imu_adapted_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+# cnn_emg_adapted_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
 
 headline_summary = ["Session", "seq", "y_true", "number_samples", "prediction_seq",
                     "prediction_seq_number", "correct_samples", "correct_samples_percent"]
@@ -63,6 +63,7 @@ emg_dict = {"timestamp": [], "ch0": [], "ch1": [], "ch2": [], "ch3": [], "ch4": 
             "label": []}
 
 x_train_classic = []
+live_prediction_threshold = 0.85
 
 
 class GestureListener(libmyo.DeviceListener):
@@ -214,24 +215,24 @@ def main():
     #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5")
     # cnn_emg_adapt = load_model(
     #     "C:/EMG_Recognition/Live_Prediction/User001_Live/User001_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5")
-    config_cnn_emg = "no_pre_pro-separate-EMG-100-0.9-NA"
-    config_cnn_imu = "no_pre_pro-separate-IMU-25-0.9-NA"
-    config_classic = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
 
-    cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic = load_models_for_validation()
-    validate_models(cnn_emg_ud=cnn_emg_ud, cnn_imu_ud=cnn_imu_ud, cnn_emg_ui=cnn_emg_ui, cnn_imu_ui=cnn_imu_ui,
-                    classic_ud=classic_ud, classic_ui=classic, config_cnn_emg=config_cnn_emg,
-                    config_cnn_imu=config_cnn_imu, config_classic=config_classic, session=2)
+    # config_cnn_emg = "no_pre_pro-separate-EMG-100-0.9-NA"
+    # config_cnn_imu = "no_pre_pro-separate-IMU-25-0.9-NA"
+    # config_classic = "no_pre_pro-separate-EMGIMU-100-0.9-georgi"
+    # cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, classic = load_models_for_validation()
+    # validate_models(cnn_emg_ud=cnn_emg_ud, cnn_imu_ud=cnn_imu_ud, cnn_emg_ui=cnn_emg_ui, cnn_imu_ui=cnn_imu_ui,
+    #                 classic_ud=classic_ud, classic_ui=classic, config_cnn_emg=config_cnn_emg,
+    #                 config_cnn_imu=config_cnn_imu, config_classic=config_classic, session=2)
     # --------------------------------------------Model Validation END ------------------------------------------------#
 
     # --------------------------------------------Live prediction for CNN START ---------------------------------------#
-    cnn_imu_user001_path = "C:/EMG_Recognition/live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
-    cnn_emg_user001_path = "C:/EMG_Recognition/live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
+    cnn_imu_user002_path = "C:/emg-recognition-with-myo/Live_Prediction/User002_live-adapt-IMU_cnn_CNN_Kaggle_adapt.h5"
+    cnn_emg_user002_path = "C:/emg-recognition-with-myo/Live_Prediction/User002_live-adapt-EMG_cnn_CNN_Kaggle_adapt.h5"
 
     live_prediction_cnn(config_emg="no_pre_processing-separate-EMG-100-0.9-NA",
                         config_imu="no_pre_processing-separate-IMU-25-0.9-NA",
-                        cnn_emg=load_model(cnn_emg_user001_path),
-                        cnn_imu=load_model(cnn_imu_user001_path),
+                        cnn_emg=load_model(cnn_emg_user002_path),
+                        cnn_imu=load_model(cnn_imu_user002_path),
                         record_time=2)
     # --------------------------------------------Live prediction for CNN END -----------------------------------------#
 
@@ -541,11 +542,11 @@ def window_live_for_one_sensor(data, window, overlap):
     first = 0
     for i in range(blocks):
         last = int(first + window)
-        data = data[first:last]
-        if not len(data) == window:
+        data_ = data[first:last]
+        if not len(data_) == window:
             continue
         first += int(window - offset)
-        window_data.append(np.asarray(data))
+        window_data.append(np.asarray(data_))
         first += int(window - offset)
     return window_data
 
@@ -568,6 +569,7 @@ def live_prediction_cnn(config_emg, config_imu, cnn_emg, cnn_imu, record_time=2)
     """
     pair_devices()
 
+    Helper_functions.wait(2)
     # ------------- Configuration split for CNN EMG -------------
     config_split = config_emg.split('-')
     preprocess_emg = config_split[0]
@@ -581,6 +583,7 @@ def live_prediction_cnn(config_emg, config_imu, cnn_emg, cnn_imu, record_time=2)
     with hub.run_in_background(gesture_listener.on_event):
         Helper_functions.wait(2)
         Helper_functions.countdown(3)
+        DEVICE_R.vibrate(libmyo.VibrationType.short)
         while 1:
             emg, ori, acc, gyr = collect_raw_data(record_time=record_time)
             emg, imu = reformat_raw_data(emg, ori, acc, gyr)
@@ -589,12 +592,15 @@ def live_prediction_cnn(config_emg, config_imu, cnn_emg, cnn_imu, record_time=2)
             x_emg = np.array(img_emg)[:, :, :, np.newaxis]
             x_imu = np.array(img_imu)[:, :, :, np.newaxis]
 
-            predict_emg = cnn_emg.predict(x_emg)
-            predict_imu = cnn_imu.predict(x_imu)
-            prediction_together = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg), cnn_imu.predict_proba(x_imu))
-            print("CNN EMG: ", predict_emg)
-            print("CNN IMU: ", predict_imu)
-            print("Both CNNs: ", prediction_together)
+            # predict_emg = cnn_emg.predict(x_emg)
+            # predict_imu = cnn_imu.predict(x_imu)
+            both_pred, emg_pred, imu_pred = prediction_calculation_cnn(cnn_emg.predict_proba(x_emg),
+                                                                       cnn_imu.predict_proba(x_imu))
+            # print("CNN EMG: ", predict_emg)
+            # print("CNN IMU: ", predict_imu)
+            print("Both CNNs: ", both_pred,
+                  "\nEMG CNNs: ", emg_pred,
+                  "\nIMU CNNs: ", imu_pred)
             Helper_functions.wait(0.5)
 
 
@@ -637,20 +643,27 @@ def prediction_calculation_cnn(emg_prediction, imu_prediction):
     :return:string
             Returns the common prediction
     """
+    gesture_both = "No Gesture"
     sum_emg, best_index_emg = sum_sequence_proba(emg_prediction)
     sum_imu, best_index_imu = sum_sequence_proba(imu_prediction)
     best_emg = sum_emg[best_index_emg]
     best_imu = sum_imu[best_index_imu]
+    summed_emg_imu = [x + y for x, y in zip(sum_emg, sum_imu)]
+    index = np.argmax(summed_emg_imu)
+    max_ = max(summed_emg_imu)
 
-    if emg_prediction[best_index_emg] == imu_prediction[best_index_imu]:
-        index = best_index_emg
-    elif best_emg > best_imu + Constant.delta:
-        index = best_index_emg
-    elif best_imu > best_emg + Constant.delta:
-        index = best_index_imu
-    else:
-        index = np.argmax(map(add, sum_emg, sum_imu))
-    return Constant.label_display_without_rest[index]
+    if best_emg >= live_prediction_threshold or best_imu >= live_prediction_threshold:
+        if best_index_emg == best_index_imu:
+            index = best_index_emg
+        elif best_emg > best_imu + Constant.delta or 1 - Constant.delta2 <= best_emg:
+            index = best_index_emg
+        elif best_imu > best_emg + Constant.delta or 1 - Constant.delta2 <= best_imu:
+            index = best_index_imu
+        gesture_both = Constant.label_display_without_rest[index]
+    elif max_ >= live_prediction_threshold:
+        index = np.argmax(summed_emg_imu)
+        gesture_both = Constant.label_display_without_rest[index]
+    return gesture_both, Constant.labels_without_rest[best_index_emg], Constant.labels_without_rest[best_index_imu]
 
 
 def sum_sequence_proba(proba):
@@ -671,8 +684,7 @@ def sum_sequence_proba(proba):
 
 
 def validate_models(cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, config_cnn_emg, config_cnn_imu,
-                    config_classic, classic_ui, cnn_imu_adapt=None,
-                    cnn_emg_adapt=None, session=2):
+                    config_classic, classic_ui, cnn_imu_adapt=None, cnn_emg_adapt=None, session=2):
     """
     This function perform a live validation on the given classifier. All gestures will record separately for 5 to 2 seconds.
     Record time can be changed in the Constant.py
@@ -714,13 +726,13 @@ def validate_models(cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, 
     # ------------- Configuration split for CNN EMG -------------
     config_split = config_cnn_emg.split('-')
     preprocess_emg = config_split[0]
-    w_emg = int(config_split[3])
+    window_emg = int(config_split[3])
     overlap_emg = float(config_split[4])
 
     # ------------- Configuration split for CNN IMU -------------
     config_split = config_cnn_imu.split('-')
     preprocess_imu = config_split[0]
-    w_imu = int(config_split[3])
+    window_imu = int(config_split[3])
     overlap_imu = float(config_split[4])
 
     # ------------- Configuration split for classic -------------
@@ -777,8 +789,8 @@ def validate_models(cnn_emg_ud, cnn_imu_ud, cnn_emg_ui, cnn_imu_ui, classic_ud, 
 
                     # ----------------------------------Perform CNN prediction-----------------------------------------#
                     # Separate windowing
-                    image_emg = window_live_for_one_sensor(emg, window=w_emg, overlap=overlap_emg)
-                    image_imu = window_live_for_one_sensor(imu, window=w_imu, overlap=overlap_imu)
+                    image_emg = window_live_for_one_sensor(emg, window=window_emg, overlap=overlap_emg)
+                    image_imu = window_live_for_one_sensor(imu, window=window_imu, overlap=overlap_imu)
 
                     w_emg = preprocess_data(image_emg, preprocess_emg, preprocess_emg)
                     w_imu = preprocess_data(image_imu, preprocess_imu, preprocess_emg)
